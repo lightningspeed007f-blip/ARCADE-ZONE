@@ -9,7 +9,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
-<!-- Confetti for Quiz Victory -->
+<!-- Confetti for Quiz & Whack Victory -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <style>
@@ -172,8 +172,8 @@
     border:1px solid var(--muted);
   }
 
-  /* --- QUIZ INLINE VIEW STYLES --- */
-  #quiz-view {
+  /* --- SHARED VIEW/NAV STYLES --- */
+  #quiz-view, #whack-view {
     display: none;
     width: 100%;
   }
@@ -344,7 +344,177 @@
   .btn-restart { background: var(--accent-2); color: #0a0e13; }
   .btn-home { background: transparent; border: 1.5px solid var(--line); color: var(--text); }
 
-  /* Marquee */
+  /* --- WHACK-A-PANDA STYLES --- */
+  .whack-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .stat-pill {
+    background: rgba(26,34,44,0.9);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 4px;
+    text-align: center;
+  }
+
+  .stat-pill .label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .stat-pill .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    margin-top: 2px;
+  }
+
+  .val-coins { color: var(--accent-2) !important; }
+  .val-miss { color: var(--danger) !important; }
+
+  .whack-arena {
+    width: 100%;
+    aspect-ratio: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 12px;
+    background: rgba(16,21,27,0.85);
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+  }
+
+  .hole {
+    background: radial-gradient(circle at 50% 60%, #0d1217 40%, #06090c 90%);
+    border: 2px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .panda-target {
+    position: absolute;
+    bottom: -100%;
+    font-size: 46px;
+    line-height: 1;
+    user-select: none;
+    transition: bottom 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+  }
+
+  .hole.active .panda-target {
+    bottom: 12%;
+    pointer-events: auto;
+  }
+
+  .hole.hit .panda-target {
+    transform: scale(0.8) rotate(15deg);
+    filter: brightness(1.6);
+  }
+
+  /* Leaderboard Styling */
+  .leaderboard-card {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(26,34,44,0.95), rgba(16,21,27,0.95));
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 18px;
+  }
+
+  .leaderboard-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: var(--accent-2);
+    margin: 0 0 12px;
+    text-align: center;
+  }
+
+  .leaderboard-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lb-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 6px;
+    border-left: 3px solid var(--line);
+  }
+
+  .lb-row:first-child {
+    border-left-color: var(--accent-2);
+    background: rgba(255,207,63,0.06);
+  }
+
+  .lb-name {
+    font-weight: 600;
+  }
+
+  .lb-coins {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--accent-2);
+  }
+
+  .name-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .name-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .name-input:focus {
+    outline: none;
+    border-color: var(--accent-2);
+  }
+
+  .btn-save-score {
+    background: var(--lime);
+    color: #0a0e13;
+    border: none;
+    border-radius: 8px;
+    padding: 0 16px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  /* Footer Marquee */
   footer.ticker-wrap {
     margin-top: 32px;
     width: 100%;
@@ -394,35 +564,35 @@
     <div class="sub">Choose a game to test your skill & luck!</div>
 
     <div class="grid">
-      <!-- Game 1: Spin The Wheel -->
-      <a href="spin.html" class="game-card active-card">
+      <!-- Game 1: Whack-a-Panda -->
+      <div class="game-card active-card" onclick="openWhack()">
+        <div class="game-icon">🐼</div>
+        <div class="game-info">
+          <h2>Tap The Panda</h2>
+          <p>Whack to win +10 coins &bull; Max 10 misses</p>
+          <span class="badge badge-live">PLAY NOW</span>
+        </div>
+      </div>
+
+      <!-- Game 2: Dharma Prashnottari -->
+      <div class="game-card active-card" onclick="openQuiz()">
+        <div class="game-icon">🏹</div>
+        <div class="game-info">
+          <h2>Dharma Prashnottari</h2>
+          <p>धर्म प्रश्नोत्तरी: Easy to Hard</p>
+          <span class="badge badge-live">PLAY NOW</span>
+        </div>
+      </div>
+
+      <!-- Game 3: Spin The Wheel -->
+      <a href="spin.html" class="game-card">
         <div class="game-icon">🎯</div>
         <div class="game-info">
           <h2>Spin The Wheel</h2>
           <p>Spin to win Teddy Bear or Toffees</p>
-          <span class="badge badge-live">PLAY NOW</span>
+          <span class="badge badge-soon">OPEN EXTERNAL</span>
         </div>
       </a>
-
-      <!-- Game 2: Hindu Mythology Quiz (Starts on Same Page) -->
-      <div class="game-card active-card" onclick="openQuiz()">
-        <div class="game-icon">🏹</div>
-        <div class="game-info">
-          <h2>Mythology Quiz</h2>
-          <p>Clear all tiers: Easy to Hard</p>
-          <span class="badge badge-live">PLAY NOW</span>
-        </div>
-      </div>
-
-      <!-- Game 3: Lucky Dice Roll -->
-      <div class="game-card" style="opacity:0.65; pointer-events:none;">
-        <div class="game-icon">🎲</div>
-        <div class="game-info">
-          <h2>Lucky Dice</h2>
-          <p>Roll a double 6 to hit the jackpot</p>
-          <span class="badge badge-soon">COMING SOON</span>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -433,7 +603,6 @@
       <div id="tierTag" class="tier-badge tier-Easy">EASY</div>
     </div>
 
-    <!-- Active Question Card -->
     <div class="quiz-card" id="quizCard">
       <div class="quiz-sub-header">
         <div class="progress-text" id="progressText">QUESTION 1 / 9</div>
@@ -443,12 +612,70 @@
       <div class="options-grid" id="optionsGrid"></div>
     </div>
 
-    <!-- Victory / Elimination Screen -->
     <div class="result-card" id="resultCard">
       <h2 id="resultTitle">RESULT</h2>
       <p id="resultMsg">Details</p>
       <button class="action-btn btn-restart" onclick="restartQuiz()">TRY AGAIN</button>
       <button class="action-btn btn-home" onclick="closeQuiz()">BACK TO HUB</button>
+    </div>
+  </div>
+
+  <!-- ================= INLINE WHACK-A-PANDA VIEW ================= -->
+  <div id="whack-view">
+    <div class="nav-bar">
+      <button class="btn-back" onclick="closeWhack()">◀ ARCADE HUB</button>
+      <div class="tier-badge tier-Easy">REFLEX TEST</div>
+    </div>
+
+    <!-- Live Game Screen -->
+    <div id="whackGameplay">
+      <div class="whack-stats">
+        <div class="stat-pill">
+          <div class="label">TIME</div>
+          <div class="val" id="whackTime">20s</div>
+        </div>
+        <div class="stat-pill">
+          <div class="label">COINS</div>
+          <div class="val val-coins" id="whackScore">0</div>
+        </div>
+        <div class="stat-pill">
+          <div class="label">MISSES</div>
+          <div class="val val-miss" id="whackMisses">0/10</div>
+        </div>
+      </div>
+
+      <div class="whack-arena" id="whackArena">
+        <!-- 9 Holes Grid -->
+        <div class="hole" data-id="0"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="1"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="2"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="3"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="4"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="5"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="6"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="7"><span class="panda-target">🐼</span></div>
+        <div class="hole" data-id="8"><span class="panda-target">🐼</span></div>
+      </div>
+    </div>
+
+    <!-- Whack Game Over / Finish Card -->
+    <div class="result-card" id="whackResultCard">
+      <h2 id="whackResultTitle">GAME OVER</h2>
+      <p id="whackResultMsg">You scored 0 coins!</p>
+      
+      <div id="saveScoreBox" class="name-input-group">
+        <input type="text" id="playerNameInput" class="name-input" maxlength="10" placeholder="Enter Your Name">
+        <button class="btn-save-score" onclick="submitScore()">SAVE</button>
+      </div>
+
+      <button class="action-btn btn-restart" onclick="startWhackGame()">PLAY AGAIN</button>
+      <button class="action-btn btn-home" onclick="closeWhack()">BACK TO HUB</button>
+
+      <!-- Persistent Leaderboard -->
+      <div class="leaderboard-card">
+        <div class="leaderboard-title">🏆 TOP PANDA SLAPPERS</div>
+        <ul class="leaderboard-list" id="leaderboardList"></ul>
+      </div>
     </div>
   </div>
 
@@ -463,7 +690,7 @@
 </footer>
 
 <script>
-  // BUILT-IN AUDIO SYNTHESIZER
+  // AUDIO SYNTHESIZER
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   function playTone(freq, duration, type = "sine") {
@@ -483,100 +710,27 @@
   }
 
   function playSfx(type) {
-    if (type === "correct") {
-      playTone(523.25, 0.15, "triangle");
-      setTimeout(() => playTone(659.25, 0.25, "triangle"), 150);
-    } else if (type === "wrong") {
-      playTone(220, 0.2, "sawtooth");
-      setTimeout(() => playTone(180, 0.4, "sawtooth"), 180);
+    if (type === "correct" || type === "whack") {
+      playTone(523.25, 0.1, "triangle");
+      setTimeout(() => playTone(783.99, 0.15, "triangle"), 80);
+    } else if (type === "wrong" || type === "miss") {
+      playTone(180, 0.18, "sawtooth");
+    } else if (type === "disqualified") {
+      playTone(200, 0.25, "sawtooth");
+      setTimeout(() => playTone(140, 0.4, "sawtooth"), 200);
     } else if (type === "win") {
       const notes = [523.25, 659.25, 783.99, 1046.50];
       notes.forEach((note, i) => {
-        setTimeout(() => playTone(note, 0.25, "triangle"), i * 150);
+        setTimeout(() => playTone(note, 0.2, "triangle"), i * 140);
       });
     }
   }
 
-  // QUESTIONS (EASY -> MEDIUM -> HARD)
-  const questions = [
-    // TIER 1: EASY
-    {
-      tier: "Easy",
-      q: "भगवान राम को कितने वर्षों का वनवास दिया गया था?",
-      options: ["10 वर्ष", "12 वर्ष", "14 वर्ष", "16 वर्ष"],
-      answer: 2
-    },
-    {
-      tier: "Easy",
-      q: "कुरुक्षेत्र युद्ध में अर्जुन के दिव्य धनुष का क्या नाम था?",
-      options: ["पिनाक", "गाण्डीव", "शारंग", "विजय"],
-      answer: 1
-    },
-    {
-      tier: "Easy",
-      q: "महाभारत युद्ध में भगवान श्रीकृष्ण किसके सारथी बने थे?",
-      options: ["युधिष्ठिर", "कर्ण", "भीम", "अर्जुन"],
-      answer: 3
-    },
-
-    // TIER 2: MEDIUM
-    {
-      tier: "Medium",
-      q: "समुद्र मंथन में रस्सी के रूप में किस नागराज का उपयोग किया गया था?",
-      options: ["शेषनाग", "वासुकि", "तक्षक", "कालिया"],
-      answer: 1
-    },
-    {
-      tier: "Medium",
-      q: "इंद्र देव ने कर्ण को अपने कुंडल-कवच के बदले कौन सा अमोघ अस्त्र दिया था?",
-      options: ["ब्रह्मास्त्र", "पाशुपतास्त्र", "वासवी शक्ति", "नारायणास्त्र"],
-      answer: 2
-    },
-    {
-      tier: "Medium",
-      q: "रामायण में बालि और सुग्रीव के पिता का क्या नाम था?",
-      options: ["ऋक्षराज", "केसरी", "जाम्बवन्त", "माल्यवान"],
-      answer: 0
-    },
-
-    // TIER 3: HARD
-    {
-      tier: "Hard",
-      q: "द्रौपदी का वास्तविक (जन्म) नाम क्या था?",
-      options: ["पांचाली", "कृष्णा", "याज्ञसेनी", "मालिनी"],
-      answer: 1
-    },
-    {
-      tier: "Hard",
-      q: "कौरवों में से एकमात्र भाई कौन था जिसने चीरहरण का खुलकर विरोध किया था?",
-      options: ["युयुत्सु", "विकर्ण", "चित्रसेन", "दुर्मुख"],
-      answer: 1
-    },
-    {
-      tier: "Hard",
-      q: "भगवान कार्तिकेय (स्कंद) के वाहन मोर का क्या नाम है?",
-      options: ["चित्ररथ", "बर्हिध्वज", "परवाणी", "मयूरदत्त"],
-      answer: 2
-    }
-  ];
-
-  let currentIndex = 0;
-  let isAnswerLocked = false;
-  let hasUsedLifeline = false;
-
+  // HUB NAVIGATION
   const storeView = document.getElementById("store-view");
   const quizView = document.getElementById("quiz-view");
-  const questionText = document.getElementById("questionText");
-  const optionsGrid = document.getElementById("optionsGrid");
-  const progressText = document.getElementById("progressText");
-  const tierTag = document.getElementById("tierTag");
-  const quizCard = document.getElementById("quizCard");
-  const resultCard = document.getElementById("resultCard");
-  const resultTitle = document.getElementById("resultTitle");
-  const resultMsg = document.getElementById("resultMsg");
-  const lifelineBtn = document.getElementById("lifelineBtn");
+  const whackView = document.getElementById("whack-view");
 
-  // VIEW SWITCHERS
   function openQuiz() {
     storeView.style.display = "none";
     quizView.style.display = "block";
@@ -588,16 +742,54 @@
     storeView.style.display = "block";
   }
 
-  // QUIZ LOGIC
+  function openWhack() {
+    storeView.style.display = "none";
+    whackView.style.display = "block";
+    startWhackGame();
+  }
+
+  function closeWhack() {
+    clearInterval(whackTimer);
+    clearTimeout(molePopTimeout);
+    clearTimeout(moleStayTimeout);
+    whackView.style.display = "none";
+    storeView.style.display = "block";
+  }
+
+  /* ================= DHARMA PRASHNOTTARI QUIZ ================= */
+  const questions = [
+    { tier: "Easy", q: "भगवान राम को कितने वर्षों का वनवास दिया गया था?", options: ["10 वर्ष", "12 वर्ष", "14 वर्ष", "16 वर्ष"], answer: 2 },
+    { tier: "Easy", q: "कुरुक्षेत्र युद्ध में अर्जुन के दिव्य धनुष का क्या नाम था?", options: ["पिनाक", "गाण्डीव", "शारंग", "विजय"], answer: 1 },
+    { tier: "Easy", q: "महाभारत युद्ध में भगवान श्रीकृष्ण किसके सारथी बने थे?", options: ["युधिष्ठिर", "कर्ण", "भीम", "अर्जुन"], answer: 3 },
+    { tier: "Medium", q: "समुद्र मंथन में रस्सी के रूप में किस नागराज का उपयोग किया गया था?", options: ["शेषनाग", "वासुकि", "तक्षक", "कालिया"], answer: 1 },
+    { tier: "Medium", q: "इंद्र देव ने कर्ण को अपने कुंडल-कवच के बदले कौन सा अमोघ अस्त्र दिया था?", options: ["ब्रह्मास्त्र", "पाशुपतास्त्र", "वासवी शक्ति", "नारायणास्त्र"], answer: 2 },
+    { tier: "Medium", q: "रामायण में बालि और सुग्रीव के पिता का क्या नाम था?", options: ["ऋक्षराज", "केसरी", "जाम्बवन्त", "माल्यवान"], answer: 0 },
+    { tier: "Hard", q: "द्रौपदी का वास्तविक (जन्म) नाम क्या था?", options: ["पांचाली", "कृष्णा", "याज्ञसेनी", "मालिनी"], answer: 1 },
+    { tier: "Hard", q: "कौरवों में से एकमात्र भाई कौन था जिसने चीरहरण का खुलकर विरोध किया था?", options: ["युयुत्सु", "विकर्ण", "चित्रसेन", "दुर्मुख"], answer: 1 },
+    { tier: "Hard", q: "भगवान कार्तिकेय (स्कंद) के वाहन मोर का क्या नाम है?", options: ["चित्ररथ", "बर्हिध्वज", "परवाणी", "मयूरदत्त"], answer: 2 }
+  ];
+
+  let currentIndex = 0;
+  let isAnswerLocked = false;
+  let hasUsedLifeline = false;
+
+  const questionText = document.getElementById("questionText");
+  const optionsGrid = document.getElementById("optionsGrid");
+  const progressText = document.getElementById("progressText");
+  const tierTag = document.getElementById("tierTag");
+  const quizCard = document.getElementById("quizCard");
+  const resultCard = document.getElementById("resultCard");
+  const resultTitle = document.getElementById("resultTitle");
+  const resultMsg = document.getElementById("resultMsg");
+  const lifelineBtn = document.getElementById("lifelineBtn");
+
   function loadQuestion() {
     isAnswerLocked = false;
     const current = questions[currentIndex];
-
     tierTag.className = `tier-badge tier-${current.tier}`;
     tierTag.innerText = current.tier;
     progressText.innerText = `QUESTION ${currentIndex + 1} / ${questions.length}`;
     questionText.innerText = current.q;
-
     optionsGrid.innerHTML = "";
     current.options.forEach((text, i) => {
       const btn = document.createElement("button");
@@ -612,26 +804,18 @@
     if (hasUsedLifeline || isAnswerLocked) return;
     hasUsedLifeline = true;
     lifelineBtn.disabled = true;
-
     const current = questions[currentIndex];
     const buttons = Array.from(optionsGrid.getElementsByTagName("button"));
-
     let wrongIndices = [0, 1, 2, 3].filter(idx => idx !== current.answer);
     wrongIndices.sort(() => Math.random() - 0.5);
-    const toRemove = wrongIndices.slice(0, 2);
-
-    toRemove.forEach(idx => {
-      buttons[idx].classList.add("hidden");
-    });
+    wrongIndices.slice(0, 2).forEach(idx => buttons[idx].classList.add("hidden"));
   }
 
   function selectOption(selectedBtn, selectedIndex) {
     if (isAnswerLocked) return;
     isAnswerLocked = true;
-
     const current = questions[currentIndex];
     const buttons = optionsGrid.getElementsByTagName("button");
-
     if (selectedIndex === current.answer) {
       playSfx("correct");
       selectedBtn.classList.add("correct");
@@ -647,24 +831,19 @@
       playSfx("wrong");
       selectedBtn.classList.add("wrong");
       buttons[current.answer].classList.add("correct");
-      setTimeout(() => {
-        showResult(false);
-      }, 1000);
+      setTimeout(() => showResult(false), 1000);
     }
   }
 
   function showResult(isWin) {
     quizCard.style.display = "none";
     resultCard.style.display = "block";
-
     if (isWin) {
       playSfx("win");
-      if (typeof confetti === 'function') {
-        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-      }
+      if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
       resultTitle.style.color = "var(--lime)";
       resultTitle.innerText = "🏆 VICTORY!";
-      resultMsg.innerText = "अद्भुत! आपने सभी कठिन प्रश्नों के सही उत्तर देकर विजय प्राप्त की है!";
+      resultMsg.innerText = "अद्भुत! आपने 'धर्म प्रश्नोत्तरी' के सभी कठिन प्रश्नों के सही उत्तर देकर विजय प्राप्त की है!";
     } else {
       resultTitle.style.color = "var(--danger)";
       resultTitle.innerText = "❌ GAME OVER";
@@ -679,6 +858,191 @@
     resultCard.style.display = "none";
     quizCard.style.display = "block";
     loadQuestion();
+  }
+
+  /* ================= WHACK-A-PANDA GAME ENGINE ================= */
+  let coins = 0;
+  let misses = 0;
+  let timeLeft = 20;
+  let whackTimer = null;
+  let molePopTimeout = null;
+  let moleStayTimeout = null;
+  let activeHole = null;
+  let isHoleHit = false;
+
+  const holes = document.querySelectorAll(".whack-arena .hole");
+  const scoreDisplay = document.getElementById("whackScore");
+  const missDisplay = document.getElementById("whackMisses");
+  const timeDisplay = document.getElementById("whackTime");
+  const whackGameplay = document.getElementById("whackGameplay");
+  const whackResultCard = document.getElementById("whackResultCard");
+  const whackResultTitle = document.getElementById("whackResultTitle");
+  const whackResultMsg = document.getElementById("whackResultMsg");
+  const playerNameInput = document.getElementById("playerNameInput");
+  const saveScoreBox = document.getElementById("saveScoreBox");
+  const leaderboardList = document.getElementById("leaderboardList");
+
+  // Attach tap event listeners
+  holes.forEach((hole) => {
+    hole.addEventListener("pointerdown", () => {
+      if (hole === activeHole && !isHoleHit) {
+        // Hit successfully
+        isHoleHit = true;
+        coins += 10;
+        scoreDisplay.innerText = coins;
+        playSfx("whack");
+        hole.classList.add("hit");
+        clearTimeout(moleStayTimeout);
+        setTimeout(() => {
+          hideMole();
+          scheduleNextMole();
+        }, 200);
+      }
+    });
+  });
+
+  function startWhackGame() {
+    coins = 0;
+    misses = 0;
+    timeLeft = 20;
+    activeHole = null;
+    isHoleHit = false;
+
+    scoreDisplay.innerText = coins;
+    missDisplay.innerText = `${misses}/10`;
+    timeDisplay.innerText = `${timeLeft}s`;
+
+    whackResultCard.style.display = "none";
+    whackGameplay.style.display = "block";
+
+    clearInterval(whackTimer);
+    clearTimeout(molePopTimeout);
+    clearTimeout(moleStayTimeout);
+
+    // Countdown Timer
+    whackTimer = setInterval(() => {
+      timeLeft--;
+      timeDisplay.innerText = `${timeLeft}s`;
+      if (timeLeft <= 0) {
+        finishWhackGame(false);
+      }
+    }, 1000);
+
+    scheduleNextMole();
+  }
+
+  function scheduleNextMole() {
+    if (timeLeft <= 0 || misses >= 10) return;
+    const delay = Math.floor(Math.random() * 400) + 300;
+    molePopTimeout = setTimeout(popMole, delay);
+  }
+
+  function popMole() {
+    if (timeLeft <= 0 || misses >= 10) return;
+
+    // Pick random hole distinct from previous
+    let nextHole;
+    do {
+      nextHole = holes[Math.floor(Math.random() * holes.length)];
+    } while (nextHole === activeHole);
+
+    activeHole = nextHole;
+    isHoleHit = false;
+    activeHole.classList.remove("hit");
+    activeHole.classList.add("active");
+
+    // Panda stays visible for 650ms - 850ms
+    const stayDuration = Math.max(550, 850 - Math.floor((20 - timeLeft) * 15));
+
+    moleStayTimeout = setTimeout(() => {
+      if (!isHoleHit) {
+        // Player missed this mole
+        misses++;
+        missDisplay.innerText = `${misses}/10`;
+        playSfx("miss");
+
+        if (misses >= 10) {
+          hideMole();
+          finishWhackGame(true);
+          return;
+        }
+      }
+      hideMole();
+      scheduleNextMole();
+    }, stayDuration);
+  }
+
+  function hideMole() {
+    if (activeHole) {
+      activeHole.classList.remove("active");
+      activeHole.classList.remove("hit");
+      activeHole = null;
+    }
+  }
+
+  function finishWhackGame(disqualified = false) {
+    clearInterval(whackTimer);
+    clearTimeout(molePopTimeout);
+    clearTimeout(moleStayTimeout);
+    hideMole();
+
+    whackGameplay.style.display = "none";
+    whackResultCard.style.display = "block";
+    saveScoreBox.style.display = "flex";
+    playerNameInput.value = "";
+
+    if (disqualified) {
+      playSfx("disqualified");
+      whackResultTitle.style.color = "var(--danger)";
+      whackResultTitle.innerText = "❌ DISQUALIFIED";
+      whackResultMsg.innerText = `You reached 10 misses! You gathered ${coins} coins before elimination.`;
+    } else {
+      playSfx("win");
+      if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      whackResultTitle.style.color = "var(--accent-2)";
+      whackResultTitle.innerText = "⏰ TIME'S UP!";
+      whackResultMsg.innerText = `Well done! You gathered a total of ${coins} coins with ${misses} misses!`;
+    }
+
+    renderLeaderboard();
+  }
+
+  // PERSISTENT LEADERBOARD LOGIC
+  function getLeaderboard() {
+    const data = localStorage.getItem("mk_whack_leaderboard");
+    if (!data) {
+      return [
+        { name: "Arjun", coins: 180 },
+        { name: "PandaMaster", coins: 140 },
+        { name: "KamakhyaFan", coins: 100 }
+      ];
+    }
+    return JSON.parse(data);
+  }
+
+  function renderLeaderboard() {
+    const list = getLeaderboard();
+    leaderboardList.innerHTML = "";
+    list.forEach((item, index) => {
+      const li = document.createElement("li");
+      li.className = "lb-row";
+      li.innerHTML = `
+        <span class="lb-name">#${index + 1} ${item.name}</span>
+        <span class="lb-coins">${item.coins} Coins</span>
+      `;
+      leaderboardList.appendChild(li);
+    });
+  }
+
+  function submitScore() {
+    const name = playerNameInput.value.trim() || "Player";
+    let list = getLeaderboard();
+    list.push({ name: name, coins: coins });
+    list.sort((a, b) => b.coins - a.coins);
+    list = list.slice(0, 5); // Keep Top 5
+    localStorage.setItem("mk_whack_leaderboard", JSON.stringify(list));
+    saveScoreBox.style.display = "none";
+    renderLeaderboard();
   }
 </script>
 </body>
