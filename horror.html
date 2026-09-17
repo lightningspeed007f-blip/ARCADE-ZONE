@@ -30,7 +30,7 @@ html, body {
     background: #050403;
 }
 
-canvas {
+canvas#canvas {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -61,18 +61,20 @@ canvas {
     position: absolute;
     top: 42px;
     left: 20px;
-    background: rgba(8, 5, 4, 0.85);
-    padding: 8px 16px;
+    background: rgba(8, 5, 4, 0.88);
+    padding: 10px 18px;
     border-left: 3px solid #8b0000;
     border-radius: 2px;
-    box-shadow: 0 0 14px rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.95);
+    max-width: 320px;
 }
 
 #objectiveLabel {
     font-size: 9px;
     letter-spacing: 2px;
-    color: #a87171;
+    color: #b56060;
     margin-bottom: 3px;
+    font-weight: bold;
 }
 
 #objective {
@@ -80,6 +82,7 @@ canvas {
     color: #f2e6dc;
     letter-spacing: 1px;
     text-shadow: 0 2px 5px black;
+    line-height: 1.4;
 }
 
 #interactionPrompt {
@@ -87,10 +90,10 @@ canvas {
     left: 50%;
     top: 62%;
     transform: translateX(-50%);
-    background: rgba(15, 10, 8, .92);
-    border: 1px solid rgba(212, 160, 100, .6);
+    background: rgba(15, 10, 8, .94);
+    border: 1px solid rgba(212, 160, 100, .7);
     color: #f5deb3;
-    padding: 9px 22px;
+    padding: 9px 24px;
     border-radius: 20px;
     font-size: 13px;
     letter-spacing: 2px;
@@ -112,14 +115,15 @@ canvas {
     font-size: 15px;
     letter-spacing: 1.5px;
     color: #f5efe6;
-    background: rgba(12, 6, 5, .9);
+    background: rgba(12, 6, 5, .92);
     padding: 12px 24px;
     border-radius: 4px;
-    border: 1px solid rgba(160, 30, 30, .4);
+    border: 1px solid rgba(160, 30, 30, .5);
     text-shadow: 0 2px 8px #000;
     opacity: 0;
     transition: .35s;
     pointer-events: none;
+    line-height: 1.5;
 }
 
 #crosshair {
@@ -198,7 +202,7 @@ canvas {
 }
 
 #startScreen {
-    background: radial-gradient(circle at center, rgba(40, 20, 15, .7), rgba(4, 2, 2, .98));
+    background: radial-gradient(circle at center, rgba(40, 20, 15, .75), rgba(4, 2, 2, .98));
 }
 
 #startScreen h1 {
@@ -211,11 +215,11 @@ canvas {
 }
 
 #startScreen p {
-    opacity: .75;
+    opacity: .8;
     font-size: 13px;
     letter-spacing: 3px;
     margin-bottom: 34px;
-    max-width: 520px;
+    max-width: 580px;
     line-height: 1.8;
 }
 
@@ -242,7 +246,7 @@ canvas {
 }
 
 #endScreen {
-    background: radial-gradient(circle at center, rgba(45, 15, 15, .75), rgba(3, 1, 1, .99));
+    background: radial-gradient(circle at center, rgba(45, 15, 15, .8), rgba(3, 1, 1, .99));
 }
 
 #endScreen h1 {
@@ -259,7 +263,7 @@ canvas {
     font-size: 14px;
     letter-spacing: 3px;
     margin-bottom: 34px;
-    max-width: 540px;
+    max-width: 560px;
     line-height: 1.9;
     color: #ebd6cc;
 }
@@ -338,7 +342,7 @@ canvas {
     align-items: center;
     justify-content: center;
     color: #ff2a2a;
-    font-size: 28px;
+    font-size: 32px;
     letter-spacing: 12px;
     opacity: 0;
     pointer-events: none;
@@ -368,8 +372,9 @@ canvas {
         <div id="title">THE LAST NIGHT</div>
         <div id="objectiveBox">
             <div id="objectiveLabel">OBJECTIVE</div>
-            <div id="objective">Find a way out.</div>
+            <div id="objective">Navigate the labyrinthine maze. Locate the random exit key and survive Ravi.</div>
         </div>
+
         <div id="interactionPrompt">[E] INTERACT</div>
         <div id="message"></div>
         <div id="crosshair"></div>
@@ -383,54 +388,53 @@ canvas {
 
     <div id="startScreen" class="screen">
         <h1>THE LAST NIGHT</h1>
-        <p>YOU HAVE ONLY ONE LIFE.<br>SEARCH THE MANSION ROOMS, LOCATE THE KEY, AND ESCAPE BEFORE IT FINDS YOU.</p>
+        <p>THE MAZE LARRY EXTENDS INTO ENDLESS SHADOWS.<br>FIND THE SHIFTING KEY, EXPLORE THE 10-POSTER GALLERY, AND ESCAPE.<br>RAVI WAITS IN THE DARK.</p>
         <button class="btn" onclick="startGame()">ENTER</button>
     </div>
 
     <div id="gameOverScreen" class="screen" style="display:none">
         <h1>“Jaldi The Late”</h1>
-        <p>You were caught in the dark. There are no second chances.</p>
+        <p>You were caught in the maze. There are no second chances.</p>
         <button class="btn deathBtn" onclick="restartGame()">TRY AGAIN</button>
     </div>
 
     <div id="endScreen" class="screen" style="display:none">
         <h1>“RAVI KA BADLA”</h1>
-        <p>You burst through the iron gate into the freezing mist.<br>The heavy lock shatters behind you, but a quiet silhouette lingers in the doorway.<br><br>The mansion remains... and the reckoning has only begun.</p>
+        <p>You break through the heavy iron gate into the freezing mist.<br>The heavy lock shatters behind you, but a quiet silhouette lingers in the doorway.<br><br>The maze remains... and the reckoning has only begun.</p>
         <button class="btn deathBtn" onclick="restartGame()">PLAY AGAIN</button>
     </div>
 </div>
 
-<!-- ================= AUDIO ENGINE ELEMENTS ================= -->
-<audio id="ambient" loop src="ambient.mp3"></audio>
-<audio id="footstep" src="footstep.mp3"></audio>
-<audio id="unlock" src="unlock.mp3"></audio>
+<!-- ================= AUDIO ENGINE ELEMENTS WITH PRELOAD ================= -->
+<audio id="ambient" loop preload="auto" src="ambient.mp3"></audio>
+<audio id="footstep" preload="auto" src="footstep.mp3"></audio>
+<audio id="unlock" preload="auto" src="unlock.mp3"></audio>
 
-<audio id="chilla1" src="chilla1.mp3"></audio>
-<audio id="chilla2" src="chilla2.mp3"></audio>
-<audio id="chilla3" src="chilla3.mp3"></audio>
+<audio id="chilla1" preload="auto" src="chilla1.mp3"></audio>
+<audio id="chilla2" preload="auto" src="chilla2.mp3"></audio>
+<audio id="chilla3" preload="auto" src="chilla3.mp3"></audio>
 
-<audio id="bhag1" src="bhag1.mp3"></audio>
-<audio id="bhag2" src="bhag2.mp3"></audio>
-<audio id="bhag3" src="bhag3.mp3"></audio>
+<audio id="bhag1" preload="auto" src="bhag1.mp3"></audio>
+<audio id="bhag2" preload="auto" src="bhag2.mp3"></audio>
+<audio id="bhag3" preload="auto" src="bhag3.mp3"></audio>
 
-<audio id="bhoot1" src="bhoot1.mp3"></audio>
-<audio id="bhoot2" src="bhoot2.mp3"></audio>
-<audio id="bhoot3" src="bhoot3.mp3"></audio>
+<audio id="bhoot1" preload="auto" src="bhoot1.mp3"></audio>
+<audio id="bhoot2" preload="auto" src="bhoot2.mp3"></audio>
+<audio id="bhoot3" preload="auto" src="bhoot3.mp3"></audio>
 
-<audio id="billu1" src="billu1.mp3"></audio>
-<audio id="billu2" src="billu2.mp3"></audio>
+<audio id="billu1" preload="auto" src="billu1.mp3"></audio>
+<audio id="billu2" preload="auto" src="billu2.mp3"></audio>
 
 <script>
-/* ================= SYSTEM ARCHITECTURE & HIGH-DPI CANVAS ================= */
+/* ================= SYSTEM ARCHITECTURE & CANVAS ================= */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { alpha: false });
 
 let W = 0;
 let H = 0;
-const RAYS = 360;
+const RAYS = 380;
 const zBuffer = new Float32Array(RAYS);
 
-// Cached ambient background gradients to prevent garbage collection frame drops
 let cachedCeilGrad = null;
 let cachedFloorGrad = null;
 let cachedRunnerGrad = null;
@@ -439,41 +443,54 @@ function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
 
-    // Precompute environment canvas gradients
     cachedCeilGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
-    cachedCeilGrad.addColorStop(0, "#100b08");
+    cachedCeilGrad.addColorStop(0, "#120c09");
     cachedCeilGrad.addColorStop(1, "#050302");
 
     cachedFloorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    cachedFloorGrad.addColorStop(0, "#160c08");
+    cachedFloorGrad.addColorStop(0, "#180d09");
     cachedFloorGrad.addColorStop(1, "#020101");
 
-    cachedRunnerGrad = ctx.createRadialGradient(W / 2, H * 0.78, 20, W / 2, H * 0.78, W * 0.45);
-    cachedRunnerGrad.addColorStop(0, "rgba(70, 8, 8, 0.24)");
+    cachedRunnerGrad = ctx.createRadialGradient(W / 2, H * 0.78, 20, W / 2, H * 0.78, W * 0.48);
+    cachedRunnerGrad.addColorStop(0, "rgba(75, 8, 8, 0.26)");
     cachedRunnerGrad.addColorStop(1, "transparent");
 }
 window.addEventListener("resize", resize);
 resize();
 
-/* ================= 17x17 HAUNTED MANSION MAP ================= */
+/* ================= 31x31 EXPANDED LABYRINTH MAZE MAP ================= */
 const map = [
-    "#################", // 0  (7, 0 South Face) = Misty 1
-    "#...............#", // 1  North Grand Corridor
-    "#.#####.#.#####.#", // 2  (4, 2 South Face) = Occult Portrait
-    "#.#...#.#.#...#.#", // 3  (13.5, 3.2)=Dining Table & Note
-    "#.#...#.#.#...#.#", // 4  (4.5, 4.2)=Creepy Mannequin I
-    "#.#.###.#.###.#.#", // 5  (0, 5 East Face) = Misty 2
-    "#...............#", // 6  Upper Hallway Crossroads
-    "###.###.#.###.###", // 7  (10, 7 South Face) = Misty 3 | (12.5, 7.5)=Creepy Mannequin II
-    "#...#.......#...#", // 8  Central Grand Rotunda
-    "###.###.#.###.###", // 9
-    "#...............#", // 10 Lower Hallway Crossroads (0, 10 East Face) = Misty 4
-    "#.#.###.#.###.#.#", // 11
-    "#.#...#.#.#...#.#", // 12 (3.5, 13.5)=Clock | (13.5, 13.5)=Key Vault
-    "#.#...#.#.#...#.#", // 13 (6.5, 13.5)=Creepy Mannequin III
-    "#.#####.#.#####.#", // 14
-    "#...............#", // 15 South Exit Corridor
-    "#################"  // 16 (11, 16 North Face) = Misty 5
+    "###############################", // 0
+    "#.#.......#...........#.......#", // 1
+    "#.#.###.#.###.#######.#.###.#.#", // 2
+    "#...#...#.....#.....#...#...#.#", // 3
+    "###.#.#####.###.###.#####.#.###", // 4
+    "#.....#.....#.....#.......#...#", // 5
+    "#.#####.#####.###.#####.#####.#", // 6
+    "#.#.....#.....#.#.....#.....#.#", // 7
+    "#.#.#####.###.#.###.#####.###.#", // 8
+    "#.#.......#.....#.......#.....#", // 9 (Poster Room Corridor Zone)
+    "#.#######.#.#####.#####.#####.#", // 10
+    "#.......#.#.....#.....#.......#", // 11
+    "###.###.#.#####.#.###.#######.#", // 12
+    "#...#.....#.....#.#...........#", // 13
+    "#.###.#########.#.#############", // 14
+    "#.#...#.......#.#.............#", // 15 (Central Labyrinth Rotunda)
+    "#.#.###.#####.#.#############.#", // 16
+    "#.#.....#.....#...............#", // 17
+    "#.#####.#####.###############.#", // 18
+    "#.....#.......#...............#", // 19
+    "#####.#########.#############.#", // 20
+    "#.....#.......#.....#.........#", // 21
+    "#.###.#######.#####.#.#######.#", // 22
+    "#.#...#.....#.....#.#.#.......#", // 23
+    "#.#.###.###.#.###.#.#.#.###.###", // 24
+    "#...#.....#.#.#...#...#...#...#", // 25
+    "###.#####.#.#.#.#########.#####", // 26
+    "#.......#.#...#.......#.......#", // 27
+    "#.#####.#.###########.#.###.###", // 28
+    "#.....#...............#...#...#", // 29 (South Exit & Clock Chamber)
+    "###############################"  // 30
 ];
 
 const MAP_W = map[0].length;
@@ -489,6 +506,71 @@ function isWall(x, y) {
 function wallNoise(x, y) {
     const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
     return n - Math.floor(n);
+}
+
+/* ================= AUTOMATIC TRANSPARENCY PROCESSOR ================= */
+function makeTransparentFromBorders(imageSource, brightnessThreshold = 160) {
+    const offCanvas = document.createElement("canvas");
+    const w = imageSource.naturalWidth || imageSource.width;
+    const h = imageSource.naturalHeight || imageSource.height;
+    offCanvas.width = w;
+    offCanvas.height = h;
+
+    const offCtx = offCanvas.getContext("2d", { willReadFrequently: true });
+    offCtx.drawImage(imageSource, 0, 0);
+
+    try {
+        const imgData = offCtx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+        const visited = new Uint8Array(w * h);
+        const queue = [];
+
+        function isCheckeredOrBg(idx) {
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            if (a < 10) return true;
+
+            const diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            return (diff < 28 && luminance > brightnessThreshold) || luminance > 242;
+        }
+
+        for (let x = 0; x < w; x++) {
+            queue.push(x, 0);
+            queue.push(x, h - 1);
+        }
+        for (let y = 0; y < h; y++) {
+            queue.push(0, y);
+            queue.push(w - 1, y);
+        }
+
+        while (queue.length > 0) {
+            const cy = queue.pop();
+            const cx = queue.pop();
+            const pIdx = cy * w + cx;
+
+            if (visited[pIdx]) continue;
+            visited[pIdx] = 1;
+
+            const dataIdx = pIdx * 4;
+            if (isCheckeredOrBg(dataIdx)) {
+                data[dataIdx + 3] = 0;
+
+                if (cx > 0 && !visited[pIdx - 1]) queue.push(cx - 1, cy);
+                if (cx < w - 1 && !visited[pIdx + 1]) queue.push(cx + 1, cy);
+                if (cy > 0 && !visited[pIdx - w]) queue.push(cx, cy - 1);
+                if (cy < h - 1 && !visited[pIdx + w]) queue.push(cx, cy + 1);
+            }
+        }
+
+        offCtx.putImageData(imgData, 0, 0);
+    } catch (err) {
+        console.warn("Background auto-strip bypassed:", err);
+    }
+
+    return offCanvas;
 }
 
 /* ================= PROCEDURAL SPRITE RENDER CACHE ================= */
@@ -507,11 +589,12 @@ const spriteCanvases = {
     door: createOffscreen(160, 256),
     key: createOffscreen(96, 96),
     mannequinFallback: createOffscreen(128, 256),
-    mistyFallback: createOffscreen(128, 160)
+    dugguFallback: createOffscreen(128, 160),
+    altar: createOffscreen(192, 160)
 };
 
 function renderOffscreenSpriteCaches() {
-    // 1. CLOCK
+    // Grandfather Clock
     let c = spriteCanvases.clock;
     let cx = c.getContext("2d");
     cx.fillStyle = "#22130c";
@@ -532,7 +615,7 @@ function renderOffscreenSpriteCaches() {
     cx.lineTo(76, 88);
     cx.stroke();
 
-    // 2. TABLE
+    // Table with Candle
     c = spriteCanvases.table;
     cx = c.getContext("2d");
     cx.fillStyle = "#341d13";
@@ -546,7 +629,7 @@ function renderOffscreenSpriteCaches() {
     cx.arc(129, 20, 10, 0, Math.PI * 2);
     cx.fill();
 
-    // 3. NOTE
+    // Parchment Note
     c = spriteCanvases.note;
     cx = c.getContext("2d");
     cx.fillStyle = "#d0be96";
@@ -556,7 +639,7 @@ function renderOffscreenSpriteCaches() {
     cx.textAlign = "center";
     cx.fillText("RUN", 48, 54);
 
-    // 4. PAINTING (Occult Portrait)
+    // Occult Painting
     c = spriteCanvases.painting;
     cx = c.getContext("2d");
     cx.fillStyle = "#2c1a0e";
@@ -573,7 +656,7 @@ function renderOffscreenSpriteCaches() {
     cx.arc(72, 64, 3, 0, Math.PI * 2);
     cx.fill();
 
-    // 5. DOOR
+    // Exit Door
     c = spriteCanvases.door;
     cx = c.getContext("2d");
     cx.fillStyle = "#22120a";
@@ -588,7 +671,7 @@ function renderOffscreenSpriteCaches() {
     cx.arc(80, 144, 5, 0, Math.PI * 2);
     cx.fill();
 
-    // 6. KEY
+    // Key
     c = spriteCanvases.key;
     cx = c.getContext("2d");
     cx.strokeStyle = "#ffd700";
@@ -605,7 +688,7 @@ function renderOffscreenSpriteCaches() {
     cx.lineTo(80, 58);
     cx.stroke();
 
-    // 7. MANNEQUIN FALLBACK
+    // Mannequin Fallback
     c = spriteCanvases.mannequinFallback;
     cx = c.getContext("2d");
     cx.fillStyle = "#1c1109";
@@ -623,8 +706,8 @@ function renderOffscreenSpriteCaches() {
     cx.arc(70, 58, 3, 0, Math.PI * 2);
     cx.fill();
 
-    // 8. MISTY FALLBACK
-    c = spriteCanvases.mistyFallback;
+    // Duggu Fallback
+    c = spriteCanvases.dugguFallback;
     cx = c.getContext("2d");
     cx.fillStyle = "#3b2a14";
     cx.fillRect(10, 10, 108, 140);
@@ -632,92 +715,77 @@ function renderOffscreenSpriteCaches() {
     cx.strokeRect(12, 12, 104, 136);
     cx.fillStyle = "#0d0908";
     cx.fillRect(18, 18, 92, 124);
-    cx.fillStyle = "#701a1a";
+    cx.fillStyle = "#8a1111";
     cx.font = "italic 13px serif";
     cx.textAlign = "center";
-    cx.fillText("MISTY", 64, 82);
+    cx.fillText("DUGGU", 64, 82);
 }
 renderOffscreenSpriteCaches();
 
 /* ================= ASSET LOADERS ================= */
-const ghostImg = new Image();
-ghostImg.src = "ghost.png";
+let ghostCanvas = null;
 let ghostImgLoaded = false;
-ghostImg.onload = () => { ghostImgLoaded = true; };
+const rawGhost = new Image();
+rawGhost.crossOrigin = "anonymous";
+rawGhost.src = "ghost.png";
+rawGhost.onload = () => {
+    ghostCanvas = makeTransparentFromBorders(rawGhost, 150);
+    ghostImgLoaded = true;
+};
 
-const mistyPics = [];
-for (let i = 1; i <= 5; i++) {
-    const item = { img: new Image(), loaded: false };
-    item.img.src = `misty${i}.jpg`;
-    item.img.onload = () => { item.loaded = true; };
-    item.img.onerror = () => {
-        if (!item.img.src.endsWith(".png")) {
-            item.img.src = `misty${i}.png`;
-        }
-    };
-    mistyPics.push(item);
-}
-
-const putlaPics = [];
+// Duggu 1 & 2 image loader for the 10-poster room
+const dugguPics = [];
 for (let i = 1; i <= 2; i++) {
     const item = { img: new Image(), loaded: false };
-    item.img.src = `putla${i}.png`;
+    item.img.crossOrigin = "anonymous";
+    item.img.src = `duggu${i}.png`;
     item.img.onload = () => { item.loaded = true; };
     item.img.onerror = () => {
         if (!item.img.src.endsWith(".jpg")) {
-            item.img.src = `putla${i}.jpg`;
+            item.img.src = `duggu${i}.jpg`;
+        }
+    };
+    dugguPics.push(item);
+}
+
+// Mannequins (putla1, putla2)
+const putlaPics = [];
+for (let i = 1; i <= 2; i++) {
+    const item = { canvas: null, loaded: false };
+    const rawPutla = new Image();
+    rawPutla.crossOrigin = "anonymous";
+    rawPutla.src = `putla${i}.png`;
+    rawPutla.onload = () => {
+        item.canvas = makeTransparentFromBorders(rawPutla, 160);
+        item.loaded = true;
+    };
+    rawPutla.onerror = () => {
+        if (!rawPutla.src.endsWith(".jpg")) {
+            rawPutla.src = `putla${i}.jpg`;
         }
     };
     putlaPics.push(item);
 }
 
-/* ================= WALL-MOUNTED POSTERS (PROPER PERSPECTIVE & SCALE) ================= */
+/* ================= WALL POSTERS (INCLUDING 10 POSTERS IN DEDICATED ROOM) ================= */
 const wallPosters = {
-    // Occult Portrait in North Room (South face of wall tile [4,2])
-    "4,2,S": {
-        id: "painting",
-        getDrawable: () => spriteCanvases.painting
-    },
-    // Misty 1 in North Corridor (South face of outer wall [7,0])
-    "7,0,S": {
-        id: "misty1",
-        getDrawable: () => {
-            const p = mistyPics[0];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    // Misty 2 in West Corridor (East face of outer wall [0,5])
-    "0,5,E": {
-        id: "misty2",
-        getDrawable: () => {
-            const p = mistyPics[1];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    // Misty 3 in Central Grand Rotunda (South face of rotunda wall [10,7])
-    "10,7,S": {
-        id: "misty3",
-        getDrawable: () => {
-            const p = mistyPics[2];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    // Misty 4 in Lower Crossroads (East face of outer wall [0,10])
-    "0,10,E": {
-        id: "misty4",
-        getDrawable: () => {
-            const p = mistyPics[3];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    // Misty 5 in South Exit Corridor (North face of outer wall [11,16])
-    "11,16,N": {
-        id: "misty5",
-        getDrawable: () => {
-            const p = mistyPics[4];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    }
+    // 10 Posters positioned along row 9 (Poster Gallery Room)
+    "2,9,N": { id: "duggu1_1", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "4,9,N": { id: "duggu2_1", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+    "6,9,N": { id: "duggu1_2", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "8,9,N": { id: "duggu2_2", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+    "10,9,N": { id: "duggu1_3", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "12,9,N": { id: "duggu2_3", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+    "14,9,N": { id: "duggu1_4", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "16,9,N": { id: "duggu2_4", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+    "18,9,N": { id: "duggu1_5", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "20,9,N": { id: "duggu2_5", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+
+    // Additional Wall Murals
+    "4,0,S": { id: "painting", getDrawable: () => spriteCanvases.painting },
+    "15,0,S": { id: "duggu1_extra", getDrawable: () => (dugguPics[0].loaded ? dugguPics[0].img : spriteCanvases.dugguFallback) },
+    "30,15,W": { id: "duggu2_extra", getDrawable: () => (dugguPics[1].loaded ? dugguPics[1].img : spriteCanvases.dugguFallback) },
+    "15,30,N": { id: "exitSeal", getDrawable: () => spriteCanvases.painting }
 };
 
 /* ================= GAME STATE ================= */
@@ -739,8 +807,8 @@ const FOV = Math.PI / 3;
 const player = {
     x: 1.5,
     y: 1.5,
-    angle: 0.1,
-    speed: 2.3,
+    angle: Math.PI / 4,
+    speed: 2.6,
     radius: 0.22,
     headBob: 0
 };
@@ -754,7 +822,7 @@ document.addEventListener("keyup", e => {
     keys[e.key.toLowerCase()] = false;
 });
 
-/* ================= BFS PATHFINDING FOR GHOST ================= */
+/* ================= BFS PATHFINDING FOR GHOST (31x31 GRID) ================= */
 function getBFSPath(startX, startY, targetX, targetY) {
     const sx = Math.floor(startX);
     const sy = Math.floor(startY);
@@ -804,10 +872,10 @@ function getBFSPath(startX, startY, targetX, targetY) {
 
 /* ================= AGGRESSIVE GHOST ENEMY ================= */
 const ghostEnemy = {
-    x: 8.5,
-    y: 8.5,
+    x: 15.5,
+    y: 15.5,
     active: false,
-    speed: 1.85,
+    speed: 2.1,
     state: "idle",
     path: [],
     pathTimer: 0,
@@ -815,221 +883,216 @@ const ghostEnemy = {
     bobAngle: 0
 };
 
-/* ================= WORLD OBJECTS (INTERACTION & SOUND TRIGGERS) ================= */
+/* ================= EXPANDED WORLD OBJECTS & RANDOM KEY SPAWN ================= */
 const worldObjects = [
     {
-        id: "painting",
-        x: 4.0,
-        y: 3.35,
-        type: "painting",
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] EXAMINE PORTRAIT",
-        mobileText: "EXAMINE",
-        examineMsg: "The eyes follow your movement. Cold breath touches your neck."
+        id: "clock",
+        x: 15.5,
+        y: 28.5,
+        type: "clock",
+        w: 0.85,
+        h: 1.8,
+        actionText: "[E] EXAMINE GRANDFATHER CLOCK",
+        mobileText: "CLOCK",
+        examineMsg: "A towering pendulum clock frozen at 3:17. A mechanism clicks within."
     },
     {
-        id: "table",
-        x: 13.5,
-        y: 3.2,
-        type: "table",
-        w: 1.5,
-        h: 1.1,
-        actionText: "[E] INSPECT TABLE",
-        mobileText: "INSPECT",
-        examineMsg: "An old wooden dining table. A candle flickers silently in the dark."
+        id: "door",
+        x: 15.5,
+        y: 29.5,
+        type: "door",
+        w: 1.25,
+        h: 2.1,
+        actionText: "[E] OPEN EXIT GATE",
+        mobileText: "EXIT GATE",
+        examineMsg: "The heavy iron gate leading into the mist. Secured by thick chains."
     },
     {
         id: "note",
-        x: 13.8,
-        y: 3.8,
+        x: 15.5,
+        y: 14.5,
         type: "note",
         w: 0.6,
         h: 0.6,
         actionText: "[E] READ PARCHMENT",
-        mobileText: "READ",
-        examineMsg: "A bloody scribbled note: 'THE KEY IS WHERE THE CLOCK STOPPED.'"
+        mobileText: "READ NOTE",
+        examineMsg: "A bloody note: 'THE KEY SHIFTS THROUGH THE LABYRINTH. BEWARE RAVI.'"
     },
     {
-        id: "clock",
-        x: 3.5,
-        y: 13.5,
-        type: "clock",
-        w: 0.85,
+        id: "mannequin1",
+        x: 5.5,
+        y: 5.5,
+        type: "mannequin",
+        picIndex: 0,
+        w: 0.88,
         h: 1.8,
-        actionText: "[E] CHECK CLOCK",
-        mobileText: "CLOCK",
-        examineMsg: "A towering grandfather clock. Frozen at 3:17."
+        actionText: "[E] EXAMINE MANNEQUIN",
+        mobileText: "MANNEQUIN",
+        examineMsg: "A porcelain mannequin in the dark corridor. Its head turns slightly."
+    },
+    {
+        id: "mannequin2",
+        x: 25.5,
+        y: 25.5,
+        type: "mannequin",
+        picIndex: 1,
+        w: 0.88,
+        h: 1.8,
+        actionText: "[E] EXAMINE MANNEQUIN",
+        mobileText: "MANNEQUIN",
+        examineMsg: "Standing frozen in the labyrinth dead-end. Cold air radiates from its fingers."
     },
     {
         id: "key",
-        x: 13.5,
-        y: 13.5,
+        x: 22.5,
+        y: 5.5, // Will be randomized on start/restart
         type: "key",
         w: 0.7,
         h: 0.7,
         actionText: "[E] TAKE EXIT KEY",
         mobileText: "TAKE KEY",
-        examineMsg: "A heavy, rusted iron key. Cold as ice."
-    },
-    {
-        id: "door",
-        x: 15.5,
-        y: 15.2,
-        type: "door",
-        w: 1.25,
-        h: 2.1,
-        actionText: "[E] OPEN EXIT DOOR",
-        mobileText: "OPEN DOOR",
-        examineMsg: "A reinforced iron door leading outside. Bolted shut."
-    },
-    // MISTY PORTRAITS (Cleanly anchored in walkable areas in front of wall mounts)
-    {
-        id: "misty1",
-        x: 7.5,
-        y: 1.35,
-        type: "mistyPortrait",
-        picIndex: 0,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty I: The painted eyes stare directly into your soul."
-    },
-    {
-        id: "misty2",
-        x: 1.35,
-        y: 5.5,
-        type: "mistyPortrait",
-        picIndex: 1,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty II: Dried crimson streaks drip beneath the vintage glass."
-    },
-    {
-        id: "misty3",
-        x: 10.5,
-        y: 8.35,
-        type: "mistyPortrait",
-        picIndex: 2,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty III: An ornate frame in the shadows. You hear faint whispering."
-    },
-    {
-        id: "misty4",
-        x: 1.35,
-        y: 10.5,
-        type: "mistyPortrait",
-        picIndex: 3,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty IV: Cold air radiates from the wooden mount."
-    },
-    {
-        id: "misty5",
-        x: 11.5,
-        y: 15.65,
-        type: "mistyPortrait",
-        picIndex: 4,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty V: Written beneath the frame: 'Ravi Ka Badla'..."
-    },
-    // MANNEQUINS
-    {
-        id: "mannequin1",
-        x: 4.5,
-        y: 4.2,
-        type: "mannequin",
-        picIndex: 0,
-        w: 1.0,
-        h: 1.9,
-        actionText: "[E] EXAMINE MANNEQUIN",
-        mobileText: "EXAMINE",
-        examineMsg: "A motionless mannequin stands beneath the dead light. Was it facing you before?"
-    },
-    {
-        id: "mannequin2",
-        x: 12.5,
-        y: 7.5,
-        type: "mannequin",
-        picIndex: 1,
-        w: 1.0,
-        h: 1.9,
-        actionText: "[E] EXAMINE MANNEQUIN",
-        mobileText: "EXAMINE",
-        examineMsg: "A faceless figure waits in the corridor. You swear it was somewhere else a moment ago."
+        examineMsg: "A heavy, rusted iron key. Cold as death."
     }
 ];
 
-/* ================= AUDIO ENGINE ================= */
-function playSound(id, volume = 1.0) {
+function randomizeKeyLocation() {
+    const validFloors = [];
+    for (let y = 1; y < MAP_H - 1; y++) {
+        for (let x = 1; x < MAP_W - 1; x++) {
+            if (map[y][x] === '.' && Math.hypot(x - player.x, y - player.y) > 5) {
+                validFloors.push({ x: x + 0.5, y: y + 0.5 });
+            }
+        }
+    }
+    if (validFloors.length > 0) {
+        const randTile = validFloors[Math.floor(Math.random() * validFloors.length)];
+        const keyObj = worldObjects.find(o => o.id === "key");
+        if (keyObj) {
+            keyObj.x = randTile.x;
+            keyObj.y = randTile.y;
+        }
+    }
+}
+
+/* ================= NORMALIZED AUDIO ENGINE (<= 6.0 SECONDS MAX) ================= */
+const activeAudioTimers = {};
+const allSfxIds = [
+    "footstep", "unlock",
+    "chilla1", "chilla2", "chilla3",
+    "bhag1", "bhag2", "bhag3",
+    "bhoot1", "bhoot2", "bhoot3",
+    "billu1", "billu2"
+];
+
+allSfxIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
+        el.addEventListener("timeupdate", () => {
+            if (el.currentTime >= 6.0) {
+                el.pause();
+                try { el.currentTime = 0; } catch (e) {}
+            }
+        });
+    }
+});
+
+function stopSound(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (activeAudioTimers[id]) {
+        clearTimeout(activeAudioTimers[id]);
+        delete activeAudioTimers[id];
+    }
+    el.pause();
+    try { el.currentTime = 0; } catch (e) {}
+}
+
+function playSound(id, volume = 1.0, maxDuration = 6.0) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (activeAudioTimers[id]) {
+        clearTimeout(activeAudioTimers[id]);
+        delete activeAudioTimers[id];
+    }
+
+    try {
+        el.pause();
         el.currentTime = 0;
-        el.volume = volume;
-        el.play().catch(() => {});
+    } catch (e) {}
+
+    el.volume = Math.max(0, Math.min(1, volume));
+    const playPromise = el.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+    }
+
+    if (maxDuration > 0) {
+        activeAudioTimers[id] = setTimeout(() => {
+            try {
+                el.pause();
+                el.currentTime = 0;
+            } catch (e) {}
+            delete activeAudioTimers[id];
+        }, maxDuration * 1000);
     }
 }
 
 function playRandomFrom(prefix, count, volume = 1.0) {
     const n = Math.floor(Math.random() * count) + 1;
-    playSound(prefix + n, volume);
+    playSound(prefix + n, volume, 6.0);
 }
 
-let distantScreamTimer = 6.0;
+let distantScreamTimer = 7.0;
 let chaseSoundTimer = 1.5;
-let mistySoundTimer = 0;
-let lastMistySoundId = null;
+let proximitySoundTimer = 0;
+let lastProximityObjId = null;
 
 function playDistantGhostScream() {
-    playRandomFrom("chilla", 3, 0.82);
+    playRandomFrom("chilla", 3, 0.85);
 }
 
 function playGhostChaseSound() {
     playRandomFrom("bhag", 3, 0.9);
 }
 
-function playMistyProximitySound(obj) {
-    if (!obj || obj.type !== "mistyPortrait") return;
-    if (obj.id === lastMistySoundId && mistySoundTimer > 0) return;
+function checkProximityAudio() {
+    if (proximitySoundTimer > 0) return;
 
-    if (["misty1", "misty3", "misty5"].includes(obj.id)) {
-        playRandomFrom("bhoot", 3, 0.78);
-    } else if (["misty2", "misty4"].includes(obj.id)) {
-        playRandomFrom("billu", 2, 0.78);
+    let nearest = null;
+    let minD = Infinity;
+
+    for (let i = 0; i < worldObjects.length; i++) {
+        const obj = worldObjects[i];
+        if (!["mannequin"].includes(obj.type)) continue;
+
+        const d = Math.hypot(player.x - obj.x, player.y - obj.y);
+        if (d < minD) {
+            minD = d;
+            nearest = obj;
+        }
     }
 
-    lastMistySoundId = obj.id;
-    mistySoundTimer = 5.0;
+    if (nearest && minD <= 2.4) {
+        if (nearest.id === lastProximityObjId && proximitySoundTimer > 0) return;
+        playRandomFrom("chilla", 3, 0.85);
+        triggerGlitch();
+        lastProximityObjId = nearest.id;
+        proximitySoundTimer = 4.5;
+    }
 }
 
 let footstepTimer = 0;
 function triggerFootstep(dt) {
     footstepTimer += dt;
-    if (footstepTimer > 0.42) {
+    if (footstepTimer > 0.38) {
         footstepTimer = 0;
-        const foot = document.getElementById("footstep");
-        if (foot) {
-            foot.currentTime = 0;
-            foot.volume = 0.25;
-            foot.play().catch(() => {});
-        }
+        playSound("footstep", 0.25, 0.4);
     }
 }
 
-/* ================= DDA RAYCASTER WITH WALL-MOUNTED POSTER DECALS ================= */
+/* ================= DDA RAYCASTER ================= */
 function drawWorld() {
-    // 1. Draw precomputed background gradients
     ctx.fillStyle = cachedCeilGrad;
     ctx.fillRect(0, 0, W, H * 0.5);
 
@@ -1078,8 +1141,8 @@ function drawWorld() {
         }
 
         let hit = false;
-        let side = 0; // 0 = X-wall (EW), 1 = Y-wall (NS)
-        let safeSteps = 45;
+        let side = 0;
+        let safeSteps = 90;
 
         while (!hit && safeSteps-- > 0) {
             if (sideDistX < sideDistY) {
@@ -1115,10 +1178,9 @@ function drawWorld() {
         const wallH = Math.min(H * 2.5, H / (perpWallDist * 0.72));
         const top = (H - wallH) / 2 + bobOffset;
 
-        let light = Math.max(0.06, 1 - (perpWallDist / 13));
-        if (side === 1) light *= 0.72; // Directional side shading
+        let light = Math.max(0.05, 1 - (perpWallDist / 20));
+        if (side === 1) light *= 0.72;
 
-        // Victorian Damask wall base colors
         const r = Math.floor(45 + light * 60);
         const g = Math.floor(22 + light * 28);
         const b = Math.floor(18 + light * 24);
@@ -1126,24 +1188,20 @@ function drawWorld() {
         ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fillRect(i * stripW, top, stripW + 1, wallH);
 
-        // Damask vertical panel stripes
         const isStripe = Math.floor(wallX * 12) % 2 === 0;
         if (isStripe) {
             ctx.fillStyle = `rgba(0,0,0,${0.20 * light})`;
             ctx.fillRect(i * stripW, top, stripW + 1, wallH);
         }
 
-        // Baseboards (Dark oak lower panel trim)
         const baseH = wallH * 0.16;
         ctx.fillStyle = `rgba(18, 9, 5, ${Math.min(1, light * 1.3)})`;
         ctx.fillRect(i * stripW, top + wallH - baseH, stripW + 1, baseH);
 
-        // Crown Molding (Upper ceiling trim)
         const crownH = wallH * 0.08;
         ctx.fillStyle = `rgba(12, 6, 4, ${Math.min(1, light * 1.3)})`;
         ctx.fillRect(i * stripW, top, stripW + 1, crownH);
 
-        // Procedural blood spatters and decay
         const n = wallNoise(mapX, mapY);
         if (n > 0.42) {
             const bloodTop = top + wallH * 0.28;
@@ -1154,40 +1212,24 @@ function drawWorld() {
                 const bloodAlpha = (0.35 + (n * 0.35)) * light;
                 ctx.fillStyle = `rgba(110, 8, 8, ${bloodAlpha})`;
                 ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH);
-
-                if (Math.abs(wallX - streakCenter) < 0.05) {
-                    ctx.fillStyle = `rgba(40, 0, 0, ${bloodAlpha * 1.2})`;
-                    ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH * 0.85);
-                }
             }
         }
 
-        // ================= WALL-MOUNTED POSTER RENDERING =================
+        // ================= WALL-MOUNTED POSTER DECALS =================
         let face = "";
         let u = 0;
         if (side === 0) {
-            if (stepX === 1) {
-                face = "W";
-                u = wallX;
-            } else {
-                face = "E";
-                u = 1.0 - wallX;
-            }
+            if (stepX === 1) { face = "W"; u = wallX; }
+            else { face = "E"; u = 1.0 - wallX; }
         } else {
-            if (stepY === 1) {
-                face = "N";
-                u = 1.0 - wallX;
-            } else {
-                face = "S";
-                u = wallX;
-            }
+            if (stepY === 1) { face = "N"; u = 1.0 - wallX; }
+            else { face = "S"; u = wallX; }
         }
 
         const posterKey = `${mapX},${mapY},${face}`;
         const poster = wallPosters[posterKey];
 
         if (poster) {
-            // Realistic small frame dimensions mounted cleanly at eye level
             const pMinU = 0.28;
             const pMaxU = 0.72;
 
@@ -1198,19 +1240,12 @@ function drawWorld() {
                 const borderThicknessU = 0.024;
                 const borderThicknessV = 0.038;
 
-                // 1. Antique dark gold & wood frame
                 const fR = Math.floor(65 * light);
                 const fG = Math.floor(42 * light);
                 const fB = Math.floor(24 * light);
                 ctx.fillStyle = `rgb(${fR},${fG},${fB})`;
                 ctx.fillRect(i * stripW, posterTop, stripW + 1, posterH);
 
-                // Frame trim lines
-                ctx.fillStyle = `rgba(190, 150, 75, ${0.45 * light})`;
-                ctx.fillRect(i * stripW, posterTop, stripW + 1, 2);
-                ctx.fillRect(i * stripW, posterTop + posterH - 2, stripW + 1, 2);
-
-                // 2. Poster artwork inside frame
                 if (u >= pMinU + borderThicknessU && u <= pMaxU - borderThicknessU) {
                     const innerTop = posterTop + posterH * borderThicknessV;
                     const innerH = posterH * (1 - borderThicknessV * 2);
@@ -1224,17 +1259,7 @@ function drawWorld() {
                         const sh = src.naturalHeight || src.height || 100;
                         const sx = Math.floor(clampedU * sw);
 
-                        ctx.drawImage(
-                            src,
-                            sx, 0, 1, sh,
-                            i * stripW, innerTop, stripW + 1, innerH
-                        );
-
-                        // Shading to match ambient darkness
-                        if (light < 0.98) {
-                            ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - light)})`;
-                            ctx.fillRect(i * stripW, innerTop, stripW + 1, innerH);
-                        }
+                        ctx.drawImage(src, sx, 0, 1, sh, i * stripW, innerTop, stripW + 1, innerH);
                     }
                 }
             }
@@ -1242,7 +1267,7 @@ function drawWorld() {
     }
 }
 
-/* ================= 3D SPRITE PROJECTION & OCCLUSION ================= */
+/* ================= 3D SPRITE PROJECTION ================= */
 function drawAllSprites() {
     const dirX = Math.cos(player.angle);
     const dirY = Math.sin(player.angle);
@@ -1252,11 +1277,9 @@ function drawAllSprites() {
     const invDet = 1.0 / (planeX * dirY - dirX * planeY);
     const renderList = [];
 
-    // 1. Gather world objects (Skip posters since they are rendered flush on walls)
     for (let i = 0; i < worldObjects.length; i++) {
         const obj = worldObjects[i];
         if (obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
-        if (obj.type === "mistyPortrait" || obj.type === "painting") continue;
 
         const spriteX = obj.x - player.x;
         const spriteY = obj.y - player.y;
@@ -1275,7 +1298,6 @@ function drawAllSprites() {
         }
     }
 
-    // 2. Add Ghost enemy
     if (ghostEnemy.active) {
         const spriteX = ghostEnemy.x - player.x;
         const spriteY = ghostEnemy.y - player.y;
@@ -1294,9 +1316,7 @@ function drawAllSprites() {
         }
     }
 
-    // Sort sprites from farthest to nearest
     renderList.sort((a, b) => b.dist - a.dist);
-
     const bobOffset = Math.sin(player.headBob) * 6;
 
     for (let s = 0; s < renderList.length; s++) {
@@ -1308,31 +1328,38 @@ function drawAllSprites() {
         let spriteH = Math.abs(Math.floor(H / ty));
         let spriteW = Math.abs(Math.floor(H / ty));
 
+        let srcDrawable = null;
+        let drawStartY = 0;
+        const floorY = H * 0.5 + Math.floor(H / (ty * 1.44)) + bobOffset;
+
         if (item.type === "ghost") {
             if (item.data.state === "attacking") spriteH *= 1.6;
             spriteW = Math.floor(spriteH * 0.65);
+            srcDrawable = ghostImgLoaded ? ghostCanvas : null;
+            drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
+        } else if (item.data.type === "mannequin") {
+            spriteW = Math.floor(spriteW * item.data.w);
+            spriteH = Math.floor(spriteH * item.data.h);
+            const p = putlaPics[item.data.picIndex];
+            srcDrawable = (p && p.loaded) ? p.canvas : spriteCanvases.mannequinFallback;
+            drawStartY = floorY - spriteH;
         } else {
             spriteW = Math.floor(spriteW * item.data.w);
             spriteH = Math.floor(spriteH * item.data.h);
-        }
 
-        const drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
-        const drawStartX = Math.floor(-spriteW / 2 + spriteScreenX);
-        const drawEndX = drawStartX + spriteW;
+            if (["door", "clock", "table"].includes(item.data.type)) {
+                drawStartY = floorY - spriteH;
+            } else {
+                drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
+            }
 
-        let srcDrawable = null;
-        if (item.type === "ghost") {
-            srcDrawable = ghostImgLoaded ? ghostImg : null;
-        } else {
-            const obj = item.data;
-            if (obj.type === "mannequin") {
-                const p = putlaPics[obj.picIndex];
-                srcDrawable = (p && p.loaded) ? p.img : spriteCanvases.mannequinFallback;
-            } else if (spriteCanvases[obj.type]) {
-                srcDrawable = spriteCanvases[obj.type];
+            if (spriteCanvases[item.data.type]) {
+                srcDrawable = spriteCanvases[item.data.type];
             }
         }
 
+        const drawStartX = Math.floor(-spriteW / 2 + spriteScreenX);
+        const drawEndX = drawStartX + spriteW;
         const imgW = srcDrawable ? (srcDrawable.naturalWidth || srcDrawable.width) : 100;
         const imgH = srcDrawable ? (srcDrawable.naturalHeight || srcDrawable.height) : 100;
 
@@ -1346,7 +1373,7 @@ function drawAllSprites() {
             }
         }
 
-        const alpha = Math.min(1.0, Math.max(0.3, 1.2 - (item.dist / 14)));
+        const alpha = Math.min(1.0, Math.max(0.3, 1.2 - (item.dist / 18)));
         ctx.save();
         ctx.globalAlpha = alpha;
 
@@ -1359,16 +1386,8 @@ function drawAllSprites() {
                 if (ty > zBuffer[rayIdx] + 0.35 && item.type === "ghost" && item.data.state !== "attacking") continue;
 
                 const texX = Math.floor(((stripe - drawStartX) / spriteW) * imgW);
-
                 if (srcDrawable) {
-                    ctx.drawImage(
-                        srcDrawable,
-                        texX, 0, 1, imgH,
-                        stripe, drawStartY, 1, spriteH
-                    );
-                } else {
-                    ctx.fillStyle = "rgba(240, 240, 255, 0.75)";
-                    ctx.fillRect(stripe, drawStartY, 1, spriteH);
+                    ctx.drawImage(srcDrawable, texX, 0, 1, imgH, stripe, drawStartY, 1, spriteH);
                 }
             }
         }
@@ -1379,11 +1398,11 @@ function drawAllSprites() {
 /* ================= FLASHLIGHT EFFECT ================= */
 function drawFlashlight() {
     const distToGhost = ghostEnemy.active ? Math.hypot(ghostEnemy.x - player.x, ghostEnemy.y - player.y) : 99;
-    const fear = Math.max(0, 1 - distToGhost / 5);
+    const fear = Math.max(0, 1 - distToGhost / 6);
 
     const grad = ctx.createRadialGradient(
         W / 2, H * 0.52, 20,
-        W / 2, H * 0.52, Math.min(W, H) * 0.65
+        W / 2, H * 0.52, Math.min(W, H) * 0.68
     );
 
     if (fear > 0.35) {
@@ -1391,12 +1410,12 @@ function drawFlashlight() {
         grad.addColorStop(0, `rgba(255,160,160,${0.28 - flick})`);
         grad.addColorStop(0.35, `rgba(220,120,120,${0.14 - flick})`);
         grad.addColorStop(0.7, "rgba(80,0,0,.2)");
-        grad.addColorStop(1, "rgba(0,0,0,.65)");
+        grad.addColorStop(1, "rgba(0,0,0,.68)");
     } else {
         grad.addColorStop(0, "rgba(255,235,200,.22)");
         grad.addColorStop(0.25, "rgba(255,220,180,.13)");
         grad.addColorStop(0.55, "rgba(255,200,150,.04)");
-        grad.addColorStop(1, "rgba(0,0,0,.38)");
+        grad.addColorStop(1, "rgba(0,0,0,.42)");
     }
 
     ctx.fillStyle = grad;
@@ -1410,24 +1429,20 @@ function updateGhostAI(dt) {
     ghostEnemy.bobAngle += dt * 4.0;
     const distToPlayer = Math.hypot(player.x - ghostEnemy.x, player.y - ghostEnemy.y);
 
-    distantScreamTimer -= dt;
-    chaseSoundTimer -= dt;
-    mistySoundTimer -= dt;
-
     const staticEl = document.getElementById("static");
-    if (distToPlayer < 7) {
-        staticEl.style.opacity = (0.04 + (7 - distToPlayer) * 0.04).toString();
+    if (distToPlayer < 8) {
+        staticEl.style.opacity = (0.04 + (8 - distToPlayer) * 0.035).toString();
     } else {
         staticEl.style.opacity = "0.04";
     }
 
-    if ((ghostEnemy.state === "watching" || ghostEnemy.state === "hunting") && distToPlayer > 6.0 && distantScreamTimer <= 0) {
+    if ((ghostEnemy.state === "watching" || ghostEnemy.state === "hunting") && distToPlayer > 7.0 && distantScreamTimer <= 0) {
         playDistantGhostScream();
         distantScreamTimer = 8.0 + Math.random() * 5.0;
     }
 
     if (ghostEnemy.state === "watching") {
-        if (distToPlayer < 4.0 || ghostEnemy.seenAlert) {
+        if (distToPlayer < 5.0 || ghostEnemy.seenAlert) {
             ghostEnemy.state = "chasing";
             playGhostChaseSound();
             chaseSoundTimer = 2.8;
@@ -1480,84 +1495,61 @@ function moveGhostAlongPath(dt, speed) {
 function executeGhostAttack() {
     if (gameState.gameOver) return;
     ghostEnemy.state = "attacking";
-
     playGhostChaseSound();
-
-    document.getElementById("game").animate([
-        { transform: "translate(0,0) scale(1)" },
-        { transform: "translate(-18px, 12px) scale(1.05)" },
-        { transform: "translate(16px, -14px) scale(1.08)" },
-        { transform: "translate(-20px, 8px) scale(1.04)" },
-        { transform: "translate(0,0) scale(1)" }
-    ], { duration: 450 });
 
     const redFlash = document.getElementById("redFlash");
     redFlash.style.opacity = "0.9";
-
-    setTimeout(() => {
-        triggerGameOver();
-    }, 450);
+    setTimeout(() => { triggerGameOver(); }, 450);
 }
 
 function triggerGameOver() {
     gameState.gameOver = true;
     ghostEnemy.active = false;
-
     const ambient = document.getElementById("ambient");
     if (ambient) ambient.pause();
-
-    const redFlash = document.getElementById("redFlash");
-    redFlash.style.opacity = "0";
-
     document.getElementById("gameOverScreen").style.display = "flex";
 }
 
 function triggerEscape() {
     gameState.escaped = true;
     ghostEnemy.active = false;
-
-    playSound("unlock", 1.0);
+    playSound("unlock", 1.0, 4.0);
     const ambient = document.getElementById("ambient");
     if (ambient) ambient.pause();
 
     const flash = document.getElementById("flash");
     flash.style.opacity = "0.85";
     setTimeout(() => { flash.style.opacity = "0"; }, 600);
-
-    setTimeout(() => {
-        document.getElementById("endScreen").style.display = "flex";
-    }, 700);
+    setTimeout(() => { document.getElementById("endScreen").style.display = "flex"; }, 700);
 }
 
 function triggerGlitch() {
     const redFlash = document.getElementById("redFlash");
-    redFlash.style.opacity = "0.4";
+    redFlash.style.opacity = "0.45";
     setTimeout(() => { redFlash.style.opacity = "0"; }, 140);
 
     const scareText = document.getElementById("scareText");
     const phrases = ["DON'T LOOK", "BEHIND YOU", "RAVI KA BADLA", "RUN", "IT'S HERE"];
     scareText.innerText = phrases[Math.floor(Math.random() * phrases.length)];
     scareText.style.opacity = "1";
-    setTimeout(() => { scareText.style.opacity = "0"; }, 600);
+    setTimeout(() => { scareText.style.opacity = "0"; }, 650);
 }
 
-/* ================= HUD & OBJECTIVES ================= */
+/* ================= HUD & NOTIFICATIONS ================= */
 let messageTimer = null;
 function showMessage(text) {
     const el = document.getElementById("message");
     el.innerText = text;
     el.style.opacity = "1";
     clearTimeout(messageTimer);
-    messageTimer = setTimeout(() => {
-        el.style.opacity = "0";
-    }, 3600);
+    messageTimer = setTimeout(() => { el.style.opacity = "0"; }, 3800);
 }
 
 function updateObjective(text) {
     document.getElementById("objective").innerText = text;
 }
 
-/* ================= MOVEMENT & CORNER SLIDING ================= */
+/* ================= MOVEMENT ================= */
 let moveX = 0;
 let moveY = 0;
 
@@ -1603,7 +1595,7 @@ function updateMovement(dt) {
     }
 }
 
-/* ================= MOBILE CONTROLS & TOUCH ENGINE ================= */
+/* ================= TOUCH CONTROLS ================= */
 const joystick = document.getElementById("joystick");
 const stick = document.getElementById("stick");
 let joystickActive = false;
@@ -1672,9 +1664,7 @@ function getNearestInteractable() {
             closest = obj;
         }
     }
-
-    if (minD < 1.45) return closest;
-    return null;
+    return minD < 1.55 ? closest : null;
 }
 
 function handleInteract() {
@@ -1683,59 +1673,45 @@ function handleInteract() {
     const obj = getNearestInteractable();
     if (!obj) return;
 
-    if (obj.id === "painting") {
-        gameState.paintingExamined = true;
-        showMessage(obj.examineMsg);
-        if (!ghostEnemy.active && !gameState.keyAcquired) {
-            ghostEnemy.x = 8.5;
-            ghostEnemy.y = 6.5;
-            ghostEnemy.active = true;
-            ghostEnemy.state = "watching";
-            ghostEnemy.seenAlert = false;
-        }
-    } else if (obj.id === "note") {
-        gameState.noteRead = true;
-        showMessage(obj.examineMsg);
-        updateObjective("Search the clock frozen at 3:17.");
-    } else if (obj.id === "clock") {
+    if (obj.id === "clock") {
         gameState.clockExamined = true;
         if (!gameState.keyRevealed) {
             gameState.keyRevealed = true;
-            showMessage("The gears shriek. A secret vault unlocked in the East Hall!");
-            playSound("unlock", 0.85);
-            updateObjective("Retrieve the Exit Key in the East Vault.");
+            showMessage("The grandfather clock echoes. The Exit Key has shifted somewhere in the maze!");
+            playSound("unlock", 0.85, 4.0);
+            updateObjective("Search the labyrinth for the relocated Exit Key.");
 
-            ghostEnemy.x = 8.5;
-            ghostEnemy.y = 8.5;
+            ghostEnemy.x = 15.5;
+            ghostEnemy.y = 15.5;
             ghostEnemy.active = true;
             ghostEnemy.state = "hunting";
-            ghostEnemy.speed = 1.6;
+            ghostEnemy.speed = 1.9;
         } else {
             showMessage(obj.examineMsg);
         }
     } else if (obj.id === "key") {
         if (!gameState.keyAcquired) {
             gameState.keyAcquired = true;
-            playSound("unlock", 1.0);
-            showMessage("EXIT KEY ACQUIRED! A blood-curdling screech roars behind you!");
-            updateObjective("RUN TO THE EXIT DOOR BEFORE IT CATCHES YOU!");
+            playSound("unlock", 1.0, 4.0);
+            showMessage("EXIT KEY ACQUIRED! Ravi has awakened!");
+            updateObjective("RUSH TO THE EXIT GATE BEFORE RAVI CATCHES YOU!");
             triggerGlitch();
 
-            ghostEnemy.x = 8.5;
-            ghostEnemy.y = 8.5;
+            ghostEnemy.x = 15.5;
+            ghostEnemy.y = 15.5;
             ghostEnemy.active = true;
             ghostEnemy.state = "chasing";
-            ghostEnemy.speed = 2.0;
+            ghostEnemy.speed = 2.4;
             playGhostChaseSound();
         }
     } else if (obj.id === "door") {
         if (!gameState.keyAcquired) {
-            showMessage("Locked with heavy iron chains. Find the Exit Key first.");
+            showMessage("Locked tight. Examine the grandfather clock first.");
             playDistantGhostScream();
         } else if (!gameState.doorUnlocked) {
             gameState.doorUnlocked = true;
-            showMessage("THE DOOR UNLOCKED! ESCAPE!");
-            playSound("unlock", 1.0);
+            showMessage("GATE OPENED! ESCAPE!");
+            playSound("unlock", 1.0, 4.0);
             setTimeout(triggerEscape, 500);
         } else {
             triggerEscape();
@@ -1744,6 +1720,7 @@ function handleInteract() {
         showMessage(obj.examineMsg);
         if (obj.type === "mannequin") {
             triggerGlitch();
+            playRandomFrom("chilla", 3, 0.85);
         }
     }
 }
@@ -1751,7 +1728,7 @@ function handleInteract() {
 const interactBtn = document.getElementById("interact");
 interactBtn.addEventListener("click", handleInteract);
 
-/* ================= 60 FPS MAIN SIMULATION LOOP ================= */
+/* ================= MAIN GAME LOOP ================= */
 let lastTime = performance.now();
 
 function gameLoop(now) {
@@ -1761,35 +1738,23 @@ function gameLoop(now) {
     if (gameState.started && !gameState.gameOver && !gameState.escaped) {
         gameState.survivalTimer += dt;
 
+        if (distantScreamTimer > 0) distantScreamTimer -= dt;
+        if (chaseSoundTimer > 0) chaseSoundTimer -= dt;
+        if (proximitySoundTimer > 0) proximitySoundTimer -= dt;
+
         if (gameState.survivalTimer > 45 && !ghostEnemy.active) {
-            ghostEnemy.x = 8.5;
-            ghostEnemy.y = 8.5;
+            ghostEnemy.x = 15.5;
+            ghostEnemy.y = 15.5;
             ghostEnemy.active = true;
             ghostEnemy.state = "hunting";
-            ghostEnemy.speed = 1.5;
-            showMessage("A cold presence hunts these halls...");
+            ghostEnemy.speed = 1.8;
+            showMessage("A cold presence begins stalking the labyrinth...");
         }
 
         updateMovement(dt);
-
-        if (mistySoundTimer <= 0) {
-            let nearestMisty = null;
-            let nearestDist = Infinity;
-            for (let i = 0; i < worldObjects.length; i++) {
-                const obj = worldObjects[i];
-                if (obj.type !== "mistyPortrait") continue;
-                const d = Math.hypot(player.x - obj.x, player.y - obj.y);
-                if (d < nearestDist) {
-                    nearestDist = d;
-                    nearestMisty = obj;
-                }
-            }
-            if (nearestMisty && nearestDist <= 2.5) {
-                playMistyProximitySound(nearestMisty);
-            }
-        }
-
+        checkProximityAudio();
         updateGhostAI(dt);
+
         drawWorld();
         drawAllSprites();
         drawFlashlight();
@@ -1802,13 +1767,12 @@ function gameLoop(now) {
             let mobileText = nearObj.mobileText;
 
             if (nearObj.id === "door" && gameState.doorUnlocked) {
-                actionText = "[E] ESCAPE";
+                actionText = "[E] ESCAPE MAZE";
                 mobileText = "ESCAPE";
             }
 
             prompt.innerText = actionText;
             prompt.style.opacity = "1";
-
             interactBtn.innerText = mobileText;
             interactBtn.style.display = "block";
         } else {
@@ -1821,13 +1785,14 @@ function gameLoop(now) {
 }
 requestAnimationFrame(gameLoop);
 
-/* ================= LIFECYCLE MANAGEMENT ================= */
+/* ================= LIFECYCLE CONTROLS ================= */
 function startGame() {
     gameState.started = true;
-    distantScreamTimer = 6.0;
+    randomizeKeyLocation();
+    distantScreamTimer = 7.0;
     chaseSoundTimer = 1.5;
-    mistySoundTimer = 0;
-    lastMistySoundId = null;
+    proximitySoundTimer = 0;
+    lastProximityObjId = null;
     document.getElementById("startScreen").style.display = "none";
 
     const ambient = document.getElementById("ambient");
@@ -1836,8 +1801,8 @@ function startGame() {
         ambient.play().catch(() => {});
     }
 
-    updateObjective("Explore the mansion. Find a way out.");
-    showMessage("Only one life. Beware the shadows.");
+    updateObjective("Navigate the labyrinthine maze. Locate the random exit key and survive.");
+    showMessage("Only one life. Beware the maze.");
 }
 
 function restartGame() {
@@ -1854,23 +1819,27 @@ function restartGame() {
         survivalTimer: 0
     };
 
+    allSfxIds.forEach(id => stopSound(id));
+
     player.x = 1.5;
     player.y = 1.5;
-    player.angle = 0.1;
+    player.angle = Math.PI / 4;
     player.headBob = 0;
 
-    ghostEnemy.x = 8.5;
-    ghostEnemy.y = 8.5;
+    randomizeKeyLocation();
+
+    ghostEnemy.x = 15.5;
+    ghostEnemy.y = 15.5;
     ghostEnemy.active = false;
     ghostEnemy.state = "idle";
-    ghostEnemy.speed = 1.85;
+    ghostEnemy.speed = 2.1;
     ghostEnemy.path = [];
     ghostEnemy.seenAlert = false;
 
-    distantScreamTimer = 6.0;
+    distantScreamTimer = 7.0;
     chaseSoundTimer = 1.5;
-    mistySoundTimer = 0;
-    lastMistySoundId = null;
+    proximitySoundTimer = 0;
+    lastProximityObjId = null;
 
     document.getElementById("gameOverScreen").style.display = "none";
     document.getElementById("endScreen").style.display = "none";
@@ -1881,8 +1850,8 @@ function restartGame() {
         ambient.play().catch(() => {});
     }
 
-    updateObjective("Explore the mansion. Find a way out.");
-    showMessage("You awake back at the entrance... Do not hesitate.");
+    updateObjective("Navigate the labyrinthine maze. Locate the random exit key and survive.");
+    showMessage("You awake back at the labyrinth start... The key has shifted.");
 }
 </script>
 </body>
