@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Spin & Win</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#0a0e13;
+    --bg-2:#151b23;
+    --panel:#1a222c;
+    --line:#2a3542;
+    --accent:#ff7a1a;
+    --accent-2:#ffcf3f;
+    --lime:#b6ff3c;
+    --teddy:#e6394a;
+    --toffee:#f2a541;
+    --sorry:#2b333d;
+    --text:#eef2f6;
+    --muted:#8a97a6;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 50% 0%, #1c2530 0%, var(--bg-1) 55%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 18px);
+    color:var(--text);
+    font-family:'Rajdhani', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 14px;
+    overflow-x:hidden;
+  }
+
+  /* Looping Background Video */
+  #bgVideo {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* Intro Screen (Unlocks Mobile Audio Permissions) */
+  .start-screen{
+    position:fixed;
+    inset:0;
+    background:#0a0e13;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    cursor:pointer;
+    transition:opacity 0.4s ease;
+  }
+  .start-screen.hidden{
+    opacity:0;
+    pointer-events:none;
+  }
+  .start-box{
+    text-align:center;
+    padding:20px;
+  }
+  .start-box h2{
+    font-family:'Orbitron', sans-serif;
+    font-size:26px;
+    color:var(--accent-2);
+    margin-bottom:12px;
+  }
+  .start-box p{
+    font-size:16px;
+    color:var(--muted);
+    margin-bottom:20px;
+  }
+  .start-btn-fake{
+    font-family:'Orbitron', sans-serif;
+    font-size:16px;
+    font-weight:800;
+    padding:12px 30px;
+    background:var(--lime);
+    color:#000;
+    border-radius:30px;
+    display:inline-block;
+  }
+
+  .stage{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    position:relative;
+  }
+
+  /* Header */
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px;
+    letter-spacing:3px;
+    color:var(--lime);
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size:34px;
+    margin:0 0 4px;
+    text-align:center;
+    letter-spacing:1px;
+    background:linear-gradient(180deg, #fff, var(--accent-2) 70%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 6px 24px rgba(255,122,26,0.25);
+  }
+  .sub{
+    color:var(--muted);
+    font-size:15px;
+    margin-bottom:22px;
+    text-align:center;
+  }
+
+  /* Wheel */
+  .wheel-wrap{
+    position:relative;
+    width:300px;
+    height:300px;
+    margin-bottom:26px;
+    filter:drop-shadow(0 18px 30px rgba(0,0,0,0.55));
+  }
+
+  .ring{
+    position:absolute;
+    inset:-10px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, var(--accent), var(--accent-2), var(--lime), var(--accent));
+    animation:ringspin 6s linear infinite;
+    opacity:0.55;
+  }
+  @keyframes ringspin{ to{ transform:rotate(360deg);} }
+
+  .pointer{
+    position:absolute;
+    top:-16px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0; height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:26px solid var(--lime);
+    filter:drop-shadow(0 0 8px rgba(182,255,60,0.8));
+    z-index:5;
+  }
+
+  .wheel{
+    position:absolute;
+    inset:8px;
+    border-radius:50%;
+    border:6px solid var(--panel);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,0.06), inset 0 0 40px rgba(0,0,0,0.55);
+    transition:transform 4s cubic-bezier(0.17,0.67,0.32,1.02);
+    will-change:transform;
+  }
+
+  .seg-icon{
+    position:absolute;
+    top:50%; left:50%;
+    width:56px; height:56px;
+    margin:-28px 0 0 -28px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    text-align:center;
+    color:#fff;
+    text-shadow:0 2px 4px rgba(0,0,0,0.5);
+  }
+  .seg-icon span.label{
+    font-family:'Orbitron', sans-serif;
+    font-size:8.5px;
+    letter-spacing:0.5px;
+    margin-top:2px;
+  }
+
+  .hub{
+    position:absolute;
+    top:50%; left:50%;
+    width:56px; height:56px;
+    margin:-28px 0 0 -28px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #2b333d, #10151b 70%);
+    border:3px solid var(--accent-2);
+    box-shadow:0 0 20px rgba(255,207,63,0.35), inset 0 2px 4px rgba(255,255,255,0.15);
+    z-index:4;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+
+  /* Button */
+  .spin-btn{
+    font-family:'Orbitron', sans-serif;
+    font-weight:800;
+    font-size:19px;
+    letter-spacing:2px;
+    color:#1a1002;
+    background:linear-gradient(180deg, var(--accent-2), var(--accent));
+    border:none;
+    padding:16px 46px;
+    clip-path:polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    cursor:pointer;
+    box-shadow:0 10px 24px rgba(255,122,26,0.35), inset 0 2px 0 rgba(255,255,255,0.4);
+    transition:transform 0.15s ease, box-shadow 0.15s ease, filter 0.2s ease;
+  }
+  .spin-btn:active{ transform:scale(0.96); }
+  .spin-btn:disabled{ filter:grayscale(0.6) brightness(0.7); cursor:not-allowed; box-shadow:none; }
+
+  .legend{
+    display:flex;
+    gap:14px;
+    margin-top:20px;
+    font-size:12.5px;
+    color:var(--muted);
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+  /* Animated Panda Mascot */
+  .mascot{
+    position:absolute;
+    bottom:-8px;
+    right:-6px;
+    width:82px;
+    height:82px;
+    display:block;
+    z-index:10;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,0.6));
+    transform-origin:bottom center;
+    animation:pandaBounce 1.4s ease-in-out infinite;
+    cursor:pointer;
+    will-change:transform;
+  }
+  .mascot:active{
+    transform:scale(1.2) rotate(10deg);
+  }
+
+  @keyframes pandaBounce{
+    0%, 100%{ transform:translateY(0px) rotate(-5deg) scale(1); }
+    50%{ transform:translateY(-14px) rotate(6deg) scale(1.06); }
+  }
+
+  .mascot.cheering{
+    animation:pandaCheer 0.22s ease-in-out infinite alternate !important;
+  }
+  @keyframes pandaCheer{
+    0%{ transform:translateY(0px) rotate(-15deg) scale(1.1); }
+    100%{ transform:translateY(-22px) rotate(15deg) scale(1.18); }
+  }
+
+  /* Result Modal */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(6,8,11,0.78);
+    backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.25s ease;
+    z-index:50;
+    padding:20px;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+
+  .modal{
+    background:linear-gradient(180deg, #1c2530, #10151b);
+    border:2px solid var(--line);
+    border-radius:18px;
+    padding:34px 26px 28px;
+    text-align:center;
+    width:100%;
+    max-width:320px;
+    transform:scale(0.8) translateY(20px);
+    transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .overlay.show .modal{ transform:scale(1) translateY(0); }
+
+  .modal .icon{ font-size:56px; margin-bottom:8px; display:block; }
+  .modal h2{
+    font-family:'Orbitron', sans-serif;
+    font-size:22px;
+    margin:0 0 8px;
+  }
+  .modal p{ color:var(--muted); margin:0 0 22px; font-size:14.5px; }
+  .modal.win h2{ color:var(--lime); text-shadow:0 0 16px rgba(182,255,60,0.5); }
+  .modal.toffee h2{ color:var(--toffee); }
+  .modal.lose h2{ color:var(--muted); }
+
+  .close-btn{
+    font-family:'Orbitron', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:1.5px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 28px;
+    cursor:pointer;
+  }
+
+  .confetti{
+    position:absolute; inset:0; overflow:hidden; pointer-events:none; border-radius:18px;
+  }
+  .confetti i{
+    position:absolute;
+    top:-10%;
+    width:8px; height:14px;
+    opacity:0.9;
+    animation:fall linear forwards;
+  }
+  @keyframes fall{
+    to{ transform:translateY(420px) rotate(540deg); opacity:0; }
+  }
+
+  /* Seamless Glowing Gold Marquee Footer */
+  footer.ticker-wrap {
+    margin-top: 26px;
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: tickerLoop 14s linear infinite;
+  }
+
+  .ticker-item {
+    font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #ffd700;
+    letter-spacing: 1.5px;
+    padding-right: 50px;
+    text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.6);
+  }
+
+  @keyframes tickerLoop {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Looping Background Video -->
+<video autoplay muted loop playsinline id="bgVideo">
+  <source src="bg.mp4" type="video/mp4">
+</video>
+
+<!-- Landing Interaction Screen -->
+<div class="start-screen" id="startScreen">
+  <div class="start-box">
+    <h2>WELCOME TO SPIN & WIN</h2>
+    <p>Tap anywhere to turn on audio and play!</p>
+    <div class="start-btn-fake">TAP TO START</div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="eyebrow">SCAN &middot; TAP &middot; SPIN</div>
+  <h1>SPIN TO WIN</h1>
+  <div class="sub">One spin, one prize. Good luck!</div>
+
+  <div class="wheel-wrap">
+    <div class="ring"></div>
+    <div class="pointer"></div>
+    <div class="wheel" id="wheel"></div>
+    <div class="hub">🎯</div>
+
+    <!-- Panda Character -->
+    <svg class="mascot" id="mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="18" r="12" fill="#20262d"/>
+      <circle cx="70" cy="18" r="12" fill="#20262d"/>
+      <circle cx="50" cy="52" r="40" fill="#f4f6f8"/>
+      <circle cx="30" cy="42" r="13" fill="#20262d"/>
+      <circle cx="70" cy="42" r="13" fill="#20262d"/>
+      <circle cx="31" cy="43" r="4.5" fill="#fff"/>
+      <circle cx="69" cy="43" r="4.5" fill="#fff"/>
+      <circle cx="31" cy="44" r="2.2" fill="#111"/>
+      <circle cx="69" cy="44" r="2.2" fill="#111"/>
+      <ellipse cx="50" cy="60" rx="9" ry="7" fill="#20262d"/>
+      <circle cx="18" cy="62" r="9" fill="#20262d"/>
+      <circle cx="82" cy="62" r="9" fill="#20262d"/>
+    </svg>
+  </div>
+
+  <button class="spin-btn" id="spinBtn">SPIN NOW</button>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--teddy)"></i>Teddy Bear</span>
+    <span><i class="dot" style="background:var(--toffee)"></i>2 Toffees</span>
+    <span><i class="dot" style="background:var(--sorry)"></i>No Prize</span>
+  </div>
+
+  <!-- Seamless Glowing Gold Bilingual Marquee Footer -->
+  <footer class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+      <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+    </div>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="confetti" id="confetti"></div>
+    <span class="icon" id="modalIcon">🧸</span>
+    <h2 id="modalTitle">JACKPOT!</h2>
+    <p id="modalText">You won the Teddy Bear!</p>
+    <button class="close-btn" id="closeBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+  // 1. Audio Declarations (Using exact repository filenames)
+  const welcomeAudio = new Audio('welcome.mp3.mp3');
+  const spinAudio = new Audio('spinning.mp3');
+
+  // 2. Wheel Segments & Slice Sounds
+  const segments = [
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:1, sound:'sorry1.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee1.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:1, sound:'sorry2.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee2.mp3.mp3' },
+    { type:'teddy',  label:'TEDDY BEAR', emoji:'🧸', color:'#e6394a', weight:1, sound:'teddy.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:1, sound:'sorry3.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee3.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:1, sound:'sorry4.mp3.mp3' },
+  ];
+
+  // Pre-load all prize sounds into memory
+  segments.forEach(s => {
+    s.audio = new Audio(s.sound);
+  });
+
+  // Handle Entrance Tap & Start Landing Audio
+  const startScreen = document.getElementById('startScreen');
+  startScreen.addEventListener('click', () => {
+    startScreen.classList.add('hidden');
+    welcomeAudio.currentTime = 0;
+    welcomeAudio.play().catch(err => console.log('Audio autoplay blocked:', err));
+  });
+
+  const segAngle = 360 / segments.length;
+  const wheel = document.getElementById('wheel');
+  const mascot = document.getElementById('mascot');
+
+  // Paint Wheel Slices
+  let gradientStops = segments.map((s,i)=> `${s.color} ${i*segAngle}deg ${(i+1)*segAngle}deg`).join(', ');
+  wheel.style.background = `conic-gradient(${gradientStops})`;
+
+  // Render Segment Icons
+  const radius = 95;
+  segments.forEach((s,i)=>{
+    const center = i*segAngle + segAngle/2;
+    const el = document.createElement('div');
+    el.className = 'seg-icon';
+    el.innerHTML = `${s.emoji}<span class="label">${s.label}</span>`;
+    el.style.transform = `rotate(${center}deg) translate(0, -${radius}px) rotate(-${center}deg)`;
+    wheel.appendChild(el);
+  });
+
+  let currentRotation = 0;
+  let spinning = false;
+  const spinBtn = document.getElementById('spinBtn');
+
+  function weightedPick(){
+    const total = segments.reduce((a,s)=>a+s.weight,0);
+    let r = Math.random()*total;
+    for(let i=0;i<segments.length;i++){
+      r -= segments[i].weight;
+      if(r<=0) return i;
+    }
+    return segments.length-1;
+  }
+
+  function spin(){
+    if(spinning) return;
+    spinning = true;
+    spinBtn.disabled = true;
+
+    // Start Panda Hype Animation
+    if(mascot) mascot.classList.add('cheering');
+
+    // Silence Welcome Track & Start Spinning Audio
+    try {
+      welcomeAudio.pause();
+      welcomeAudio.currentTime = 0;
+    } catch(e){}
+
+    try {
+      spinAudio.currentTime = 0;
+      spinAudio.play();
+    } catch(e){}
+
+    const index = weightedPick();
+    const winningSegment = segments[index];
+
+    // Pre-warm winning sound for mobile browsers
+    if (winningSegment.audio) {
+      winningSegment.audio.load();
+    }
+
+    const center = index*segAngle + segAngle/2;
+    const jitter = (Math.random()*segAngle*0.5) - segAngle*0.25;
+    const targetAngle = center + jitter;
+
+    const requiredMod = (360 - targetAngle + 360) % 360;
+    const prevMod = ((currentRotation % 360) + 360) % 360;
+    const extraSpins = 6*360;
+    let newRotation = currentRotation - prevMod + requiredMod + extraSpins;
+    if(newRotation <= currentRotation) newRotation += 360;
+    currentRotation = newRotation;
+
+    wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+    setTimeout(()=>{
+      // Stop Spin Audio & Reset Panda
+      try {
+        spinAudio.pause();
+        spinAudio.currentTime = 0;
+      } catch(e){}
+
+      if(mascot) mascot.classList.remove('cheering');
+
+      showResult(winningSegment);
+      spinning = false;
+      spinBtn.disabled = false;
+    }, 4150);
+  }
+
+  function launchConfetti(colors){
+    const box = document.getElementById('confetti');
+    box.innerHTML = '';
+    for(let i=0;i<40;i++){
+      const c = document.createElement('i');
+      c.style.left = Math.random()*100 + '%';
+      c.style.background = colors[Math.floor(Math.random()*colors.length)];
+      c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
+      c.style.animationDelay = (Math.random()*0.4) + 's';
+      box.appendChild(c);
+    }
+  }
+
+  function showResult(seg){
+    // Play winning segment track
+    if (seg.audio) {
+      seg.audio.currentTime = 0;
+      seg.audio.play().catch(e => console.log('Slice audio play error:', e));
+    }
+
+    const overlay = document.getElementById('overlay');
+    const modal = document.getElementById('modal');
+    const icon = document.getElementById('modalIcon');
+    const title = document.getElementById('modalTitle');
+    const text = document.getElementById('modalText');
+
+    modal.className = 'modal';
+    if(seg.type === 'teddy'){
+      modal.classList.add('win');
+      icon.textContent = '🧸';
+      title.textContent = 'JACKPOT!';
+      text.textContent = 'You won the Teddy Bear! Show this screen to collect it.';
+      launchConfetti(['#e6394a','#ffcf3f','#b6ff3c','#ff7a1a']);
+    } else if(seg.type === 'toffee'){
+      modal.classList.add('toffee');
+      icon.textContent = '🍬';
+      title.textContent = 'SWEET WIN!';
+      text.textContent = 'You won 2 Toffees. Show this screen to collect it.';
+      launchConfetti(['#f2a541','#ffcf3f']);
+    } else {
+      modal.classList.add('lose');
+      icon.textContent = '🎯';
+      title.textContent = 'SO CLOSE!';
+      text.textContent = 'No prize this time — better luck on your next spin!';
+      document.getElementById('confetti').innerHTML = '';
+    }
+    overlay.classList.add('show');
+  }
+
+  document.getElementById('closeBtn').addEventListener('click', ()=>{
+    document.getElementById('overlay').classList.remove('show');
+  });
+
+  spinBtn.addEventListener('click', spin);
+</script>
+
+</body>
+</html>
+
