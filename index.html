@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Spin & Win</title>
+<meta name="apple-mobile-web-app-title" content="Spin & Win">
+<meta name="application-name" content="Spin & Win">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -39,7 +42,6 @@
     overflow-x:hidden;
   }
 
-  /* Looping Background Video */
   #bgVideo {
     position: fixed;
     inset: 0;
@@ -51,7 +53,27 @@
     pointer-events: none;
   }
 
-  /* Intro Screen (Unlocks Mobile Audio Permissions) */
+  /* Audio Mute Toggle Button */
+  .mute-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 60;
+    background: rgba(26, 34, 44, 0.85);
+    border: 1px solid var(--line);
+    color: var(--accent-2);
+    font-size: 18px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
   .start-screen{
     position:fixed;
     inset:0;
@@ -103,7 +125,6 @@
     position:relative;
   }
 
-  /* Header */
   .eyebrow{
     font-family:'Orbitron', sans-serif;
     font-size:12px;
@@ -131,7 +152,6 @@
     text-align:center;
   }
 
-  /* Wheel */
   .wheel-wrap{
     position:relative;
     width:300px;
@@ -208,7 +228,6 @@
     font-size:22px;
   }
 
-  /* Button */
   .spin-btn{
     font-family:'Orbitron', sans-serif;
     font-weight:800;
@@ -238,7 +257,6 @@
   .legend span{ display:flex; align-items:center; gap:6px; }
   .dot{ width:10px; height:10px; border-radius:3px; display:inline-block; }
 
-  /* Animated Panda Mascot */
   .mascot{
     position:absolute;
     bottom:-8px;
@@ -270,7 +288,6 @@
     100%{ transform:translateY(-22px) rotate(15deg) scale(1.18); }
   }
 
-  /* Result Modal */
   .overlay{
     position:fixed; inset:0;
     background:rgba(6,8,11,0.78);
@@ -287,7 +304,7 @@
     background:linear-gradient(180deg, #1c2530, #10151b);
     border:2px solid var(--line);
     border-radius:18px;
-    padding:34px 26px 28px;
+    padding:30px 24px 26px;
     text-align:center;
     width:100%;
     max-width:320px;
@@ -296,16 +313,37 @@
   }
   .overlay.show .modal{ transform:scale(1) translateY(0); }
 
-  .modal .icon{ font-size:56px; margin-bottom:8px; display:block; }
+  .modal .icon{ font-size:54px; margin-bottom:6px; display:block; }
   .modal h2{
     font-family:'Orbitron', sans-serif;
     font-size:22px;
     margin:0 0 8px;
   }
-  .modal p{ color:var(--muted); margin:0 0 22px; font-size:14.5px; }
+  .modal p{ color:var(--muted); margin:0 0 16px; font-size:14px; }
   .modal.win h2{ color:var(--lime); text-shadow:0 0 16px rgba(182,255,60,0.5); }
   .modal.toffee h2{ color:var(--toffee); }
   .modal.lose h2{ color:var(--muted); }
+
+  /* Anti-fraud Verification Box */
+  .claim-box {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px dashed var(--accent-2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 20px;
+    font-size: 11.5px;
+    color: var(--accent-2);
+    letter-spacing: 1px;
+  }
+  .claim-box span {
+    display: block;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 800;
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
 
   .close-btn{
     font-family:'Orbitron', sans-serif;
@@ -334,7 +372,6 @@
     to{ transform:translateY(420px) rotate(540deg); opacity:0; }
   }
 
-  /* Seamless Glowing Gold Marquee Footer */
   footer.ticker-wrap {
     margin-top: 26px;
     width: 100%;
@@ -371,12 +408,13 @@
 </head>
 <body>
 
-<!-- Looping Background Video -->
 <video autoplay muted loop playsinline id="bgVideo">
   <source src="bg.mp4" type="video/mp4">
 </video>
 
-<!-- Landing Interaction Screen -->
+<!-- Sound Mute/Unmute Toggle -->
+<button class="mute-btn" id="muteBtn" aria-label="Toggle Sound">🔊</button>
+
 <div class="start-screen" id="startScreen">
   <div class="start-box">
     <h2>WELCOME TO SPIN & WIN</h2>
@@ -386,9 +424,9 @@
 </div>
 
 <div class="stage">
-  <div class="eyebrow">SCAN &middot; TAP &middot; SPIN</div>
+  <div class="eyebrow" id="adminTrigger">SCAN &middot; TAP &middot; SPIN</div>
   <h1>SPIN TO WIN</h1>
-  <div class="sub">One spin, one prize. Good luck!</div>
+  <div class="sub" id="subStatus">One spin, one prize. Good luck!</div>
 
   <div class="wheel-wrap">
     <div class="ring"></div>
@@ -396,7 +434,6 @@
     <div class="wheel" id="wheel"></div>
     <div class="hub">🎯</div>
 
-    <!-- Panda Character -->
     <svg class="mascot" id="mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <circle cx="30" cy="18" r="12" fill="#20262d"/>
       <circle cx="70" cy="18" r="12" fill="#20262d"/>
@@ -421,7 +458,6 @@
     <span><i class="dot" style="background:var(--sorry)"></i>No Prize</span>
   </div>
 
-  <!-- Seamless Glowing Gold Bilingual Marquee Footer -->
   <footer class="ticker-wrap">
     <div class="ticker-track">
       <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
@@ -436,49 +472,72 @@
     <span class="icon" id="modalIcon">🧸</span>
     <h2 id="modalTitle">JACKPOT!</h2>
     <p id="modalText">You won the Teddy Bear!</p>
-    <button class="close-btn" id="closeBtn">PLAY AGAIN</button>
+    
+    <!-- Time-stamped claim verification box -->
+    <div class="claim-box" id="claimBox" style="display:none;">
+      OFFICIAL CLAIM PASS
+      <span id="claimToken">#WIN-0000</span>
+      <small id="claimTime" style="color:#aaa; font-size:10px;"></small>
+    </div>
+
+    <button class="close-btn" id="closeBtn">CLOSE</button>
   </div>
 </div>
 
 <script>
-  // 1. Audio Declarations (Using exact repository filenames)
+  let isMuted = false;
   const welcomeAudio = new Audio('welcome.mp3.mp3');
   const spinAudio = new Audio('spinning.mp3');
 
-  // 2. Wheel Segments & Slice Sounds
+  // Mathematical Win Probability: Total Weight = 100
+  // Teddy Bear = 1 weight (Exact 1% jackpot odds)
+  // Toffees = 30% combined odds
+  // Sorry = 69% odds
   const segments = [
-    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:1, sound:'sorry1.mp3.mp3' },
-    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee1.mp3.mp3' },
-    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:1, sound:'sorry2.mp3.mp3' },
-    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee2.mp3.mp3' },
-    { type:'teddy',  label:'TEDDY BEAR', emoji:'🧸', color:'#e6394a', weight:1, sound:'teddy.mp3.mp3' },
-    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:1, sound:'sorry3.mp3.mp3' },
-    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:1, sound:'toffee3.mp3.mp3' },
-    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:1, sound:'sorry4.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:17, sound:'sorry1.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:10, sound:'toffee1.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:17, sound:'sorry2.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:10, sound:'toffee2.mp3.mp3' },
+    { type:'teddy',  label:'TEDDY BEAR', emoji:'🧸', color:'#e6394a', weight:1,  sound:'teddy.mp3.mp3' }, // 1%
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#2b333d', weight:17, sound:'sorry3.mp3.mp3' },
+    { type:'toffee', label:'2 TOFFEES',  emoji:'🍬', color:'#f2a541', weight:10, sound:'toffee3.mp3.mp3' },
+    { type:'sorry',  label:'SORRY',      emoji:'❌', color:'#232a33', weight:18, sound:'sorry4.mp3.mp3' },
   ];
 
-  // Pre-load all prize sounds into memory
   segments.forEach(s => {
     s.audio = new Audio(s.sound);
   });
 
-  // Handle Entrance Tap & Start Landing Audio
+  // Sound Mute Toggle
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isMuted = !isMuted;
+    welcomeAudio.muted = isMuted;
+    spinAudio.muted = isMuted;
+    segments.forEach(s => { if(s.audio) s.audio.muted = isMuted; });
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+  });
+
+  // Tap-to-Start interaction
   const startScreen = document.getElementById('startScreen');
   startScreen.addEventListener('click', () => {
     startScreen.classList.add('hidden');
-    welcomeAudio.currentTime = 0;
-    welcomeAudio.play().catch(err => console.log('Audio autoplay blocked:', err));
+    if(!isMuted) {
+      welcomeAudio.currentTime = 0;
+      welcomeAudio.play().catch(err => console.log('Autoplay blocked:', err));
+    }
   });
 
   const segAngle = 360 / segments.length;
   const wheel = document.getElementById('wheel');
   const mascot = document.getElementById('mascot');
+  const spinBtn = document.getElementById('spinBtn');
+  const subStatus = document.getElementById('subStatus');
 
-  // Paint Wheel Slices
   let gradientStops = segments.map((s,i)=> `${s.color} ${i*segAngle}deg ${(i+1)*segAngle}deg`).join(', ');
   wheel.style.background = `conic-gradient(${gradientStops})`;
 
-  // Render Segment Icons
   const radius = 95;
   segments.forEach((s,i)=>{
     const center = i*segAngle + segAngle/2;
@@ -489,9 +548,33 @@
     wheel.appendChild(el);
   });
 
+  // 1-Spin Per Day Lock Check
+  const TODAY_KEY = 'mkg_wheel_' + new Date().toISOString().slice(0, 10);
+  function checkDailySpinStatus() {
+    if (localStorage.getItem(TODAY_KEY)) {
+      spinBtn.disabled = true;
+      spinBtn.innerText = 'SPIN USED';
+      subStatus.innerText = 'Daily spin used! Come back tomorrow.';
+    }
+  }
+  checkDailySpinStatus();
+
+  // Hidden Organizer Reset (Quick 5 taps on "SCAN • TAP • SPIN" unlocks device)
+  let adminClicks = 0;
+  document.getElementById('adminTrigger').addEventListener('click', () => {
+    adminClicks++;
+    if (adminClicks >= 5) {
+      localStorage.removeItem(TODAY_KEY);
+      spinBtn.disabled = false;
+      spinBtn.innerText = 'SPIN NOW';
+      subStatus.innerText = 'Unlocked by Organizer!';
+      alert('Device reset! Player can spin again.');
+      adminClicks = 0;
+    }
+  });
+
   let currentRotation = 0;
   let spinning = false;
-  const spinBtn = document.getElementById('spinBtn');
 
   function weightedPick(){
     const total = segments.reduce((a,s)=>a+s.weight,0);
@@ -504,29 +587,28 @@
   }
 
   function spin(){
-    if(spinning) return;
+    if(spinning || localStorage.getItem(TODAY_KEY)) return;
     spinning = true;
     spinBtn.disabled = true;
 
-    // Start Panda Hype Animation
     if(mascot) mascot.classList.add('cheering');
 
-    // Silence Welcome Track & Start Spinning Audio
     try {
       welcomeAudio.pause();
       welcomeAudio.currentTime = 0;
     } catch(e){}
 
     try {
-      spinAudio.currentTime = 0;
-      spinAudio.play();
+      if(!isMuted){
+        spinAudio.currentTime = 0;
+        spinAudio.play();
+      }
     } catch(e){}
 
     const index = weightedPick();
     const winningSegment = segments[index];
 
-    // Pre-warm winning sound for mobile browsers
-    if (winningSegment.audio) {
+    if (winningSegment.audio && !isMuted) {
       winningSegment.audio.load();
     }
 
@@ -544,7 +626,6 @@
     wheel.style.transform = `rotate(${currentRotation}deg)`;
 
     setTimeout(()=>{
-      // Stop Spin Audio & Reset Panda
       try {
         spinAudio.pause();
         spinAudio.currentTime = 0;
@@ -552,9 +633,12 @@
 
       if(mascot) mascot.classList.remove('cheering');
 
+      // Record daily spin lock
+      localStorage.setItem(TODAY_KEY, 'used');
+      checkDailySpinStatus();
+
       showResult(winningSegment);
       spinning = false;
-      spinBtn.disabled = false;
     }, 4150);
   }
 
@@ -572,10 +656,9 @@
   }
 
   function showResult(seg){
-    // Play winning segment track
-    if (seg.audio) {
+    if (seg.audio && !isMuted) {
       seg.audio.currentTime = 0;
-      seg.audio.play().catch(e => console.log('Slice audio play error:', e));
+      seg.audio.play().catch(e => console.log('Playback error:', e));
     }
 
     const overlay = document.getElementById('overlay');
@@ -583,25 +666,36 @@
     const icon = document.getElementById('modalIcon');
     const title = document.getElementById('modalTitle');
     const text = document.getElementById('modalText');
+    const claimBox = document.getElementById('claimBox');
+    const claimToken = document.getElementById('claimToken');
+    const claimTime = document.getElementById('claimTime');
 
     modal.className = 'modal';
+
     if(seg.type === 'teddy'){
       modal.classList.add('win');
       icon.textContent = '🧸';
       title.textContent = 'JACKPOT!';
-      text.textContent = 'You won the Teddy Bear! Show this screen to collect it.';
+      text.textContent = 'You won the Teddy Bear! Present this screen to staff:';
+      claimBox.style.display = 'block';
+      claimToken.textContent = '#TEDDY-' + Math.floor(1000 + Math.random() * 9000);
+      claimTime.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
       launchConfetti(['#e6394a','#ffcf3f','#b6ff3c','#ff7a1a']);
     } else if(seg.type === 'toffee'){
       modal.classList.add('toffee');
       icon.textContent = '🍬';
       title.textContent = 'SWEET WIN!';
-      text.textContent = 'You won 2 Toffees. Show this screen to collect it.';
+      text.textContent = 'You won 2 Toffees! Present this screen to staff:';
+      claimBox.style.display = 'block';
+      claimToken.textContent = '#SWEET-' + Math.floor(1000 + Math.random() * 9000);
+      claimTime.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
       launchConfetti(['#f2a541','#ffcf3f']);
     } else {
       modal.classList.add('lose');
       icon.textContent = '🎯';
       title.textContent = 'SO CLOSE!';
-      text.textContent = 'No prize this time — better luck on your next spin!';
+      text.textContent = 'No prize this time — thank you for playing!';
+      claimBox.style.display = 'none';
       document.getElementById('confetti').innerHTML = '';
     }
     overlay.classList.add('show');
@@ -616,4 +710,3 @@
 
 </body>
 </html>
-
