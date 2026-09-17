@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Maa Kamakhya Arcade</title>
+<meta name="apple-mobile-web-app-title" content="Game Arcade">
+<meta name="application-name" content="Game Arcade">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
+<!-- Confetti for Quiz Victory -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  :root{
+    --bg-1:#0a0e13;
+    --panel:#1a222c;
+    --line:#2a3542;
+    --accent:#ff7a1a;
+    --accent-2:#ffcf3f;
+    --lime:#b6ff3c;
+    --text:#eef2f6;
+    --muted:#8a97a6;
+    --danger:#ff4d4d;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(circle at 50% 0%, #1c2530 0%, var(--bg-1) 55%);
+    color:var(--text);
+    font-family:'Rajdhani', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    padding:30px 16px 20px;
+    overflow-x:hidden;
+  }
+
+  #bgVideo {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .stage{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* --- HUB / STORE STYLES --- */
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px;
+    letter-spacing:3px;
+    color:var(--lime);
+    margin-bottom:6px;
+  }
+
+  h1{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size:32px;
+    margin:0 0 6px;
+    text-align:center;
+    letter-spacing:1px;
+    background:linear-gradient(180deg, #fff, var(--accent-2) 70%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 6px 24px rgba(255,122,26,0.25);
+  }
+
+  .sub{
+    color:var(--muted);
+    font-size:15px;
+    margin-bottom:28px;
+    text-align:center;
+  }
+
+  .grid{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .game-card{
+    display:flex;
+    align-items:center;
+    background:linear-gradient(135deg, rgba(26,34,44,0.9), rgba(16,21,27,0.9));
+    border:2px solid var(--line);
+    border-radius:16px;
+    padding:16px;
+    text-decoration:none;
+    color:var(--text);
+    transition:transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+    backdrop-filter:blur(6px);
+    cursor:pointer;
+  }
+
+  .game-card:active{
+    transform:scale(0.98);
+  }
+
+  .game-card.active-card{
+    border-color:var(--accent-2);
+    box-shadow:0 8px 24px rgba(255,207,63,0.2);
+  }
+
+  .game-icon{
+    font-size:42px;
+    width:68px;
+    height:68px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,0.04);
+    border-radius:12px;
+    margin-right:16px;
+    flex-shrink:0;
+  }
+
+  .game-info{
+    flex-grow:1;
+  }
+
+  .game-info h2{
+    font-family:'Orbitron', sans-serif;
+    font-size:17px;
+    margin:0 0 4px;
+    color:#fff;
+  }
+
+  .game-info p{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  .badge{
+    display:inline-block;
+    font-size:10px;
+    font-family:'Orbitron', sans-serif;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:6px;
+    margin-top:6px;
+  }
+
+  .badge-live{
+    background:rgba(182,255,60,0.15);
+    color:var(--lime);
+    border:1px solid var(--lime);
+  }
+
+  .badge-soon{
+    background:rgba(138,151,166,0.15);
+    color:var(--muted);
+    border:1px solid var(--muted);
+  }
+
+  /* --- QUIZ INLINE VIEW STYLES --- */
+  #quiz-view {
+    display: none;
+    width: 100%;
+  }
+
+  .nav-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .btn-back {
+    cursor: pointer;
+    background: rgba(255,207,63,0.08);
+    border: 1px solid var(--accent-2);
+    color: var(--accent-2);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 8px;
+  }
+
+  .tier-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tier-Easy { background: rgba(182,255,60,0.15); color: var(--lime); border: 1px solid var(--lime); }
+  .tier-Medium { background: rgba(255,207,63,0.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .tier-Hard { background: rgba(255,122,26,0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+  .quiz-card{
+    width:100%;
+    background:linear-gradient(135deg, rgba(26,34,44,0.95), rgba(16,21,27,0.95));
+    border:2px solid var(--line);
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.6);
+    backdrop-filter:blur(10px);
+  }
+
+  .quiz-sub-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .progress-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .btn-lifeline {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--accent-2);
+    background: rgba(255, 207, 63, 0.12);
+    border: 1px solid var(--accent-2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+
+  .btn-lifeline:disabled {
+    opacity: 0.35;
+    border-color: var(--muted);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .question-box {
+    font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #fff;
+    min-height: 70px;
+    margin-bottom: 22px;
+  }
+
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .opt-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid var(--line);
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .opt-btn:active {
+    transform: scale(0.98);
+  }
+
+  .opt-btn.correct {
+    background: rgba(182,255,60,0.2) !important;
+    border-color: var(--lime) !important;
+    color: var(--lime) !important;
+  }
+
+  .opt-btn.wrong {
+    background: rgba(255,77,77,0.2) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+  }
+
+  .opt-btn.hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Result Screen */
+  .result-card {
+    display: none;
+    width: 100%;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(26,34,44,0.95), rgba(16,21,27,0.95));
+    border: 2px solid var(--accent-2);
+    border-radius: 18px;
+    padding: 30px 20px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+  }
+
+  .result-card h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px;
+    margin: 0 0 10px;
+  }
+
+  .result-card p {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 24px;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+
+  .btn-restart { background: var(--accent-2); color: #0a0e13; }
+  .btn-home { background: transparent; border: 1.5px solid var(--line); color: var(--text); }
+
+  /* Marquee */
+  footer.ticker-wrap {
+    margin-top: 32px;
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: tickerLoop 14s linear infinite;
+  }
+
+  .ticker-item {
+    font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffd700;
+    letter-spacing: 1.5px;
+    padding-right: 50px;
+    text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.6);
+  }
+
+  @keyframes tickerLoop {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+
+<video autoplay muted loop playsinline id="bgVideo">
+  <source src="bg.mp4" type="video/mp4">
+</video>
+
+<div class="stage">
+
+  <!-- ================= ARCADE STORE / HUB VIEW ================= -->
+  <div id="store-view" style="width: 100%;">
+    <div class="eyebrow" style="text-align:center;">SELECT &bull; PLAY &bull; WIN</div>
+    <h1>ARCADE ZONE</h1>
+    <div class="sub">Choose a game to test your skill & luck!</div>
+
+    <div class="grid">
+      <!-- Game 1: Spin The Wheel -->
+      <a href="spin.html" class="game-card active-card">
+        <div class="game-icon">🎯</div>
+        <div class="game-info">
+          <h2>Spin The Wheel</h2>
+          <p>Spin to win Teddy Bear or Toffees</p>
+          <span class="badge badge-live">PLAY NOW</span>
+        </div>
+      </a>
+
+      <!-- Game 2: Hindu Mythology Quiz (Starts on Same Page) -->
+      <div class="game-card active-card" onclick="openQuiz()">
+        <div class="game-icon">🏹</div>
+        <div class="game-info">
+          <h2>Mythology Quiz</h2>
+          <p>Clear all tiers: Easy to Hard</p>
+          <span class="badge badge-live">PLAY NOW</span>
+        </div>
+      </div>
+
+      <!-- Game 3: Lucky Dice Roll -->
+      <div class="game-card" style="opacity:0.65; pointer-events:none;">
+        <div class="game-icon">🎲</div>
+        <div class="game-info">
+          <h2>Lucky Dice</h2>
+          <p>Roll a double 6 to hit the jackpot</p>
+          <span class="badge badge-soon">COMING SOON</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= INLINE QUIZ VIEW ================= -->
+  <div id="quiz-view">
+    <div class="nav-bar">
+      <button class="btn-back" onclick="closeQuiz()">◀ ARCADE HUB</button>
+      <div id="tierTag" class="tier-badge tier-Easy">EASY</div>
+    </div>
+
+    <!-- Active Question Card -->
+    <div class="quiz-card" id="quizCard">
+      <div class="quiz-sub-header">
+        <div class="progress-text" id="progressText">QUESTION 1 / 9</div>
+        <button class="btn-lifeline" id="lifelineBtn" onclick="useFiftyFifty()">50:50 LIFELINE</button>
+      </div>
+      <div class="question-box" id="questionText">Loading Question...</div>
+      <div class="options-grid" id="optionsGrid"></div>
+    </div>
+
+    <!-- Victory / Elimination Screen -->
+    <div class="result-card" id="resultCard">
+      <h2 id="resultTitle">RESULT</h2>
+      <p id="resultMsg">Details</p>
+      <button class="action-btn btn-restart" onclick="restartQuiz()">TRY AGAIN</button>
+      <button class="action-btn btn-home" onclick="closeQuiz()">BACK TO HUB</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer Ticker Marquee -->
+<footer class="ticker-wrap">
+  <div class="ticker-track">
+    <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+    <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+  </div>
+</footer>
+
+<script>
+  // BUILT-IN AUDIO SYNTHESIZER
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playTone(freq, duration, type = "sine") {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function playSfx(type) {
+    if (type === "correct") {
+      playTone(523.25, 0.15, "triangle");
+      setTimeout(() => playTone(659.25, 0.25, "triangle"), 150);
+    } else if (type === "wrong") {
+      playTone(220, 0.2, "sawtooth");
+      setTimeout(() => playTone(180, 0.4, "sawtooth"), 180);
+    } else if (type === "win") {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((note, i) => {
+        setTimeout(() => playTone(note, 0.25, "triangle"), i * 150);
+      });
+    }
+  }
+
+  // QUESTIONS (EASY -> MEDIUM -> HARD)
+  const questions = [
+    // TIER 1: EASY
+    {
+      tier: "Easy",
+      q: "भगवान राम को कितने वर्षों का वनवास दिया गया था?",
+      options: ["10 वर्ष", "12 वर्ष", "14 वर्ष", "16 वर्ष"],
+      answer: 2
+    },
+    {
+      tier: "Easy",
+      q: "कुरुक्षेत्र युद्ध में अर्जुन के दिव्य धनुष का क्या नाम था?",
+      options: ["पिनाक", "गाण्डीव", "शारंग", "विजय"],
+      answer: 1
+    },
+    {
+      tier: "Easy",
+      q: "महाभारत युद्ध में भगवान श्रीकृष्ण किसके सारथी बने थे?",
+      options: ["युधिष्ठिर", "कर्ण", "भीम", "अर्जुन"],
+      answer: 3
+    },
+
+    // TIER 2: MEDIUM
+    {
+      tier: "Medium",
+      q: "समुद्र मंथन में रस्सी के रूप में किस नागराज का उपयोग किया गया था?",
+      options: ["शेषनाग", "वासुकि", "तक्षक", "कालिया"],
+      answer: 1
+    },
+    {
+      tier: "Medium",
+      q: "इंद्र देव ने कर्ण को अपने कुंडल-कवच के बदले कौन सा अमोघ अस्त्र दिया था?",
+      options: ["ब्रह्मास्त्र", "पाशुपतास्त्र", "वासवी शक्ति", "नारायणास्त्र"],
+      answer: 2
+    },
+    {
+      tier: "Medium",
+      q: "रामायण में बालि और सुग्रीव के पिता का क्या नाम था?",
+      options: ["ऋक्षराज", "केसरी", "जाम्बवन्त", "माल्यवान"],
+      answer: 0
+    },
+
+    // TIER 3: HARD
+    {
+      tier: "Hard",
+      q: "द्रौपदी का वास्तविक (जन्म) नाम क्या था?",
+      options: ["पांचाली", "कृष्णा", "याज्ञसेनी", "मालिनी"],
+      answer: 1
+    },
+    {
+      tier: "Hard",
+      q: "कौरवों में से एकमात्र भाई कौन था जिसने चीरहरण का खुलकर विरोध किया था?",
+      options: ["युयुत्सु", "विकर्ण", "चित्रसेन", "दुर्मुख"],
+      answer: 1
+    },
+    {
+      tier: "Hard",
+      q: "भगवान कार्तिकेय (स्कंद) के वाहन मोर का क्या नाम है?",
+      options: ["चित्ररथ", "बर्हिध्वज", "परवाणी", "मयूरदत्त"],
+      answer: 2
+    }
+  ];
+
+  let currentIndex = 0;
+  let isAnswerLocked = false;
+  let hasUsedLifeline = false;
+
+  const storeView = document.getElementById("store-view");
+  const quizView = document.getElementById("quiz-view");
+  const questionText = document.getElementById("questionText");
+  const optionsGrid = document.getElementById("optionsGrid");
+  const progressText = document.getElementById("progressText");
+  const tierTag = document.getElementById("tierTag");
+  const quizCard = document.getElementById("quizCard");
+  const resultCard = document.getElementById("resultCard");
+  const resultTitle = document.getElementById("resultTitle");
+  const resultMsg = document.getElementById("resultMsg");
+  const lifelineBtn = document.getElementById("lifelineBtn");
+
+  // VIEW SWITCHERS
+  function openQuiz() {
+    storeView.style.display = "none";
+    quizView.style.display = "block";
+    restartQuiz();
+  }
+
+  function closeQuiz() {
+    quizView.style.display = "none";
+    storeView.style.display = "block";
+  }
+
+  // QUIZ LOGIC
+  function loadQuestion() {
+    isAnswerLocked = false;
+    const current = questions[currentIndex];
+
+    tierTag.className = `tier-badge tier-${current.tier}`;
+    tierTag.innerText = current.tier;
+    progressText.innerText = `QUESTION ${currentIndex + 1} / ${questions.length}`;
+    questionText.innerText = current.q;
+
+    optionsGrid.innerHTML = "";
+    current.options.forEach((text, i) => {
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.innerText = text;
+      btn.onclick = () => selectOption(btn, i);
+      optionsGrid.appendChild(btn);
+    });
+  }
+
+  function useFiftyFifty() {
+    if (hasUsedLifeline || isAnswerLocked) return;
+    hasUsedLifeline = true;
+    lifelineBtn.disabled = true;
+
+    const current = questions[currentIndex];
+    const buttons = Array.from(optionsGrid.getElementsByTagName("button"));
+
+    let wrongIndices = [0, 1, 2, 3].filter(idx => idx !== current.answer);
+    wrongIndices.sort(() => Math.random() - 0.5);
+    const toRemove = wrongIndices.slice(0, 2);
+
+    toRemove.forEach(idx => {
+      buttons[idx].classList.add("hidden");
+    });
+  }
+
+  function selectOption(selectedBtn, selectedIndex) {
+    if (isAnswerLocked) return;
+    isAnswerLocked = true;
+
+    const current = questions[currentIndex];
+    const buttons = optionsGrid.getElementsByTagName("button");
+
+    if (selectedIndex === current.answer) {
+      playSfx("correct");
+      selectedBtn.classList.add("correct");
+      setTimeout(() => {
+        currentIndex++;
+        if (currentIndex < questions.length) {
+          loadQuestion();
+        } else {
+          showResult(true);
+        }
+      }, 700);
+    } else {
+      playSfx("wrong");
+      selectedBtn.classList.add("wrong");
+      buttons[current.answer].classList.add("correct");
+      setTimeout(() => {
+        showResult(false);
+      }, 1000);
+    }
+  }
+
+  function showResult(isWin) {
+    quizCard.style.display = "none";
+    resultCard.style.display = "block";
+
+    if (isWin) {
+      playSfx("win");
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      }
+      resultTitle.style.color = "var(--lime)";
+      resultTitle.innerText = "🏆 VICTORY!";
+      resultMsg.innerText = "अद्भुत! आपने सभी कठिन प्रश्नों के सही उत्तर देकर विजय प्राप्त की है!";
+    } else {
+      resultTitle.style.color = "var(--danger)";
+      resultTitle.innerText = "❌ GAME OVER";
+      resultMsg.innerText = `आप प्रश्न ${currentIndex + 1} (${questions[currentIndex].tier} Tier) पर बाहर हो गए। पुनः प्रयास करें!`;
+    }
+  }
+
+  function restartQuiz() {
+    currentIndex = 0;
+    hasUsedLifeline = false;
+    lifelineBtn.disabled = false;
+    resultCard.style.display = "none";
+    quizCard.style.display = "block";
+    loadQuestion();
+  }
+</script>
+</body>
+</html>
