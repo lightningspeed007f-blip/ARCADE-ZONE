@@ -2,578 +2,723 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Last Night - Ravi Ka Badla</title>
 
 <style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-    user-select:none;
-    -webkit-user-select:none;
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-html,body{
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#000000;
-    font-family:'Courier New', Courier, monospace, sans-serif;
-    touch-action:none;
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000000;
+    font-family: 'Courier New', Courier, monospace, sans-serif;
+    touch-action: none;
 }
 
-#game{
-    position:fixed;
-    inset:0;
-    overflow:hidden;
-    background:#050403;
+#game {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #050403;
 }
 
-canvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    display:block;
+canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
 }
 
 /* ================= HUD ================= */
-
-#hud{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    color:white;
-    z-index:20;
+#hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    color: white;
+    z-index: 20;
 }
 
-#title{
-    position:absolute;
-    top:18px;
-    left:20px;
-    font-size:11px;
-    letter-spacing:4px;
-    opacity:.55;
+#title {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    font-size: 11px;
+    letter-spacing: 4px;
+    opacity: .55;
 }
 
-#objectiveBox{
-    position:absolute;
-    top:42px;
-    left:20px;
-    background:rgba(8,5,4,0.85);
-    padding:8px 16px;
-    border-left:3px solid #8b0000;
-    border-radius:2px;
-    box-shadow:0 0 14px rgba(0,0,0,0.9);
+#objectiveBox {
+    position: absolute;
+    top: 42px;
+    left: 20px;
+    background: rgba(8, 5, 4, 0.85);
+    padding: 8px 16px;
+    border-left: 3px solid #8b0000;
+    border-radius: 2px;
+    box-shadow: 0 0 14px rgba(0, 0, 0, 0.9);
 }
 
-#objectiveLabel{
-    font-size:9px;
-    letter-spacing:2px;
-    color:#a87171;
-    margin-bottom:3px;
+#objectiveLabel {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #a87171;
+    margin-bottom: 3px;
 }
 
-#objective{
-    font-size:13px;
-    color:#f2e6dc;
-    letter-spacing:1px;
-    text-shadow:0 2px 5px black;
+#objective {
+    font-size: 13px;
+    color: #f2e6dc;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 5px black;
 }
 
-#interactionPrompt{
-    position:absolute;
-    left:50%;
-    top:62%;
-    transform:translateX(-50%);
-    background:rgba(15,10,8,.92);
-    border:1px solid rgba(212,160,100,.6);
-    color:#f5deb3;
-    padding:9px 22px;
-    border-radius:20px;
-    font-size:13px;
-    letter-spacing:2px;
-    text-shadow:0 1px 4px #000;
-    box-shadow:0 0 20px rgba(0,0,0,.95);
-    opacity:0;
-    transition:opacity .2s ease;
-    pointer-events:none;
+#interactionPrompt {
+    position: absolute;
+    left: 50%;
+    top: 62%;
+    transform: translateX(-50%);
+    background: rgba(15, 10, 8, .92);
+    border: 1px solid rgba(212, 160, 100, .6);
+    color: #f5deb3;
+    padding: 9px 22px;
+    border-radius: 20px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 4px #000;
+    box-shadow: 0 0 20px rgba(0, 0, 0, .95);
+    opacity: 0;
+    transition: opacity .2s ease;
+    pointer-events: none;
 }
 
-#message{
-    position:absolute;
-    left:50%;
-    bottom:16%;
-    transform:translateX(-50%);
-    text-align:center;
-    width:85%;
-    max-width:640px;
-    font-size:15px;
-    letter-spacing:1.5px;
-    color:#f5efe6;
-    background:rgba(12,6,5,.9);
-    padding:12px 24px;
-    border-radius:4px;
-    border:1px solid rgba(160,30,30,.4);
-    text-shadow:0 2px 8px #000;
-    opacity:0;
-    transition:.35s;
-    pointer-events:none;
+#message {
+    position: absolute;
+    left: 50%;
+    bottom: 16%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 85%;
+    max-width: 640px;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    color: #f5efe6;
+    background: rgba(12, 6, 5, .9);
+    padding: 12px 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(160, 30, 30, .4);
+    text-shadow: 0 2px 8px #000;
+    opacity: 0;
+    transition: .35s;
+    pointer-events: none;
 }
 
-#crosshair{
-    position:absolute;
-    left:50%;
-    top:50%;
-    width:4px;
-    height:4px;
-    transform:translate(-50%,-50%);
-    background:rgba(255,255,255,.65);
-    border-radius:50%;
-    box-shadow:0 0 6px rgba(255,255,255,.4);
+#crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, .65);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255, 255, 255, .4);
 }
 
-/* ================= JOYSTICK (MOBILE) ================= */
-
-#joystick{
-    position:absolute;
-    width:130px;
-    height:130px;
-    left:25px;
-    bottom:25px;
-    border:2px solid rgba(255,255,255,.16);
-    border-radius:50%;
-    background:rgba(255,255,255,.035);
-    z-index:30;
+/* ================= JOYSTICK & TOUCH ================= */
+#joystick {
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    left: 25px;
+    bottom: 25px;
+    border: 2px solid rgba(255, 255, 255, .16);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .035);
+    z-index: 30;
 }
 
-#stick{
-    position:absolute;
-    width:55px;
-    height:55px;
-    left:50%;
-    top:50%;
-    transform:translate(-50%,-50%);
-    border-radius:50%;
-    background:rgba(220,220,220,.2);
-    border:1px solid rgba(255,255,255,.3);
+#stick {
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(220, 220, 220, .2);
+    border: 1px solid rgba(255, 255, 255, .3);
 }
 
-/* ================= INTERACT BUTTON (MOBILE) ================= */
-
-#interact{
-    position:absolute;
-    right:25px;
-    bottom:35px;
-    width:90px;
-    height:90px;
-    border-radius:50%;
-    border:2px solid rgba(220,160,90,.6);
-    background:rgba(30,20,14,.85);
-    color:#f5deb3;
-    font-size:11px;
-    letter-spacing:1px;
-    font-weight:bold;
-    z-index:30;
-    display:none;
-    box-shadow:0 0 15px rgba(0,0,0,.7);
-    cursor:pointer;
+#interact {
+    position: absolute;
+    right: 25px;
+    bottom: 35px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 2px solid rgba(220, 160, 90, .6);
+    background: rgba(30, 20, 14, .85);
+    color: #f5deb3;
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: bold;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 0 15px rgba(0, 0, 0, .7);
+    cursor: pointer;
 }
 
-#interact:active{
-    background:rgba(70,40,25,.95);
-    transform:scale(.95);
+#interact:active {
+    background: rgba(70, 40, 25, .95);
+    transform: scale(.95);
 }
 
 /* ================= SCREENS ================= */
-
-.screen{
-    position:absolute;
-    inset:0;
-    z-index:100;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    flex-direction:column;
-    color:white;
-    text-align:center;
-    padding:25px;
+.screen {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+    text-align: center;
+    padding: 25px;
 }
 
-#startScreen{
-    background:
-        radial-gradient(circle at center,
-        rgba(40,20,15,.7),
-        rgba(4,2,2,.98));
+#startScreen {
+    background: radial-gradient(circle at center, rgba(40, 20, 15, .7), rgba(4, 2, 2, .98));
 }
 
-#startScreen h1{
-    font-size:42px;
-    letter-spacing:10px;
-    font-weight:300;
-    margin-bottom:12px;
-    color:#e6d3be;
-    text-shadow:0 0 25px rgba(255,200,160,.3);
+#startScreen h1 {
+    font-size: 42px;
+    letter-spacing: 10px;
+    font-weight: 300;
+    margin-bottom: 12px;
+    color: #e6d3be;
+    text-shadow: 0 0 25px rgba(255, 200, 160, .3);
 }
 
-#startScreen p{
-    opacity:.75;
-    font-size:13px;
-    letter-spacing:3px;
-    margin-bottom:34px;
-    max-width:520px;
-    line-height:1.8;
+#startScreen p {
+    opacity: .75;
+    font-size: 13px;
+    letter-spacing: 3px;
+    margin-bottom: 34px;
+    max-width: 520px;
+    line-height: 1.8;
 }
 
-/* DEATH SCREEN: Jaldi The Late */
-#gameOverScreen{
-    background:#000000;
-    z-index:120;
+#gameOverScreen {
+    background: #000000;
+    z-index: 120;
 }
 
-#gameOverScreen h1{
-    font-size:44px;
-    letter-spacing:8px;
-    font-weight:700;
-    color:#b81414;
-    text-shadow:0 0 25px rgba(184,20,20,0.8), 0 0 50px rgba(100,0,0,0.9);
-    margin-bottom:16px;
-    text-transform:uppercase;
+#gameOverScreen h1 {
+    font-size: 44px;
+    letter-spacing: 8px;
+    font-weight: 700;
+    color: #b81414;
+    text-shadow: 0 0 25px rgba(184, 20, 20, 0.8), 0 0 50px rgba(100, 0, 0, 0.9);
+    margin-bottom: 16px;
+    text-transform: uppercase;
 }
 
-#gameOverScreen p{
-    color:#808080;
-    font-size:13px;
-    letter-spacing:4px;
-    margin-bottom:38px;
+#gameOverScreen p {
+    color: #808080;
+    font-size: 13px;
+    letter-spacing: 4px;
+    margin-bottom: 38px;
 }
 
-/* ESCAPE SCREEN: RAVI KA BADLA */
-#endScreen{
-    background:
-        radial-gradient(circle at center,
-        rgba(45,15,15,.75),
-        rgba(3,1,1,.99));
+#endScreen {
+    background: radial-gradient(circle at center, rgba(45, 15, 15, .75), rgba(3, 1, 1, .99));
 }
 
-#endScreen h1{
-    font-size:44px;
-    letter-spacing:9px;
-    font-weight:700;
-    color:#c71f1f;
-    text-shadow:0 0 30px rgba(199,31,31,.8), 0 0 60px rgba(120,0,0,.9);
-    margin-bottom:16px;
+#endScreen h1 {
+    font-size: 44px;
+    letter-spacing: 9px;
+    font-weight: 700;
+    color: #c71f1f;
+    text-shadow: 0 0 30px rgba(199, 31, 31, .8), 0 0 60px rgba(120, 0, 0, .9);
+    margin-bottom: 16px;
 }
 
-#endScreen p{
-    opacity:.85;
-    font-size:14px;
-    letter-spacing:3px;
-    margin-bottom:34px;
-    max-width:540px;
-    line-height:1.9;
-    color:#ebd6cc;
+#endScreen p {
+    opacity: .85;
+    font-size: 14px;
+    letter-spacing: 3px;
+    margin-bottom: 34px;
+    max-width: 540px;
+    line-height: 1.9;
+    color: #ebd6cc;
 }
 
-.btn{
-    padding:14px 38px;
-    border:1px solid rgba(220,180,120,.5);
-    background:rgba(255,255,255,.06);
-    color:#f5deb3;
-    letter-spacing:4px;
-    font-size:13px;
-    cursor:pointer;
-    transition:.2s;
+.btn {
+    padding: 14px 38px;
+    border: 1px solid rgba(220, 180, 120, .5);
+    background: rgba(255, 255, 255, .06);
+    color: #f5deb3;
+    letter-spacing: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: .2s;
 }
 
-.btn:hover{
-    background:rgba(220,180,120,.2);
-    border-color:#f5deb3;
-    box-shadow:0 0 15px rgba(210,160,90,.35);
+.btn:hover {
+    background: rgba(220, 180, 120, .2);
+    border-color: #f5deb3;
+    box-shadow: 0 0 15px rgba(210, 160, 90, .35);
 }
 
-.deathBtn{
-    border-color:rgba(184,20,20,.6);
-    color:#e07a7a;
+.deathBtn {
+    border-color: rgba(184, 20, 20, .6);
+    color: #e07a7a;
 }
 
-.deathBtn:hover{
-    background:rgba(184,20,20,.25);
-    border-color:#ff4444;
-    box-shadow:0 0 20px rgba(184,20,20,.5);
+.deathBtn:hover {
+    background: rgba(184, 20, 20, .25);
+    border-color: #ff4444;
+    box-shadow: 0 0 20px rgba(184, 20, 20, .5);
 }
 
-/* ================= HORROR ATMOSPHERE FX ================= */
-
-#vignette{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    z-index:15;
-    background:
-      radial-gradient(
-        ellipse at center,
-        transparent 25%,
-        rgba(0,0,0,.4) 60%,
-        rgba(0,0,0,.95) 100%
-      );
+/* ================= ATMOSPHERE & SHADERS ================= */
+#vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+    background: radial-gradient(ellipse at center, transparent 25%, rgba(0, 0, 0, .45) 60%, rgba(0, 0, 0, .96) 100%);
 }
 
-#static{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    z-index:16;
-    opacity:.04;
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        rgba(255,255,255,.12) 0px,
-        rgba(255,255,255,.12) 1px,
-        transparent 1px,
-        transparent 4px
-      );
+#static {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 16;
+    opacity: .04;
+    background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, .12) 0px, rgba(255, 255, 255, .12) 1px, transparent 1px, transparent 4px);
 }
 
-#flash{
-    position:absolute;
-    inset:0;
-    z-index:80;
-    pointer-events:none;
-    background:white;
-    opacity:0;
-    transition:opacity .08s ease-out;
+#flash {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    pointer-events: none;
+    background: white;
+    opacity: 0;
+    transition: opacity .08s ease-out;
 }
 
-#redFlash{
-    position:absolute;
-    inset:0;
-    z-index:79;
-    pointer-events:none;
-    background:rgba(160,0,0,.75);
-    opacity:0;
-    transition:opacity .15s ease-out;
+#redFlash {
+    position: absolute;
+    inset: 0;
+    z-index: 79;
+    pointer-events: none;
+    background: rgba(160, 0, 0, .75);
+    opacity: 0;
+    transition: opacity .15s ease-out;
 }
 
-#scareText{
-    position:absolute;
-    inset:0;
-    z-index:90;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#ff2a2a;
-    font-size:28px;
-    letter-spacing:12px;
-    opacity:0;
-    pointer-events:none;
-    text-shadow:0 0 25px #ff0000;
-    transition:opacity .2s;
-    font-weight:bold;
+#scareText {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff2a2a;
+    font-size: 28px;
+    letter-spacing: 12px;
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 0 25px #ff0000;
+    transition: opacity .2s;
+    font-weight: bold;
 }
 
-@media(min-width:800px){
-    #joystick{
-        display:none;
+@media(min-width: 800px) {
+    #joystick {
+        display: none;
     }
 }
 </style>
 </head>
-
 <body>
 
 <div id="game">
+    <canvas id="canvas"></canvas>
+    <div id="vignette"></div>
+    <div id="static"></div>
+    <div id="flash"></div>
+    <div id="redFlash"></div>
+    <div id="scareText">RUN</div>
 
-<canvas id="canvas"></canvas>
-
-<div id="vignette"></div>
-<div id="static"></div>
-
-<div id="flash"></div>
-<div id="redFlash"></div>
-
-<div id="scareText">RUN</div>
-
-<div id="hud">
-    <div id="title">THE LAST NIGHT</div>
-    <div id="objectiveBox">
-        <div id="objectiveLabel">OBJECTIVE</div>
-        <div id="objective">Find a way out.</div>
+    <div id="hud">
+        <div id="title">THE LAST NIGHT</div>
+        <div id="objectiveBox">
+            <div id="objectiveLabel">OBJECTIVE</div>
+            <div id="objective">Find a way out.</div>
+        </div>
+        <div id="interactionPrompt">[E] INTERACT</div>
+        <div id="message"></div>
+        <div id="crosshair"></div>
     </div>
-    <div id="interactionPrompt">[E] INTERACT</div>
-    <div id="message"></div>
-    <div id="crosshair"></div>
+
+    <div id="joystick">
+        <div id="stick"></div>
+    </div>
+
+    <button id="interact">EXAMINE</button>
+
+    <div id="startScreen" class="screen">
+        <h1>THE LAST NIGHT</h1>
+        <p>YOU HAVE ONLY ONE LIFE.<br>SEARCH THE MANSION ROOMS, LOCATE THE KEY, AND ESCAPE BEFORE IT FINDS YOU.</p>
+        <button class="btn" onclick="startGame()">ENTER</button>
+    </div>
+
+    <div id="gameOverScreen" class="screen" style="display:none">
+        <h1>“Jaldi The Late”</h1>
+        <p>You were caught in the dark. There are no second chances.</p>
+        <button class="btn deathBtn" onclick="restartGame()">TRY AGAIN</button>
+    </div>
+
+    <div id="endScreen" class="screen" style="display:none">
+        <h1>“RAVI KA BADLA”</h1>
+        <p>You burst through the iron gate into the freezing mist.<br>The heavy lock shatters behind you, but a quiet silhouette lingers in the doorway.<br><br>The mansion remains... and the reckoning has only begun.</p>
+        <button class="btn deathBtn" onclick="restartGame()">PLAY AGAIN</button>
+    </div>
 </div>
 
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-
-<button id="interact">EXAMINE</button>
-
-<!-- ================= START SCREEN ================= -->
-<div id="startScreen" class="screen">
-    <h1>THE LAST NIGHT</h1>
-    <p>YOU HAVE ONLY ONE LIFE.<br>SEARCH THE MANSION ROOMS, LOCATE THE KEY, AND ESCAPE BEFORE IT FINDS YOU.</p>
-    <button class="btn" onclick="startGame()">ENTER</button>
-</div>
-
-<!-- ================= DEATH SCREEN: Jaldi The Late ================= -->
-<div id="gameOverScreen" class="screen" style="display:none">
-    <h1>“Jaldi The Late”</h1>
-    <p>You were caught in the dark. There are no second chances.</p>
-    <button class="btn deathBtn" onclick="restartGame()">TRY AGAIN</button>
-</div>
-
-<!-- ================= ESCAPED SCREEN: RAVI KA BADLA ================= -->
-<div id="endScreen" class="screen" style="display:none">
-    <h1>“RAVI KA BADLA”</h1>
-    <p>You burst through the iron gate into the freezing mist.<br>The heavy lock shatters behind you, but a quiet silhouette lingers in the doorway.<br><br>The mansion remains... and the reckoning has only begun.</p>
-    <button class="btn deathBtn" onclick="restartGame()">PLAY AGAIN</button>
-</div>
-
-</div>
-
-<!-- ================= AUDIO ELEMENTS ================= -->
+<!-- ================= AUDIO ENGINE ELEMENTS ================= -->
 <audio id="ambient" loop src="ambient.mp3"></audio>
 <audio id="footstep" src="footstep.mp3"></audio>
 <audio id="unlock" src="unlock.mp3"></audio>
 
-<audio id="scare1" src="scare1.mp3"></audio>
-<audio id="scare2" src="scare2.mp3"></audio>
-<audio id="scare3" src="scare3.mp3"></audio>
-<audio id="scare4" src="scare4.mp3"></audio>
-<audio id="scare5" src="scare5.mp3"></audio>
-<audio id="scare6" src="scare6.mp3"></audio>
-<audio id="scare7" src="scare7.mp3"></audio>
-<audio id="scare8" src="scare8.mp3"></audio>
-<audio id="scare9" src="scare9.mp3"></audio>
-<audio id="scare10" src="scare10.mp3"></audio>
+<audio id="chilla1" src="chilla1.mp3"></audio>
+<audio id="chilla2" src="chilla2.mp3"></audio>
+<audio id="chilla3" src="chilla3.mp3"></audio>
+
+<audio id="bhag1" src="bhag1.mp3"></audio>
+<audio id="bhag2" src="bhag2.mp3"></audio>
+<audio id="bhag3" src="bhag3.mp3"></audio>
+
+<audio id="bhoot1" src="bhoot1.mp3"></audio>
+<audio id="bhoot2" src="bhoot2.mp3"></audio>
+<audio id="bhoot3" src="bhoot3.mp3"></audio>
+
+<audio id="billu1" src="billu1.mp3"></audio>
+<audio id="billu2" src="billu2.mp3"></audio>
 
 <script>
-/* ================= CANVAS SETUP ================= */
+/* ================= SYSTEM ARCHITECTURE & HIGH-DPI CANVAS ================= */
 const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-let W, H;
+const ctx = canvas.getContext("2d", { alpha: false });
 
-function resize(){
+let W = 0;
+let H = 0;
+const RAYS = 360;
+const zBuffer = new Float32Array(RAYS);
+
+// Cached ambient background gradients to prevent garbage collection frame drops
+let cachedCeilGrad = null;
+let cachedFloorGrad = null;
+let cachedRunnerGrad = null;
+
+function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
+
+    // Precompute environment canvas gradients
+    cachedCeilGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+    cachedCeilGrad.addColorStop(0, "#100b08");
+    cachedCeilGrad.addColorStop(1, "#050302");
+
+    cachedFloorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    cachedFloorGrad.addColorStop(0, "#160c08");
+    cachedFloorGrad.addColorStop(1, "#020101");
+
+    cachedRunnerGrad = ctx.createRadialGradient(W / 2, H * 0.78, 20, W / 2, H * 0.78, W * 0.45);
+    cachedRunnerGrad.addColorStop(0, "rgba(70, 8, 8, 0.24)");
+    cachedRunnerGrad.addColorStop(1, "transparent");
 }
 window.addEventListener("resize", resize);
 resize();
 
-/* ================= LOAD GHOST SPRITE ================= */
+/* ================= 17x17 HAUNTED MANSION MAP ================= */
+const map = [
+    "#################", // 0  (7, 0 South Face) = Misty 1
+    "#...............#", // 1  North Grand Corridor
+    "#.#####.#.#####.#", // 2  (4, 2 South Face) = Occult Portrait
+    "#.#...#.#.#...#.#", // 3  (13.5, 3.2)=Dining Table & Note
+    "#.#...#.#.#...#.#", // 4  (4.5, 4.2)=Creepy Mannequin I
+    "#.#.###.#.###.#.#", // 5  (0, 5 East Face) = Misty 2
+    "#...............#", // 6  Upper Hallway Crossroads
+    "###.###.#.###.###", // 7  (10, 7 South Face) = Misty 3 | (12.5, 7.5)=Creepy Mannequin II
+    "#...#.......#...#", // 8  Central Grand Rotunda
+    "###.###.#.###.###", // 9
+    "#...............#", // 10 Lower Hallway Crossroads (0, 10 East Face) = Misty 4
+    "#.#.###.#.###.#.#", // 11
+    "#.#...#.#.#...#.#", // 12 (3.5, 13.5)=Clock | (13.5, 13.5)=Key Vault
+    "#.#...#.#.#...#.#", // 13 (6.5, 13.5)=Creepy Mannequin III
+    "#.#####.#.#####.#", // 14
+    "#...............#", // 15 South Exit Corridor
+    "#################"  // 16 (11, 16 North Face) = Misty 5
+];
+
+const MAP_W = map[0].length;
+const MAP_H = map.length;
+
+function isWall(x, y) {
+    const mx = Math.floor(x);
+    const my = Math.floor(y);
+    if (my < 0 || my >= MAP_H || mx < 0 || mx >= MAP_W) return true;
+    return map[my][mx] === "#";
+}
+
+function wallNoise(x, y) {
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return n - Math.floor(n);
+}
+
+/* ================= PROCEDURAL SPRITE RENDER CACHE ================= */
+function createOffscreen(width, height) {
+    const c = document.createElement("canvas");
+    c.width = width;
+    c.height = height;
+    return c;
+}
+
+const spriteCanvases = {
+    clock: createOffscreen(128, 256),
+    table: createOffscreen(256, 160),
+    note: createOffscreen(96, 96),
+    painting: createOffscreen(128, 160),
+    door: createOffscreen(160, 256),
+    key: createOffscreen(96, 96),
+    mannequinFallback: createOffscreen(128, 256),
+    mistyFallback: createOffscreen(128, 160)
+};
+
+function renderOffscreenSpriteCaches() {
+    // 1. CLOCK
+    let c = spriteCanvases.clock;
+    let cx = c.getContext("2d");
+    cx.fillStyle = "#22130c";
+    cx.fillRect(16, 20, 96, 216);
+    cx.strokeStyle = "#806040";
+    cx.lineWidth = 6;
+    cx.strokeRect(16, 20, 96, 216);
+    cx.fillStyle = "#eee0be";
+    cx.beginPath();
+    cx.arc(64, 70, 32, 0, Math.PI * 2);
+    cx.fill();
+    cx.strokeStyle = "#1a0f07";
+    cx.lineWidth = 4;
+    cx.beginPath();
+    cx.moveTo(64, 70);
+    cx.lineTo(84, 74);
+    cx.moveTo(64, 70);
+    cx.lineTo(76, 88);
+    cx.stroke();
+
+    // 2. TABLE
+    c = spriteCanvases.table;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#341d13";
+    cx.fillRect(20, 60, 216, 24);
+    cx.fillRect(36, 84, 16, 76);
+    cx.fillRect(204, 84, 16, 76);
+    cx.fillStyle = "#e0d3b6";
+    cx.fillRect(124, 28, 10, 32);
+    cx.fillStyle = "#ff9922";
+    cx.beginPath();
+    cx.arc(129, 20, 10, 0, Math.PI * 2);
+    cx.fill();
+
+    // 3. NOTE
+    c = spriteCanvases.note;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#d0be96";
+    cx.fillRect(16, 16, 64, 64);
+    cx.fillStyle = "#7a1111";
+    cx.font = "bold 20px Arial";
+    cx.textAlign = "center";
+    cx.fillText("RUN", 48, 54);
+
+    // 4. PAINTING (Occult Portrait)
+    c = spriteCanvases.painting;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#2c1a0e";
+    cx.fillRect(10, 10, 108, 140);
+    cx.fillStyle = "#0c0a08";
+    cx.fillRect(20, 20, 88, 120);
+    cx.fillStyle = "#241612";
+    cx.beginPath();
+    cx.arc(64, 66, 26, 0, Math.PI * 2);
+    cx.fill();
+    cx.fillStyle = "#8a1c1c";
+    cx.beginPath();
+    cx.arc(56, 64, 3, 0, Math.PI * 2);
+    cx.arc(72, 64, 3, 0, Math.PI * 2);
+    cx.fill();
+
+    // 5. DOOR
+    c = spriteCanvases.door;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#22120a";
+    cx.fillRect(16, 10, 128, 236);
+    cx.strokeStyle = "#50301c";
+    cx.lineWidth = 8;
+    cx.strokeRect(16, 10, 128, 236);
+    cx.fillStyle = "#8a7058";
+    cx.fillRect(66, 130, 28, 32);
+    cx.fillStyle = "#000";
+    cx.beginPath();
+    cx.arc(80, 144, 5, 0, Math.PI * 2);
+    cx.fill();
+
+    // 6. KEY
+    c = spriteCanvases.key;
+    cx = c.getContext("2d");
+    cx.strokeStyle = "#ffd700";
+    cx.lineWidth = 6;
+    cx.beginPath();
+    cx.arc(32, 48, 16, 0, Math.PI * 2);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(48, 48);
+    cx.lineTo(82, 48);
+    cx.moveTo(70, 48);
+    cx.lineTo(70, 62);
+    cx.moveTo(80, 48);
+    cx.lineTo(80, 58);
+    cx.stroke();
+
+    // 7. MANNEQUIN FALLBACK
+    c = spriteCanvases.mannequinFallback;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#1c1109";
+    cx.fillRect(40, 220, 48, 12);
+    cx.fillRect(60, 120, 8, 100);
+    cx.fillStyle = "#9c8f7d";
+    cx.fillRect(44, 90, 40, 60);
+    cx.fillStyle = "#ded6c8";
+    cx.beginPath();
+    cx.ellipse(64, 60, 18, 24, 0, 0, Math.PI * 2);
+    cx.fill();
+    cx.fillStyle = "#111";
+    cx.beginPath();
+    cx.arc(58, 58, 3, 0, Math.PI * 2);
+    cx.arc(70, 58, 3, 0, Math.PI * 2);
+    cx.fill();
+
+    // 8. MISTY FALLBACK
+    c = spriteCanvases.mistyFallback;
+    cx = c.getContext("2d");
+    cx.fillStyle = "#3b2a14";
+    cx.fillRect(10, 10, 108, 140);
+    cx.fillStyle = "#a8843c";
+    cx.strokeRect(12, 12, 104, 136);
+    cx.fillStyle = "#0d0908";
+    cx.fillRect(18, 18, 92, 124);
+    cx.fillStyle = "#701a1a";
+    cx.font = "italic 13px serif";
+    cx.textAlign = "center";
+    cx.fillText("MISTY", 64, 82);
+}
+renderOffscreenSpriteCaches();
+
+/* ================= ASSET LOADERS ================= */
 const ghostImg = new Image();
 ghostImg.src = "ghost.png";
 let ghostImgLoaded = false;
 ghostImg.onload = () => { ghostImgLoaded = true; };
 
-/* ================= LOAD 5 MISTY CUSTOM PORTRAITS ================= */
 const mistyPics = [];
-for(let i = 1; i <= 5; i++){
+for (let i = 1; i <= 5; i++) {
     const item = { img: new Image(), loaded: false };
     item.img.src = `misty${i}.jpg`;
     item.img.onload = () => { item.loaded = true; };
     item.img.onerror = () => {
-        // Fallback to .png if .jpg is not present
-        if(!item.img.src.endsWith(".png")){
+        if (!item.img.src.endsWith(".png")) {
             item.img.src = `misty${i}.png`;
         }
     };
     mistyPics.push(item);
 }
 
-/* ================= 17x17 HAUNTED MANSION MAP =================
-   Start: (1.5, 1.5)
-   Exit Door: (15.5, 15.2)
-*/
-const map = [
-    "#################", // 0
-    "#...............#", // 1  North Grand Corridor (Misty 1 at 7.5, 1.15)
-    "#.#####.#.#####.#", // 2
-    "#.#...#.#.#...#.#", // 3  (3.5, 2.5)=Occult Portrait | (13.5, 3.2)=Dining Table & Note
-    "#.#...#.#.#...#.#", // 4  (4.5, 4.2)=Creepy Mannequin I
-    "#.#.###.#.###.#.#", // 5  (1.15, 5.5)=Misty 2
-    "#...............#", // 6  Upper Hallway Crossroads
-    "###.###.#.###.###", // 7  (12.5, 7.5)=Creepy Mannequin II
-    "#...#.......#...#", // 8  Central Grand Rotunda (Misty 3 at 9.85, 8.5)
-    "###.###.#.###.###", // 9
-    "#...............#", // 10 Lower Hallway Crossroads (Misty 4 at 1.15, 10.5)
-    "#.#.###.#.###.#.#", // 11
-    "#.#...#.#.#...#.#", // 12 (3.5, 13.5)=Clock | (13.5, 13.5)=Key Vault
-    "#.#...#.#.#...#.#", // 13 (6.5, 13.5)=Creepy Mannequin III
-    "#.#####.#.#####.#", // 14
-    "#...............#", // 15 South Exit Corridor (Misty 5 at 11.5, 15.85)
-    "#################"  // 16
-];
-
-const MAP_W = map[0].length;
-const MAP_H = map.length;
-
-function isWall(x, y){
-    const mx = Math.floor(x);
-    const my = Math.floor(y);
-    if(my < 0 || my >= MAP_H || mx < 0 || mx >= MAP_W) return true;
-    return map[my][mx] === "#";
-}
-
-/* ================= PROCEDURAL BLOOD & DECAY WALL HASH ================= */
-function wallNoise(x, y){
-    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    return n - Math.floor(n);
-}
-
-/* ================= BFS PATHFINDING FOR GHOST ================= */
-function getBFSPath(startX, startY, targetX, targetY){
-    const sx = Math.floor(startX);
-    const sy = Math.floor(startY);
-    const tx = Math.floor(targetX);
-    const ty = Math.floor(targetY);
-
-    if(sx === tx && sy === ty) return [];
-
-    const queue = [[sx, sy]];
-    const visited = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(false));
-    const parent = {};
-
-    visited[sy][sx] = true;
-    let found = false;
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-
-    while(queue.length > 0){
-        const [cx, cy] = queue.shift();
-        if(cx === tx && cy === ty){
-            found = true;
-            break;
+const putlaPics = [];
+for (let i = 1; i <= 2; i++) {
+    const item = { img: new Image(), loaded: false };
+    item.img.src = `putla${i}.png`;
+    item.img.onload = () => { item.loaded = true; };
+    item.img.onerror = () => {
+        if (!item.img.src.endsWith(".jpg")) {
+            item.img.src = `putla${i}.jpg`;
         }
-        for(const [dx, dy] of dirs){
-            const nx = cx + dx;
-            const ny = cy + dy;
-            if(nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H){
-                if(!visited[ny][nx] && map[ny][nx] !== "#"){
-                    visited[ny][nx] = true;
-                    parent[`${nx},${ny}`] = [cx, cy];
-                    queue.push([nx, ny]);
-                }
-            }
+    };
+    putlaPics.push(item);
+}
+
+/* ================= WALL-MOUNTED POSTERS (PROPER PERSPECTIVE & SCALE) ================= */
+const wallPosters = {
+    // Occult Portrait in North Room (South face of wall tile [4,2])
+    "4,2,S": {
+        id: "painting",
+        getDrawable: () => spriteCanvases.painting
+    },
+    // Misty 1 in North Corridor (South face of outer wall [7,0])
+    "7,0,S": {
+        id: "misty1",
+        getDrawable: () => {
+            const p = mistyPics[0];
+            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
+        }
+    },
+    // Misty 2 in West Corridor (East face of outer wall [0,5])
+    "0,5,E": {
+        id: "misty2",
+        getDrawable: () => {
+            const p = mistyPics[1];
+            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
+        }
+    },
+    // Misty 3 in Central Grand Rotunda (South face of rotunda wall [10,7])
+    "10,7,S": {
+        id: "misty3",
+        getDrawable: () => {
+            const p = mistyPics[2];
+            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
+        }
+    },
+    // Misty 4 in Lower Crossroads (East face of outer wall [0,10])
+    "0,10,E": {
+        id: "misty4",
+        getDrawable: () => {
+            const p = mistyPics[3];
+            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
+        }
+    },
+    // Misty 5 in South Exit Corridor (North face of outer wall [11,16])
+    "11,16,N": {
+        id: "misty5",
+        getDrawable: () => {
+            const p = mistyPics[4];
+            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
         }
     }
-
-    if(!found) return [];
-
-    const path = [];
-    let curr = [tx, ty];
-    while(curr){
-        if(curr[0] === sx && curr[1] === sy) break;
-        path.unshift({ x: curr[0] + 0.5, y: curr[1] + 0.5 });
-        curr = parent[`${curr[0]},${curr[1]}`];
-    }
-    return path;
-}
+};
 
 /* ================= GAME STATE ================= */
 let gameState = {
@@ -589,24 +734,73 @@ let gameState = {
     survivalTimer: 0
 };
 
-/* ================= PLAYER ================= */
+/* ================= PLAYER OBJECT ================= */
+const FOV = Math.PI / 3;
 const player = {
     x: 1.5,
     y: 1.5,
     angle: 0.1,
-    speed: 2.2,
+    speed: 2.3,
     radius: 0.22,
     headBob: 0
 };
 
-let keys = {};
+const keys = {};
 document.addEventListener("keydown", e => {
     keys[e.key.toLowerCase()] = true;
-    if(e.key.toLowerCase() === "e") handleInteract();
+    if (e.key.toLowerCase() === "e") handleInteract();
 });
 document.addEventListener("keyup", e => {
     keys[e.key.toLowerCase()] = false;
 });
+
+/* ================= BFS PATHFINDING FOR GHOST ================= */
+function getBFSPath(startX, startY, targetX, targetY) {
+    const sx = Math.floor(startX);
+    const sy = Math.floor(startY);
+    const tx = Math.floor(targetX);
+    const ty = Math.floor(targetY);
+
+    if (sx === tx && sy === ty) return [];
+
+    const queue = [[sx, sy]];
+    const visited = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(false));
+    const parent = {};
+
+    visited[sy][sx] = true;
+    let found = false;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+    while (queue.length > 0) {
+        const [cx, cy] = queue.shift();
+        if (cx === tx && cy === ty) {
+            found = true;
+            break;
+        }
+        for (let i = 0; i < 4; i++) {
+            const nx = cx + dirs[i][0];
+            const ny = cy + dirs[i][1];
+            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+                if (!visited[ny][nx] && map[ny][nx] !== "#") {
+                    visited[ny][nx] = true;
+                    parent[`${nx},${ny}`] = [cx, cy];
+                    queue.push([nx, ny]);
+                }
+            }
+        }
+    }
+
+    if (!found) return [];
+
+    const path = [];
+    let curr = [tx, ty];
+    while (curr) {
+        if (curr[0] === sx && curr[1] === sy) break;
+        path.unshift({ x: curr[0] + 0.5, y: curr[1] + 0.5 });
+        curr = parent[`${curr[0]},${curr[1]}`];
+    }
+    return path;
+}
 
 /* ================= AGGRESSIVE GHOST ENEMY ================= */
 const ghostEnemy = {
@@ -621,14 +815,15 @@ const ghostEnemy = {
     bobAngle: 0
 };
 
-/* ================= WORLD OBJECTS (PUZZLES, MISTY PICS, MANNEQUINS) ================= */
+/* ================= WORLD OBJECTS (INTERACTION & SOUND TRIGGERS) ================= */
 const worldObjects = [
-    // CORE OBJECTIVES
     {
         id: "painting",
-        x: 3.5,
-        y: 2.5,
+        x: 4.0,
+        y: 3.35,
         type: "painting",
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] EXAMINE PORTRAIT",
         mobileText: "EXAMINE",
         examineMsg: "The eyes follow your movement. Cold breath touches your neck."
@@ -638,6 +833,8 @@ const worldObjects = [
         x: 13.5,
         y: 3.2,
         type: "table",
+        w: 1.5,
+        h: 1.1,
         actionText: "[E] INSPECT TABLE",
         mobileText: "INSPECT",
         examineMsg: "An old wooden dining table. A candle flickers silently in the dark."
@@ -647,6 +844,8 @@ const worldObjects = [
         x: 13.8,
         y: 3.8,
         type: "note",
+        w: 0.6,
+        h: 0.6,
         actionText: "[E] READ PARCHMENT",
         mobileText: "READ",
         examineMsg: "A bloody scribbled note: 'THE KEY IS WHERE THE CLOCK STOPPED.'"
@@ -656,6 +855,8 @@ const worldObjects = [
         x: 3.5,
         y: 13.5,
         type: "clock",
+        w: 0.85,
+        h: 1.8,
         actionText: "[E] CHECK CLOCK",
         mobileText: "CLOCK",
         examineMsg: "A towering grandfather clock. Frozen at 3:17."
@@ -665,6 +866,8 @@ const worldObjects = [
         x: 13.5,
         y: 13.5,
         type: "key",
+        w: 0.7,
+        h: 0.7,
         actionText: "[E] TAKE EXIT KEY",
         mobileText: "TAKE KEY",
         examineMsg: "A heavy, rusted iron key. Cold as ice."
@@ -674,48 +877,57 @@ const worldObjects = [
         x: 15.5,
         y: 15.2,
         type: "door",
+        w: 1.25,
+        h: 2.1,
         actionText: "[E] OPEN EXIT DOOR",
         mobileText: "OPEN DOOR",
         examineMsg: "A reinforced iron door leading outside. Bolted shut."
     },
-
-    // 5 CUSTOM MISTY WALL PORTRAITS (No impact on progression, pure atmosphere)
+    // MISTY PORTRAITS (Cleanly anchored in walkable areas in front of wall mounts)
     {
         id: "misty1",
         x: 7.5,
-        y: 1.18,
+        y: 1.35,
         type: "mistyPortrait",
         picIndex: 0,
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] VIEW PORTRAIT",
         mobileText: "VIEW",
         examineMsg: "Portrait of Misty I: The painted eyes stare directly into your soul."
     },
     {
         id: "misty2",
-        x: 1.18,
+        x: 1.35,
         y: 5.5,
         type: "mistyPortrait",
         picIndex: 1,
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] VIEW PORTRAIT",
         mobileText: "VIEW",
         examineMsg: "Portrait of Misty II: Dried crimson streaks drip beneath the vintage glass."
     },
     {
         id: "misty3",
-        x: 9.82,
-        y: 8.5,
+        x: 10.5,
+        y: 8.35,
         type: "mistyPortrait",
         picIndex: 2,
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] VIEW PORTRAIT",
         mobileText: "VIEW",
         examineMsg: "Portrait of Misty III: An ornate frame in the shadows. You hear faint whispering."
     },
     {
         id: "misty4",
-        x: 1.18,
+        x: 1.35,
         y: 10.5,
         type: "mistyPortrait",
         picIndex: 3,
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] VIEW PORTRAIT",
         mobileText: "VIEW",
         examineMsg: "Portrait of Misty IV: Cold air radiates from the wooden mount."
@@ -723,69 +935,91 @@ const worldObjects = [
     {
         id: "misty5",
         x: 11.5,
-        y: 15.82,
+        y: 15.65,
         type: "mistyPortrait",
         picIndex: 4,
+        w: 0.6,
+        h: 0.8,
         actionText: "[E] VIEW PORTRAIT",
         mobileText: "VIEW",
         examineMsg: "Portrait of Misty V: Written beneath the frame: 'Ravi Ka Badla'..."
     },
-
-    // HORROR ELEMENTS: CREEPY MANNEQUINS
+    // MANNEQUINS
     {
         id: "mannequin1",
         x: 4.5,
         y: 4.2,
         type: "mannequin",
-        headTilt: 0.15,
+        picIndex: 0,
+        w: 1.0,
+        h: 1.9,
         actionText: "[E] EXAMINE MANNEQUIN",
         mobileText: "EXAMINE",
-        examineMsg: "A lifelike wax mannequin draped in stained cloth. Its head turned toward you..."
+        examineMsg: "A motionless mannequin stands beneath the dead light. Was it facing you before?"
     },
     {
         id: "mannequin2",
         x: 12.5,
         y: 7.5,
         type: "mannequin",
-        headTilt: -0.22,
+        picIndex: 1,
+        w: 1.0,
+        h: 1.9,
         actionText: "[E] EXAMINE MANNEQUIN",
         mobileText: "EXAMINE",
-        examineMsg: "A faceless wooden figure standing motionless in the dark corridor."
-    },
-    {
-        id: "mannequin3",
-        x: 6.5,
-        y: 13.5,
-        type: "mannequin",
-        headTilt: 0.35,
-        actionText: "[E] EXAMINE MANNEQUIN",
-        mobileText: "EXAMINE",
-        examineMsg: "Its fingers are chipped and smeared with dark dried blood."
+        examineMsg: "A faceless figure waits in the corridor. You swear it was somewhere else a moment ago."
     }
 ];
 
-/* ================= SOUND ENGINE ================= */
-function playSound(id, volume = 1.0){
+/* ================= AUDIO ENGINE ================= */
+function playSound(id, volume = 1.0) {
     const el = document.getElementById(id);
-    if(el){
+    if (el) {
         el.currentTime = 0;
         el.volume = volume;
         el.play().catch(() => {});
     }
 }
 
-function playScareSound(){
-    const n = Math.floor(Math.random() * 10) + 1;
-    playSound("scare" + n, 1.0);
+function playRandomFrom(prefix, count, volume = 1.0) {
+    const n = Math.floor(Math.random() * count) + 1;
+    playSound(prefix + n, volume);
+}
+
+let distantScreamTimer = 6.0;
+let chaseSoundTimer = 1.5;
+let mistySoundTimer = 0;
+let lastMistySoundId = null;
+
+function playDistantGhostScream() {
+    playRandomFrom("chilla", 3, 0.82);
+}
+
+function playGhostChaseSound() {
+    playRandomFrom("bhag", 3, 0.9);
+}
+
+function playMistyProximitySound(obj) {
+    if (!obj || obj.type !== "mistyPortrait") return;
+    if (obj.id === lastMistySoundId && mistySoundTimer > 0) return;
+
+    if (["misty1", "misty3", "misty5"].includes(obj.id)) {
+        playRandomFrom("bhoot", 3, 0.78);
+    } else if (["misty2", "misty4"].includes(obj.id)) {
+        playRandomFrom("billu", 2, 0.78);
+    }
+
+    lastMistySoundId = obj.id;
+    mistySoundTimer = 5.0;
 }
 
 let footstepTimer = 0;
-function triggerFootstep(dt){
+function triggerFootstep(dt) {
     footstepTimer += dt;
-    if(footstepTimer > 0.42){
+    if (footstepTimer > 0.42) {
         footstepTimer = 0;
         const foot = document.getElementById("footstep");
-        if(foot){
+        if (foot) {
             foot.currentTime = 0;
             foot.volume = 0.25;
             foot.play().catch(() => {});
@@ -793,74 +1027,98 @@ function triggerFootstep(dt){
     }
 }
 
-/* ================= RAYCASTING WITH HOME WALL TEXTURING & BLOOD ================= */
-const FOV = Math.PI / 3;
-const RAYS = 320;
-const zBuffer = new Float32Array(RAYS);
-
-function castRay(angle){
-    const sin = Math.sin(angle);
-    const cos = Math.cos(angle);
-
-    let dist = 0;
-    const maxDist = 22;
-    const step = 0.02;
-
-    while(dist < maxDist){
-        dist += step;
-        const checkX = player.x + cos * dist;
-        const checkY = player.y + sin * dist;
-        if(isWall(checkX, checkY)){
-            const prevX = checkX - cos * step;
-            const isEW = Math.floor(prevX) !== Math.floor(checkX);
-            const wallU = isEW ? (checkY - Math.floor(checkY)) : (checkX - Math.floor(checkX));
-            return { dist, isEW, wallU, mx: Math.floor(checkX), my: Math.floor(checkY) };
-        }
-    }
-    return { dist: maxDist, isEW: false, wallU: 0, mx: 0, my: 0 };
-}
-
-function drawWorld(){
-    // Ceiling: Dark antique wooden rafters
-    const ceilGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
-    ceilGrad.addColorStop(0, "#100b08");
-    ceilGrad.addColorStop(1, "#050302");
-    ctx.fillStyle = ceilGrad;
+/* ================= DDA RAYCASTER WITH WALL-MOUNTED POSTER DECALS ================= */
+function drawWorld() {
+    // 1. Draw precomputed background gradients
+    ctx.fillStyle = cachedCeilGrad;
     ctx.fillRect(0, 0, W, H * 0.5);
 
-    // Floor: Dark hardwood planks with faint hallway center rug tint
-    const floorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    floorGrad.addColorStop(0, "#160c08");
-    floorGrad.addColorStop(1, "#020101");
-    ctx.fillStyle = floorGrad;
+    ctx.fillStyle = cachedFloorGrad;
     ctx.fillRect(0, H * 0.5, W, H * 0.5);
 
-    // Hallway runner carpet illusion (center red velvet)
-    const runnerGrad = ctx.createRadialGradient(W/2, H * 0.78, 20, W/2, H * 0.78, W * 0.45);
-    runnerGrad.addColorStop(0, "rgba(70, 8, 8, 0.22)");
-    runnerGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = runnerGrad;
+    ctx.fillStyle = cachedRunnerGrad;
     ctx.fillRect(0, H * 0.5, W, H * 0.5);
+
+    const dirX = Math.cos(player.angle);
+    const dirY = Math.sin(player.angle);
+    const planeX = -dirY * Math.tan(FOV / 2);
+    const planeY = dirX * Math.tan(FOV / 2);
 
     const stripW = W / RAYS;
     const bobOffset = Math.sin(player.headBob) * 6;
 
-    for(let i = 0; i < RAYS; i++){
-        const cameraX = (i / RAYS) - 0.5;
-        const rayAngle = player.angle + cameraX * FOV;
+    for (let i = 0; i < RAYS; i++) {
+        const cameraX = (2 * i / RAYS) - 1;
+        const rayDirX = dirX + planeX * cameraX;
+        const rayDirY = dirY + planeY * cameraX;
 
-        const hit = castRay(rayAngle);
-        const correctedDist = hit.dist * Math.cos(rayAngle - player.angle);
-        zBuffer[i] = correctedDist;
+        let mapX = Math.floor(player.x);
+        let mapY = Math.floor(player.y);
 
-        const wallH = Math.min(H * 2.4, H / (correctedDist * 0.72));
+        const deltaDistX = Math.abs(1 / (rayDirX === 0 ? 1e-6 : rayDirX));
+        const deltaDistY = Math.abs(1 / (rayDirY === 0 ? 1e-6 : rayDirY));
+
+        let stepX, stepY;
+        let sideDistX, sideDistY;
+
+        if (rayDirX < 0) {
+            stepX = -1;
+            sideDistX = (player.x - mapX) * deltaDistX;
+        } else {
+            stepX = 1;
+            sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
+        }
+
+        if (rayDirY < 0) {
+            stepY = -1;
+            sideDistY = (player.y - mapY) * deltaDistY;
+        } else {
+            stepY = 1;
+            sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
+        }
+
+        let hit = false;
+        let side = 0; // 0 = X-wall (EW), 1 = Y-wall (NS)
+        let safeSteps = 45;
+
+        while (!hit && safeSteps-- > 0) {
+            if (sideDistX < sideDistY) {
+                sideDistX += deltaDistX;
+                mapX += stepX;
+                side = 0;
+            } else {
+                sideDistY += deltaDistY;
+                mapY += stepY;
+                side = 1;
+            }
+            if (isWall(mapX, mapY)) hit = true;
+        }
+
+        let perpWallDist;
+        if (side === 0) {
+            perpWallDist = (mapX - player.x + (1 - stepX) / 2) / (rayDirX === 0 ? 1e-6 : rayDirX);
+        } else {
+            perpWallDist = (mapY - player.y + (1 - stepY) / 2) / (rayDirY === 0 ? 1e-6 : rayDirY);
+        }
+
+        perpWallDist = Math.max(0.08, perpWallDist);
+        zBuffer[i] = perpWallDist;
+
+        let wallX;
+        if (side === 0) {
+            wallX = player.y + perpWallDist * rayDirY;
+        } else {
+            wallX = player.x + perpWallDist * rayDirX;
+        }
+        wallX -= Math.floor(wallX);
+
+        const wallH = Math.min(H * 2.5, H / (perpWallDist * 0.72));
         const top = (H - wallH) / 2 + bobOffset;
 
-        // Light level with distance falloff
-        let light = Math.max(0.05, 1 - (correctedDist / 12));
-        if(hit.isEW) light *= 0.75; // East-West directional depth
+        let light = Math.max(0.06, 1 - (perpWallDist / 13));
+        if (side === 1) light *= 0.72; // Directional side shading
 
-        // Victorian Wallpaper Base Color (Weathered burgundy / dark mahogany)
+        // Victorian Damask wall base colors
         const r = Math.floor(45 + light * 60);
         const g = Math.floor(22 + light * 28);
         const b = Math.floor(18 + light * 24);
@@ -868,14 +1126,14 @@ function drawWorld(){
         ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fillRect(i * stripW, top, stripW + 1, wallH);
 
-        // Damask wallpaper vertical stripes
-        const stripe = Math.floor(hit.wallU * 12) % 2 === 0;
-        if(stripe){
-            ctx.fillStyle = `rgba(0,0,0,${0.18 * light})`;
+        // Damask vertical panel stripes
+        const isStripe = Math.floor(wallX * 12) % 2 === 0;
+        if (isStripe) {
+            ctx.fillStyle = `rgba(0,0,0,${0.20 * light})`;
             ctx.fillRect(i * stripW, top, stripW + 1, wallH);
         }
 
-        // Mansion Baseboards (Dark oak lower panel trim)
+        // Baseboards (Dark oak lower panel trim)
         const baseH = wallH * 0.16;
         ctx.fillStyle = `rgba(18, 9, 5, ${Math.min(1, light * 1.3)})`;
         ctx.fillRect(i * stripW, top + wallH - baseH, stripW + 1, baseH);
@@ -885,366 +1143,241 @@ function drawWorld(){
         ctx.fillStyle = `rgba(12, 6, 4, ${Math.min(1, light * 1.3)})`;
         ctx.fillRect(i * stripW, top, stripW + 1, crownH);
 
-        // PROCEDURAL BLOOD AND GHOST-PAINTED WALL MARKINGS
-        const n = wallNoise(hit.mx, hit.my);
-        if(n > 0.42){
-            // Wall has blood stains / scratch markings
+        // Procedural blood spatters and decay
+        const n = wallNoise(mapX, mapY);
+        if (n > 0.42) {
             const bloodTop = top + wallH * 0.28;
             const bloodH = wallH * (0.35 + (n - 0.42) * 0.4);
             const streakCenter = (n * 7) % 1;
 
-            if(Math.abs(hit.wallU - streakCenter) < 0.18){
-                // Blood drip / smear
+            if (Math.abs(wallX - streakCenter) < 0.18) {
                 const bloodAlpha = (0.35 + (n * 0.35)) * light;
                 ctx.fillStyle = `rgba(110, 8, 8, ${bloodAlpha})`;
                 ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH);
 
-                // Dark dried blood center streak
-                if(Math.abs(hit.wallU - streakCenter) < 0.05){
+                if (Math.abs(wallX - streakCenter) < 0.05) {
                     ctx.fillStyle = `rgba(40, 0, 0, ${bloodAlpha * 1.2})`;
                     ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH * 0.85);
                 }
             }
         }
-    }
-}
 
-/* ================= SPRITE PROJECTION & OCCLUSION ================= */
-function projectSprite(x, y){
-    const dx = x - player.x;
-    const dy = y - player.y;
-    const distance = Math.hypot(dx, dy);
-
-    let angle = Math.atan2(dy, dx) - player.angle;
-    while(angle > Math.PI) angle -= Math.PI * 2;
-    while(angle < -Math.PI) angle += Math.PI * 2;
-
-    if(Math.abs(angle) > FOV * 0.85) return null;
-
-    const perpDist = distance * Math.cos(angle);
-    if(perpDist <= 0.1) return null;
-
-    const screenX = (W / 2) + Math.tan(angle) * (W / 2) / Math.tan(FOV / 2);
-    const scale = Math.min(3.6, 3.8 / perpDist);
-
-    return { screenX, distance, perpDist, scale, angle };
-}
-
-function drawSprites(){
-    const renderList = [];
-
-    // World Objects
-    for(const obj of worldObjects){
-        if(obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
-
-        const proj = projectSprite(obj.x, obj.y);
-        if(proj){
-            const rayIndex = Math.floor((proj.screenX / W) * RAYS);
-            if(rayIndex >= 0 && rayIndex < RAYS){
-                if(proj.perpDist <= zBuffer[rayIndex] + 0.35){
-                    renderList.push({ type: "object", data: obj, proj });
-                }
+        // ================= WALL-MOUNTED POSTER RENDERING =================
+        let face = "";
+        let u = 0;
+        if (side === 0) {
+            if (stepX === 1) {
+                face = "W";
+                u = wallX;
+            } else {
+                face = "E";
+                u = 1.0 - wallX;
+            }
+        } else {
+            if (stepY === 1) {
+                face = "N";
+                u = 1.0 - wallX;
+            } else {
+                face = "S";
+                u = wallX;
             }
         }
-    }
 
-    // Ghost Enemy
-    if(ghostEnemy.active){
-        const proj = projectSprite(ghostEnemy.x, ghostEnemy.y);
-        if(proj){
-            renderList.push({ type: "ghost", data: ghostEnemy, proj });
-        }
-    }
+        const posterKey = `${mapX},${mapY},${face}`;
+        const poster = wallPosters[posterKey];
 
-    // Back to front depth sorting
-    renderList.sort((a, b) => b.proj.distance - a.proj.distance);
+        if (poster) {
+            // Realistic small frame dimensions mounted cleanly at eye level
+            const pMinU = 0.28;
+            const pMaxU = 0.72;
 
-    for(const item of renderList){
-        if(item.type === "object"){
-            renderWorldObject(item.data, item.proj);
-        } else if(item.type === "ghost"){
-            renderGhostSprite(item.data, item.proj);
-        }
-    }
-}
+            if (u >= pMinU && u <= pMaxU) {
+                const posterTop = top + wallH * 0.25;
+                const posterH = wallH * 0.44;
 
-function renderWorldObject(obj, proj){
-    const s = proj.scale;
-    const cx = proj.screenX;
-    const bobOffset = Math.sin(player.headBob) * 6;
+                const borderThicknessU = 0.024;
+                const borderThicknessV = 0.038;
 
-    // 1. MISTY CUSTOM PORTRAITS (misty1 - misty5)
-    if(obj.type === "mistyPortrait"){
-        const w = 92 * s;
-        const h = 120 * s;
-        const x = cx - w / 2;
-        const y = H * 0.38 - h / 2 + bobOffset;
+                // 1. Antique dark gold & wood frame
+                const fR = Math.floor(65 * light);
+                const fG = Math.floor(42 * light);
+                const fB = Math.floor(24 * light);
+                ctx.fillStyle = `rgb(${fR},${fG},${fB})`;
+                ctx.fillRect(i * stripW, posterTop, stripW + 1, posterH);
 
-        // Antique carved gilded frame
-        ctx.fillStyle = "#3b2a14";
-        ctx.fillRect(x - 5 * s, y - 5 * s, w + 10 * s, h + 10 * s);
-        ctx.fillStyle = "#a8843c";
-        ctx.strokeRect(x - 4 * s, y - 4 * s, w + 8 * s, h + 8 * s);
+                // Frame trim lines
+                ctx.fillStyle = `rgba(190, 150, 75, ${0.45 * light})`;
+                ctx.fillRect(i * stripW, posterTop, stripW + 1, 2);
+                ctx.fillRect(i * stripW, posterTop + posterH - 2, stripW + 1, 2);
 
-        // Velvet matte border
-        ctx.fillStyle = "#1e0b0e";
-        ctx.fillRect(x - 2 * s, y - 2 * s, w + 4 * s, h + 4 * s);
+                // 2. Poster artwork inside frame
+                if (u >= pMinU + borderThicknessU && u <= pMaxU - borderThicknessU) {
+                    const innerTop = posterTop + posterH * borderThicknessV;
+                    const innerH = posterH * (1 - borderThicknessV * 2);
 
-        const pic = mistyPics[obj.picIndex];
-        if(pic && pic.loaded){
-            ctx.drawImage(pic.img, x, y, w, h);
-        } else {
-            // Atmospheric placeholder canvas
-            ctx.fillStyle = "#0d0908";
-            ctx.fillRect(x, y, w, h);
-            ctx.fillStyle = "rgba(180, 140, 90, 0.4)";
-            ctx.font = `${Math.max(8, 9 * s)}px Courier New`;
-            ctx.textAlign = "center";
-            ctx.fillText(`MISTY ${obj.picIndex + 1}`, cx, y + h * 0.5);
-        }
+                    const normU = (u - (pMinU + borderThicknessU)) / (pMaxU - pMinU - borderThicknessU * 2);
+                    const clampedU = Math.max(0, Math.min(0.999, normU));
 
-        // Frame glass subtle reflection
-        ctx.fillStyle = "rgba(255,255,255,0.04)";
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + w * 0.6, y);
-        ctx.lineTo(x, y + h * 0.6);
-        ctx.fill();
-    }
-    // 2. OCCULT PAINTING
-    else if(obj.type === "painting"){
-        const w = 95 * s;
-        const h = 130 * s;
-        ctx.fillStyle = "#2c1a0e";
-        ctx.fillRect(cx - w/2, H * 0.38 - h/2 + bobOffset, w, h);
-        ctx.fillStyle = "#0c0a08";
-        ctx.fillRect(cx - w * 0.42, H * 0.38 - h * 0.42 + bobOffset, w * 0.84, h * 0.84);
+                    const src = poster.getDrawable();
+                    if (src) {
+                        const sw = src.naturalWidth || src.width || 100;
+                        const sh = src.naturalHeight || src.height || 100;
+                        const sx = Math.floor(clampedU * sw);
 
-        // Portrait silhouette
-        ctx.fillStyle = "#1c1714";
-        ctx.beginPath();
-        ctx.arc(cx, H * 0.36 + bobOffset, 16 * s, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Blood-red glowing eyes
-        ctx.fillStyle = gameState.paintingExamined ? "#ff2222" : "rgba(220,210,180,.6)";
-        ctx.beginPath();
-        ctx.arc(cx - 5 * s, H * 0.36 + bobOffset, 2.4 * s, 0, Math.PI * 2);
-        ctx.arc(cx + 5 * s, H * 0.36 + bobOffset, 2.4 * s, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    // 3. CREEPY MANNEQUINS
-    else if(obj.type === "mannequin"){
-        const mw = 32 * s;
-        const mh = 160 * s;
-        const baseOffset = H * 0.62 + bobOffset;
-
-        // Wooden stand base & pole
-        ctx.fillStyle = "#1c1109";
-        ctx.fillRect(cx - 16 * s, baseOffset, 32 * s, 6 * s);
-        ctx.fillRect(cx - 3 * s, baseOffset - 60 * s, 6 * s, 60 * s);
-
-        // Draped Torso
-        ctx.fillStyle = "#9c8f7d";
-        ctx.beginPath();
-        ctx.moveTo(cx - 14 * s, baseOffset - 60 * s);
-        ctx.lineTo(cx + 14 * s, baseOffset - 60 * s);
-        ctx.lineTo(cx + 10 * s, baseOffset - 18 * s);
-        ctx.lineTo(cx - 10 * s, baseOffset - 18 * s);
-        ctx.closePath();
-        ctx.fill();
-
-        // Stains on cloth
-        ctx.fillStyle = "rgba(90, 10, 10, 0.55)";
-        ctx.beginPath();
-        ctx.arc(cx - 2 * s, baseOffset - 36 * s, 7 * s, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Porcelain Neck & Head (Tilted unnaturally)
-        ctx.save();
-        ctx.translate(cx, baseOffset - 66 * s);
-        ctx.rotate(obj.headTilt || 0.15);
-
-        // Head
-        ctx.fillStyle = "#ded6c8";
-        ctx.beginPath();
-        ctx.ellipse(0, -14 * s, 10 * s, 14 * s, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Black empty eye sockets
-        ctx.fillStyle = "#111";
-        ctx.beginPath();
-        ctx.arc(-4 * s, -14 * s, 2 * s, 0, Math.PI * 2);
-        ctx.arc(4 * s, -14 * s, 2 * s, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-    // 4. DINING TABLE & CANDLE
-    else if(obj.type === "table"){
-        const w = 120 * s;
-        ctx.fillStyle = "#341d13";
-        ctx.fillRect(cx - w/2, H * 0.56 + bobOffset, w, 16 * s);
-        ctx.fillRect(cx - w * 0.35, H * 0.58 + bobOffset, 8 * s, 90 * s);
-        ctx.fillRect(cx + w * 0.28, H * 0.58 + bobOffset, 8 * s, 90 * s);
-
-        // Candle
-        ctx.fillStyle = "#e0d3b6";
-        ctx.fillRect(cx - 4 * s, H * 0.48 + bobOffset, 8 * s, 42 * s);
-        ctx.fillStyle = "#ff9922";
-        ctx.beginPath();
-        ctx.arc(cx, H * 0.47 + bobOffset, (7 + Math.sin(performance.now() * 0.01) * 1.5) * s, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    // 5. PARCHMENT NOTE
-    else if(obj.type === "note"){
-        const w = 42 * s;
-        const h = 32 * s;
-        ctx.fillStyle = "#d0be96";
-        ctx.fillRect(cx - w/2, H * 0.54 + bobOffset, w, h);
-        ctx.fillStyle = "#7a1111";
-        ctx.font = `bold ${9 * s}px Arial`;
-        ctx.textAlign = "center";
-        ctx.fillText("RUN", cx, H * 0.54 + 20 * s + bobOffset);
-    }
-    // 6. GRANDFATHER CLOCK
-    else if(obj.type === "clock"){
-        const w = 56 * s;
-        const h = 180 * s;
-        ctx.fillStyle = "#22130c";
-        ctx.fillRect(cx - w/2, H * 0.30 + bobOffset, w, h);
-        ctx.strokeStyle = "#806040";
-        ctx.lineWidth = 3 * s;
-        ctx.strokeRect(cx - w/2, H * 0.30 + bobOffset, w, h);
-
-        // Clock face
-        ctx.fillStyle = "#eee0be";
-        ctx.beginPath();
-        ctx.arc(cx, H * 0.39 + bobOffset, 20 * s, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Hands at 3:17
-        ctx.strokeStyle = "#1a0f07";
-        ctx.lineWidth = 2.5 * s;
-        ctx.beginPath();
-        ctx.moveTo(cx, H * 0.39 + bobOffset);
-        ctx.lineTo(cx + 12 * s, H * 0.39 + 3 * s + bobOffset);
-        ctx.moveTo(cx, H * 0.39 + bobOffset);
-        ctx.lineTo(cx + 10 * s, H * 0.39 + 8 * s + bobOffset);
-        ctx.stroke();
-    }
-    // 7. KEY
-    else if(obj.type === "key"){
-        const hover = Math.sin(performance.now() * 0.006) * 7 * s;
-        const ky = H * 0.55 + hover + bobOffset;
-
-        ctx.fillStyle = "rgba(255,215,0,.3)";
-        ctx.beginPath();
-        ctx.arc(cx, ky, 24 * s, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = 3.5 * s;
-
-        ctx.beginPath();
-        ctx.arc(cx - 10 * s, ky, 7 * s, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(cx - 3 * s, ky);
-        ctx.lineTo(cx + 16 * s, ky);
-        ctx.moveTo(cx + 10 * s, ky);
-        ctx.lineTo(cx + 10 * s, ky + 7 * s);
-        ctx.moveTo(cx + 15 * s, ky);
-        ctx.lineTo(cx + 15 * s, ky + 5 * s);
-        ctx.stroke();
-    }
-    // 8. EXIT DOOR
-    else if(obj.type === "door"){
-        const w = 115 * s;
-        const h = 215 * s;
-        const dy = H * 0.28 + bobOffset;
-
-        if(!gameState.doorUnlocked){
-            ctx.fillStyle = "#22120a";
-            ctx.fillRect(cx - w/2, dy, w, h);
-            ctx.strokeStyle = "#50301c";
-            ctx.lineWidth = 4 * s;
-            ctx.strokeRect(cx - w/2, dy, w, h);
-
-            // Heavy Padlock
-            ctx.fillStyle = "#8a7058";
-            ctx.fillRect(cx - 10 * s, dy + h * 0.52, 20 * s, 22 * s);
-            ctx.fillStyle = "#000";
-            ctx.beginPath();
-            ctx.arc(cx, dy + h * 0.52 + 10 * s, 3 * s, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.fillStyle = "#0a131c";
-            ctx.fillRect(cx - w/2, dy, w, h);
-            ctx.fillStyle = "rgba(180,220,255,.22)";
-            ctx.fillRect(cx - w * 0.45, dy, w * 0.9, h);
-        }
-    }
-}
-
-/* ================= 3D GHOST RENDERING & ATTACK SURGE ================= */
-function renderGhostSprite(ghost, proj){
-    let spriteH = Math.min(H * 2.5, (H / proj.perpDist) * 1.4);
-    if(ghost.state === "attacking"){
-        spriteH *= 1.6;
-    }
-
-    const spriteW = spriteH * 0.65;
-    const topY = (H - spriteH) / 2 + Math.sin(ghost.bobAngle) * 14;
-
-    const startX = Math.floor(proj.screenX - spriteW / 2);
-    const endX = Math.floor(proj.screenX + spriteW / 2);
-
-    const imgW = ghostImg.naturalWidth || 400;
-    const imgH = ghostImg.naturalHeight || 600;
-
-    // Direct gaze scare reaction
-    const isLookingDirectly = Math.abs(proj.angle) < FOV * 0.32;
-    if(isLookingDirectly && !ghost.seenAlert){
-        ghost.seenAlert = true;
-        playScareSound();
-        triggerGlitch();
-    }
-
-    const alpha = Math.min(1.0, Math.max(0.3, 1.3 - (proj.distance / 12)));
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    if(ghostImgLoaded){
-        for(let x = startX; x < endX; x += 2){
-            if(x < 0 || x >= W) continue;
-
-            const rayIdx = Math.floor((x / W) * RAYS);
-            if(rayIdx >= 0 && rayIdx < RAYS){
-                if(proj.perpDist < zBuffer[rayIdx] + 0.35 || ghost.state === "attacking"){
-                    const texX = Math.floor(((x - startX) / spriteW) * imgW);
-                    if(texX >= 0 && texX < imgW){
                         ctx.drawImage(
-                            ghostImg,
-                            texX, 0, 2, imgH,
-                            x, topY, 2, spriteH
+                            src,
+                            sx, 0, 1, sh,
+                            i * stripW, innerTop, stripW + 1, innerH
                         );
+
+                        // Shading to match ambient darkness
+                        if (light < 0.98) {
+                            ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - light)})`;
+                            ctx.fillRect(i * stripW, innerTop, stripW + 1, innerH);
+                        }
                     }
                 }
             }
         }
-    } else {
-        ctx.fillStyle = "rgba(240,240,255,0.75)";
-        ctx.beginPath();
-        ctx.ellipse(proj.screenX, topY + spriteH * 0.4, spriteW * 0.35, spriteH * 0.45, 0, 0, Math.PI * 2);
-        ctx.fill();
+    }
+}
+
+/* ================= 3D SPRITE PROJECTION & OCCLUSION ================= */
+function drawAllSprites() {
+    const dirX = Math.cos(player.angle);
+    const dirY = Math.sin(player.angle);
+    const planeX = -dirY * Math.tan(FOV / 2);
+    const planeY = dirX * Math.tan(FOV / 2);
+
+    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
+    const renderList = [];
+
+    // 1. Gather world objects (Skip posters since they are rendered flush on walls)
+    for (let i = 0; i < worldObjects.length; i++) {
+        const obj = worldObjects[i];
+        if (obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
+        if (obj.type === "mistyPortrait" || obj.type === "painting") continue;
+
+        const spriteX = obj.x - player.x;
+        const spriteY = obj.y - player.y;
+
+        const transformX = invDet * (dirY * spriteX - dirX * spriteY);
+        const transformY = invDet * (-planeY * spriteX + planeX * spriteY);
+
+        if (transformY > 0.1) {
+            renderList.push({
+                type: "object",
+                data: obj,
+                dist: Math.hypot(spriteX, spriteY),
+                transformX,
+                transformY
+            });
+        }
     }
 
-    ctx.restore();
+    // 2. Add Ghost enemy
+    if (ghostEnemy.active) {
+        const spriteX = ghostEnemy.x - player.x;
+        const spriteY = ghostEnemy.y - player.y;
+
+        const transformX = invDet * (dirY * spriteX - dirX * spriteY);
+        const transformY = invDet * (-planeY * spriteX + planeX * spriteY);
+
+        if (transformY > 0.1) {
+            renderList.push({
+                type: "ghost",
+                data: ghostEnemy,
+                dist: Math.hypot(spriteX, spriteY),
+                transformX,
+                transformY
+            });
+        }
+    }
+
+    // Sort sprites from farthest to nearest
+    renderList.sort((a, b) => b.dist - a.dist);
+
+    const bobOffset = Math.sin(player.headBob) * 6;
+
+    for (let s = 0; s < renderList.length; s++) {
+        const item = renderList[s];
+        const tx = item.transformX;
+        const ty = item.transformY;
+
+        const spriteScreenX = Math.floor((W / 2) * (1 + tx / ty));
+        let spriteH = Math.abs(Math.floor(H / ty));
+        let spriteW = Math.abs(Math.floor(H / ty));
+
+        if (item.type === "ghost") {
+            if (item.data.state === "attacking") spriteH *= 1.6;
+            spriteW = Math.floor(spriteH * 0.65);
+        } else {
+            spriteW = Math.floor(spriteW * item.data.w);
+            spriteH = Math.floor(spriteH * item.data.h);
+        }
+
+        const drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
+        const drawStartX = Math.floor(-spriteW / 2 + spriteScreenX);
+        const drawEndX = drawStartX + spriteW;
+
+        let srcDrawable = null;
+        if (item.type === "ghost") {
+            srcDrawable = ghostImgLoaded ? ghostImg : null;
+        } else {
+            const obj = item.data;
+            if (obj.type === "mannequin") {
+                const p = putlaPics[obj.picIndex];
+                srcDrawable = (p && p.loaded) ? p.img : spriteCanvases.mannequinFallback;
+            } else if (spriteCanvases[obj.type]) {
+                srcDrawable = spriteCanvases[obj.type];
+            }
+        }
+
+        const imgW = srcDrawable ? (srcDrawable.naturalWidth || srcDrawable.width) : 100;
+        const imgH = srcDrawable ? (srcDrawable.naturalHeight || srcDrawable.height) : 100;
+
+        if (item.type === "ghost") {
+            const angleDiff = Math.abs(Math.atan2(item.data.y - player.y, item.data.x - player.x) - player.angle);
+            if (angleDiff < FOV * 0.35 && !item.data.seenAlert) {
+                item.data.seenAlert = true;
+                if (item.data.state === "chasing" || item.data.state === "attacking") playGhostChaseSound();
+                else playDistantGhostScream();
+                triggerGlitch();
+            }
+        }
+
+        const alpha = Math.min(1.0, Math.max(0.3, 1.2 - (item.dist / 14)));
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        for (let stripe = drawStartX; stripe < drawEndX; stripe++) {
+            if (stripe < 0 || stripe >= W) continue;
+
+            const rayIdx = Math.floor((stripe / W) * RAYS);
+            if (rayIdx >= 0 && rayIdx < RAYS) {
+                if (ty > zBuffer[rayIdx] + 0.05 && item.type !== "ghost") continue;
+                if (ty > zBuffer[rayIdx] + 0.35 && item.type === "ghost" && item.data.state !== "attacking") continue;
+
+                const texX = Math.floor(((stripe - drawStartX) / spriteW) * imgW);
+
+                if (srcDrawable) {
+                    ctx.drawImage(
+                        srcDrawable,
+                        texX, 0, 1, imgH,
+                        stripe, drawStartY, 1, spriteH
+                    );
+                } else {
+                    ctx.fillStyle = "rgba(240, 240, 255, 0.75)";
+                    ctx.fillRect(stripe, drawStartY, 1, spriteH);
+                }
+            }
+        }
+        ctx.restore();
+    }
 }
 
 /* ================= FLASHLIGHT EFFECT ================= */
-function drawFlashlight(){
+function drawFlashlight() {
     const distToGhost = ghostEnemy.active ? Math.hypot(ghostEnemy.x - player.x, ghostEnemy.y - player.y) : 99;
     const fear = Math.max(0, 1 - distToGhost / 5);
 
@@ -1253,7 +1386,7 @@ function drawFlashlight(){
         W / 2, H * 0.52, Math.min(W, H) * 0.65
     );
 
-    if(fear > 0.35){
+    if (fear > 0.35) {
         const flick = Math.random() * 0.08;
         grad.addColorStop(0, `rgba(255,160,160,${0.28 - flick})`);
         grad.addColorStop(0.35, `rgba(220,120,120,${0.14 - flick})`);
@@ -1270,48 +1403,56 @@ function drawFlashlight(){
     ctx.fillRect(0, 0, W, H);
 }
 
-/* ================= GHOST ATTACK AI & LOGIC ================= */
-function updateGhostAI(dt){
-    if(!ghostEnemy.active || gameState.gameOver || gameState.escaped) return;
+/* ================= GHOST ARTIFICIAL INTELLIGENCE ================= */
+function updateGhostAI(dt) {
+    if (!ghostEnemy.active || gameState.gameOver || gameState.escaped) return;
 
     ghostEnemy.bobAngle += dt * 4.0;
     const distToPlayer = Math.hypot(player.x - ghostEnemy.x, player.y - ghostEnemy.y);
 
-    // Static noise distortion based on proximity
+    distantScreamTimer -= dt;
+    chaseSoundTimer -= dt;
+    mistySoundTimer -= dt;
+
     const staticEl = document.getElementById("static");
-    if(distToPlayer < 7){
+    if (distToPlayer < 7) {
         staticEl.style.opacity = (0.04 + (7 - distToPlayer) * 0.04).toString();
     } else {
         staticEl.style.opacity = "0.04";
     }
 
-    // STATE: WATCHING
-    if(ghostEnemy.state === "watching"){
-        if(distToPlayer < 4.0 || ghostEnemy.seenAlert){
+    if ((ghostEnemy.state === "watching" || ghostEnemy.state === "hunting") && distToPlayer > 6.0 && distantScreamTimer <= 0) {
+        playDistantGhostScream();
+        distantScreamTimer = 8.0 + Math.random() * 5.0;
+    }
+
+    if (ghostEnemy.state === "watching") {
+        if (distToPlayer < 4.0 || ghostEnemy.seenAlert) {
             ghostEnemy.state = "chasing";
-            playScareSound();
+            playGhostChaseSound();
+            chaseSoundTimer = 2.8;
             showMessage("IT SPOTTED YOU! RUN!");
         }
-    }
-    // STATE: HUNTING / CHASING (RELENTLESS ATTACK AI)
-    else if(ghostEnemy.state === "chasing" || ghostEnemy.state === "hunting"){
+    } else if (ghostEnemy.state === "chasing" || ghostEnemy.state === "hunting") {
+        if (ghostEnemy.state === "chasing" && chaseSoundTimer <= 0) {
+            playGhostChaseSound();
+            chaseSoundTimer = 2.8 + Math.random() * 1.6;
+        }
+
         ghostEnemy.pathTimer += dt;
-        if(ghostEnemy.pathTimer > 0.3){
+        if (ghostEnemy.pathTimer > 0.28) {
             ghostEnemy.pathTimer = 0;
             ghostEnemy.path = getBFSPath(ghostEnemy.x, ghostEnemy.y, player.x, player.y);
         }
 
-        if(ghostEnemy.path.length > 0){
+        if (ghostEnemy.path.length > 0) {
             moveGhostAlongPath(dt, ghostEnemy.speed);
         }
 
-        // FATAL STRIKE DISTANCE
-        if(distToPlayer < 0.95){
+        if (distToPlayer < 0.95) {
             executeGhostAttack();
         }
-    }
-    // STATE: ATTACKING
-    else if(ghostEnemy.state === "attacking"){
+    } else if (ghostEnemy.state === "attacking") {
         const dx = player.x - ghostEnemy.x;
         const dy = player.y - ghostEnemy.y;
         ghostEnemy.x += dx * 8 * dt;
@@ -1319,15 +1460,15 @@ function updateGhostAI(dt){
     }
 }
 
-function moveGhostAlongPath(dt, speed){
+function moveGhostAlongPath(dt, speed) {
     const nextNode = ghostEnemy.path[0];
-    if(!nextNode) return;
+    if (!nextNode) return;
 
     const dx = nextNode.x - ghostEnemy.x;
     const dy = nextNode.y - ghostEnemy.y;
     const dist = Math.hypot(dx, dy);
 
-    if(dist < 0.16){
+    if (dist < 0.16) {
         ghostEnemy.path.shift();
     } else {
         const step = speed * dt;
@@ -1336,15 +1477,12 @@ function moveGhostAlongPath(dt, speed){
     }
 }
 
-/* ================= FATAL GHOST ATTACK & DEATH ================= */
-function executeGhostAttack(){
-    if(gameState.gameOver) return;
+function executeGhostAttack() {
+    if (gameState.gameOver) return;
     ghostEnemy.state = "attacking";
 
-    playScareSound();
-    playSound("scare1", 1.0);
+    playGhostChaseSound();
 
-    // Violent screen shake
     document.getElementById("game").animate([
         { transform: "translate(0,0) scale(1)" },
         { transform: "translate(-18px, 12px) scale(1.05)" },
@@ -1356,18 +1494,17 @@ function executeGhostAttack(){
     const redFlash = document.getElementById("redFlash");
     redFlash.style.opacity = "0.9";
 
-    // Instant fatal cut -> "Jaldi The Late"
     setTimeout(() => {
         triggerGameOver();
     }, 450);
 }
 
-function triggerGameOver(){
+function triggerGameOver() {
     gameState.gameOver = true;
     ghostEnemy.active = false;
 
     const ambient = document.getElementById("ambient");
-    if(ambient) ambient.pause();
+    if (ambient) ambient.pause();
 
     const redFlash = document.getElementById("redFlash");
     redFlash.style.opacity = "0";
@@ -1375,14 +1512,13 @@ function triggerGameOver(){
     document.getElementById("gameOverScreen").style.display = "flex";
 }
 
-/* ================= ESCAPE TRIGGER: RAVI KA BADLA ================= */
-function triggerEscape(){
+function triggerEscape() {
     gameState.escaped = true;
     ghostEnemy.active = false;
 
     playSound("unlock", 1.0);
     const ambient = document.getElementById("ambient");
-    if(ambient) ambient.pause();
+    if (ambient) ambient.pause();
 
     const flash = document.getElementById("flash");
     flash.style.opacity = "0.85";
@@ -1393,8 +1529,7 @@ function triggerEscape(){
     }, 700);
 }
 
-/* ================= JUMPSCARE / SCREEN FX ================= */
-function triggerGlitch(){
+function triggerGlitch() {
     const redFlash = document.getElementById("redFlash");
     redFlash.style.opacity = "0.4";
     setTimeout(() => { redFlash.style.opacity = "0"; }, 140);
@@ -1408,7 +1543,7 @@ function triggerGlitch(){
 
 /* ================= HUD & OBJECTIVES ================= */
 let messageTimer = null;
-function showMessage(text){
+function showMessage(text) {
     const el = document.getElementById("message");
     el.innerText = text;
     el.style.opacity = "1";
@@ -1418,25 +1553,25 @@ function showMessage(text){
     }, 3600);
 }
 
-function updateObjective(text){
+function updateObjective(text) {
     document.getElementById("objective").innerText = text;
 }
 
-/* ================= CONTROLS & HEAD BOBBING ================= */
+/* ================= MOVEMENT & CORNER SLIDING ================= */
 let moveX = 0;
 let moveY = 0;
 
-function updateMovement(dt){
+function updateMovement(dt) {
     let forward = 0;
     let strafe = 0;
     let turn = 0;
 
-    if(keys["w"] || keys["arrowup"]) forward += 1;
-    if(keys["s"] || keys["arrowdown"]) forward -= 1;
-    if(keys["a"]) strafe -= 1;
-    if(keys["d"]) strafe += 1;
-    if(keys["arrowleft"]) turn -= 1;
-    if(keys["arrowright"]) turn += 1;
+    if (keys["w"] || keys["arrowup"]) forward += 1;
+    if (keys["s"] || keys["arrowdown"]) forward -= 1;
+    if (keys["a"]) strafe -= 1;
+    if (keys["d"]) strafe += 1;
+    if (keys["arrowleft"]) turn -= 1;
+    if (keys["arrowright"]) turn += 1;
 
     forward += moveY;
     strafe += moveX;
@@ -1444,19 +1579,23 @@ function updateMovement(dt){
     player.angle += turn * dt * 2.2;
     const curSpeed = player.speed * dt;
 
-    const nx = player.x + Math.cos(player.angle) * forward * curSpeed + Math.cos(player.angle + Math.PI / 2) * strafe * curSpeed;
-    const ny = player.y + Math.sin(player.angle) * forward * curSpeed + Math.sin(player.angle + Math.PI / 2) * strafe * curSpeed;
+    const moveVecX = (Math.cos(player.angle) * forward + Math.cos(player.angle + Math.PI / 2) * strafe) * curSpeed;
+    const moveVecY = (Math.sin(player.angle) * forward + Math.sin(player.angle + Math.PI / 2) * strafe) * curSpeed;
 
+    const nextX = player.x + moveVecX;
+    const nextY = player.y + moveVecY;
     const r = player.radius;
-    if(!isWall(nx + Math.sign(nx - player.x) * r, player.y)){
-        player.x = nx;
+
+    if (!isWall(nextX + Math.sign(moveVecX) * r, player.y - r) &&
+        !isWall(nextX + Math.sign(moveVecX) * r, player.y + r)) {
+        player.x = nextX;
     }
-    if(!isWall(player.x, ny + Math.sign(ny - player.y) * r)){
-        player.y = ny;
+    if (!isWall(player.x - r, nextY + Math.sign(moveVecY) * r) &&
+        !isWall(player.x + r, nextY + Math.sign(moveVecY) * r)) {
+        player.y = nextY;
     }
 
-    // Footsteps and head-bobbing
-    if(Math.abs(forward) + Math.abs(strafe) > 0.15){
+    if (Math.abs(forward) + Math.abs(strafe) > 0.15) {
         player.headBob += dt * 10;
         triggerFootstep(dt);
     } else {
@@ -1464,12 +1603,12 @@ function updateMovement(dt){
     }
 }
 
-/* ================= MOBILE TOUCH / JOYSTICK ================= */
+/* ================= MOBILE CONTROLS & TOUCH ENGINE ================= */
 const joystick = document.getElementById("joystick");
 const stick = document.getElementById("stick");
 let joystickActive = false;
 
-function joystickMove(e){
+function joystickMove(e) {
     const rect = joystick.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -1478,7 +1617,7 @@ function joystickMove(e){
     const max = 38;
     const dist = Math.hypot(dx, dy);
 
-    if(dist > max){
+    if (dist > max) {
         dx = (dx / dist) * max;
         dy = (dy / dist) * max;
     }
@@ -1494,7 +1633,7 @@ joystick.addEventListener("pointerdown", e => {
     joystickMove(e);
 });
 joystick.addEventListener("pointermove", e => {
-    if(joystickActive) joystickMove(e);
+    if (joystickActive) joystickMove(e);
 });
 joystick.addEventListener("pointerup", () => {
     joystickActive = false;
@@ -1511,7 +1650,7 @@ canvas.addEventListener("pointerdown", e => {
     lastTouchX = e.clientX;
 });
 canvas.addEventListener("pointermove", e => {
-    if(!isPointerLooking) return;
+    if (!isPointerLooking) return;
     const dx = e.clientX - lastTouchX;
     player.angle += dx * 0.0052;
     lastTouchX = e.clientX;
@@ -1519,60 +1658,53 @@ canvas.addEventListener("pointermove", e => {
 canvas.addEventListener("pointerup", () => { isPointerLooking = false; });
 
 /* ================= INTERACTION ENGINE ================= */
-function getNearestInteractable(){
+function getNearestInteractable() {
     let closest = null;
     let minD = 999;
 
-    for(const obj of worldObjects){
-        if(obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
+    for (let i = 0; i < worldObjects.length; i++) {
+        const obj = worldObjects[i];
+        if (obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
 
         const d = Math.hypot(obj.x - player.x, obj.y - player.y);
-        if(d < minD){
+        if (d < minD) {
             minD = d;
             closest = obj;
         }
     }
 
-    if(minD < 1.45) return closest;
+    if (minD < 1.45) return closest;
     return null;
 }
 
-function handleInteract(){
-    if(!gameState.started || gameState.gameOver || gameState.escaped) return;
+function handleInteract() {
+    if (!gameState.started || gameState.gameOver || gameState.escaped) return;
 
     const obj = getNearestInteractable();
-    if(!obj) return;
+    if (!obj) return;
 
-    // 1. OCCULT PAINTING
-    if(obj.id === "painting"){
+    if (obj.id === "painting") {
         gameState.paintingExamined = true;
         showMessage(obj.examineMsg);
-        
-        if(!ghostEnemy.active && !gameState.keyAcquired){
+        if (!ghostEnemy.active && !gameState.keyAcquired) {
             ghostEnemy.x = 8.5;
             ghostEnemy.y = 6.5;
             ghostEnemy.active = true;
             ghostEnemy.state = "watching";
             ghostEnemy.seenAlert = false;
         }
-    }
-    // 2. PARCHMENT NOTE
-    else if(obj.id === "note"){
+    } else if (obj.id === "note") {
         gameState.noteRead = true;
         showMessage(obj.examineMsg);
         updateObjective("Search the clock frozen at 3:17.");
-        playSound("scare3", 0.6);
-    }
-    // 3. CLOCK
-    else if(obj.id === "clock"){
+    } else if (obj.id === "clock") {
         gameState.clockExamined = true;
-        if(!gameState.keyRevealed){
+        if (!gameState.keyRevealed) {
             gameState.keyRevealed = true;
             showMessage("The gears shriek. A secret vault unlocked in the East Hall!");
             playSound("unlock", 0.85);
             updateObjective("Retrieve the Exit Key in the East Vault.");
 
-            // Awaken ghost to hunt
             ghostEnemy.x = 8.5;
             ghostEnemy.y = 8.5;
             ghostEnemy.active = true;
@@ -1581,31 +1713,26 @@ function handleInteract(){
         } else {
             showMessage(obj.examineMsg);
         }
-    }
-    // 4. KEY
-    else if(obj.id === "key"){
-        if(!gameState.keyAcquired){
+    } else if (obj.id === "key") {
+        if (!gameState.keyAcquired) {
             gameState.keyAcquired = true;
             playSound("unlock", 1.0);
             showMessage("EXIT KEY ACQUIRED! A blood-curdling screech roars behind you!");
             updateObjective("RUN TO THE EXIT DOOR BEFORE IT CATCHES YOU!");
             triggerGlitch();
 
-            // Aggressive chase AI
             ghostEnemy.x = 8.5;
             ghostEnemy.y = 8.5;
             ghostEnemy.active = true;
             ghostEnemy.state = "chasing";
             ghostEnemy.speed = 2.0;
-            playScareSound();
+            playGhostChaseSound();
         }
-    }
-    // 5. DOOR
-    else if(obj.id === "door"){
-        if(!gameState.keyAcquired){
+    } else if (obj.id === "door") {
+        if (!gameState.keyAcquired) {
             showMessage("Locked with heavy iron chains. Find the Exit Key first.");
-            playSound("scare4", 0.6);
-        } else if(!gameState.doorUnlocked){
+            playDistantGhostScream();
+        } else if (!gameState.doorUnlocked) {
             gameState.doorUnlocked = true;
             showMessage("THE DOOR UNLOCKED! ESCAPE!");
             playSound("unlock", 1.0);
@@ -1613,12 +1740,10 @@ function handleInteract(){
         } else {
             triggerEscape();
         }
-    }
-    // 6. MISTY PORTRAITS & MANNEQUINS
-    else {
+    } else {
         showMessage(obj.examineMsg);
-        if(obj.type === "mannequin"){
-            playSound("scare2", 0.4);
+        if (obj.type === "mannequin") {
+            triggerGlitch();
         }
     }
 }
@@ -1626,18 +1751,17 @@ function handleInteract(){
 const interactBtn = document.getElementById("interact");
 interactBtn.addEventListener("click", handleInteract);
 
-/* ================= GAME LOOP ================= */
+/* ================= 60 FPS MAIN SIMULATION LOOP ================= */
 let lastTime = performance.now();
 
-function gameLoop(now){
+function gameLoop(now) {
     const dt = Math.min(0.06, (now - lastTime) / 1000);
     lastTime = now;
 
-    if(gameState.started && !gameState.gameOver && !gameState.escaped){
+    if (gameState.started && !gameState.gameOver && !gameState.escaped) {
         gameState.survivalTimer += dt;
 
-        // Tension timer: Awaken ghost if player lingers too long
-        if(gameState.survivalTimer > 45 && !ghostEnemy.active){
+        if (gameState.survivalTimer > 45 && !ghostEnemy.active) {
             ghostEnemy.x = 8.5;
             ghostEnemy.y = 8.5;
             ghostEnemy.active = true;
@@ -1647,20 +1771,37 @@ function gameLoop(now){
         }
 
         updateMovement(dt);
+
+        if (mistySoundTimer <= 0) {
+            let nearestMisty = null;
+            let nearestDist = Infinity;
+            for (let i = 0; i < worldObjects.length; i++) {
+                const obj = worldObjects[i];
+                if (obj.type !== "mistyPortrait") continue;
+                const d = Math.hypot(player.x - obj.x, player.y - obj.y);
+                if (d < nearestDist) {
+                    nearestDist = d;
+                    nearestMisty = obj;
+                }
+            }
+            if (nearestMisty && nearestDist <= 2.5) {
+                playMistyProximitySound(nearestMisty);
+            }
+        }
+
         updateGhostAI(dt);
         drawWorld();
-        drawSprites();
+        drawAllSprites();
         drawFlashlight();
 
-        // Interaction Prompt Update
         const nearObj = getNearestInteractable();
         const prompt = document.getElementById("interactionPrompt");
 
-        if(nearObj){
+        if (nearObj) {
             let actionText = nearObj.actionText;
             let mobileText = nearObj.mobileText;
 
-            if(nearObj.id === "door" && gameState.doorUnlocked){
+            if (nearObj.id === "door" && gameState.doorUnlocked) {
                 actionText = "[E] ESCAPE";
                 mobileText = "ESCAPE";
             }
@@ -1680,13 +1821,17 @@ function gameLoop(now){
 }
 requestAnimationFrame(gameLoop);
 
-/* ================= START & RESTART ================= */
-function startGame(){
+/* ================= LIFECYCLE MANAGEMENT ================= */
+function startGame() {
     gameState.started = true;
+    distantScreamTimer = 6.0;
+    chaseSoundTimer = 1.5;
+    mistySoundTimer = 0;
+    lastMistySoundId = null;
     document.getElementById("startScreen").style.display = "none";
 
     const ambient = document.getElementById("ambient");
-    if(ambient){
+    if (ambient) {
         ambient.volume = 0.35;
         ambient.play().catch(() => {});
     }
@@ -1695,7 +1840,7 @@ function startGame(){
     showMessage("Only one life. Beware the shadows.");
 }
 
-function restartGame(){
+function restartGame() {
     gameState = {
         started: true,
         paintingExamined: false,
@@ -1722,11 +1867,16 @@ function restartGame(){
     ghostEnemy.path = [];
     ghostEnemy.seenAlert = false;
 
+    distantScreamTimer = 6.0;
+    chaseSoundTimer = 1.5;
+    mistySoundTimer = 0;
+    lastMistySoundId = null;
+
     document.getElementById("gameOverScreen").style.display = "none";
     document.getElementById("endScreen").style.display = "none";
 
     const ambient = document.getElementById("ambient");
-    if(ambient){
+    if (ambient) {
         ambient.currentTime = 0;
         ambient.play().catch(() => {});
     }
@@ -1735,6 +1885,5 @@ function restartGame(){
     showMessage("You awake back at the entrance... Do not hesitate.");
 }
 </script>
-
 </body>
 </html>
