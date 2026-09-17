@@ -2,755 +2,1523 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>The Last Night</title>
+
 <style>
-* {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    user-select:none;
+    -webkit-user-select:none;
 }
 
-html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #050505;
-    color: white;
-    font-family: Arial, sans-serif;
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#000000;
+    font-family:Arial,sans-serif;
+    touch-action:none;
 }
 
-#game {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: #080808;
+#game{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    background:#0a0806;
 }
 
-/* =========================
-   2.5D ROOM VIEWPORT
-========================= */
-.room {
-    position: absolute;
-    inset: 0;
-    perspective: 900px;
-    overflow: hidden;
-    transform-origin: center center;
-    transition: transform 0.08s linear;
+canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
 }
 
-.ceiling {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 42%;
-    background: linear-gradient(rgba(10,10,10,0.95), rgba(30,30,30,0.8));
-    clip-path: polygon(0 0, 100% 0, 76% 100%, 24% 100%);
+/* ================= HUD ================= */
+
+#hud{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    color:white;
+    z-index:20;
 }
 
-.wall-left {
-    position: absolute;
-    left: 0;
-    top: 20%;
-    width: 50%;
-    height: 55%;
-    background: linear-gradient(90deg, #0e0e0e 0%, #252525 100%);
-    clip-path: polygon(0 0, 100% 18%, 100% 100%, 0 100%);
+#title{
+    position:absolute;
+    top:18px;
+    left:20px;
+    font-size:11px;
+    letter-spacing:4px;
+    opacity:.55;
 }
 
-.wall-right {
-    position: absolute;
-    right: 0;
-    top: 20%;
-    width: 50%;
-    height: 55%;
-    background: linear-gradient(90deg, #252525 0%, #0a0a0a 100%);
-    clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%);
+#objectiveBox{
+    position:absolute;
+    top:42px;
+    left:20px;
+    background:rgba(0,0,0,0.65);
+    padding:6px 14px;
+    border-left:3px solid #b82626;
+    border-radius:2px;
+    box-shadow:0 0 10px rgba(0,0,0,0.8);
 }
 
-.floor {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 58%;
-    background: repeating-linear-gradient(0deg, #0d0d0d 0px, #0d0d0d 35px, #161616 36px, #161616 38px);
-    clip-path: polygon(24% 0, 76% 0, 100% 100%, 0 100%);
+#objectiveLabel{
+    font-size:9px;
+    letter-spacing:2px;
+    color:#9e7d7d;
+    margin-bottom:2px;
 }
 
-/* =========================
-   INTERACTIVE OBJECTS
-========================= */
-.interactable {
-    cursor: pointer;
-    z-index: 25;
+#objective{
+    font-size:13px;
+    color:#f2e6dc;
+    letter-spacing:1px;
+    text-shadow:0 2px 5px black;
 }
 
-.door {
-    position: absolute;
-    left: 50%;
-    top: 27%;
-    transform: translateX(-50%);
-    width: 125px;
-    height: 230px;
-    background: linear-gradient(90deg, #090909, #242424, #090909);
-    border: 5px solid #080808;
-    box-shadow: 0 0 30px rgba(0,0,0,0.9), inset 0 0 25px black;
+#interactionPrompt{
+    position:absolute;
+    left:50%;
+    top:62%;
+    transform:translateX(-50%);
+    background:rgba(12,9,7,.88);
+    border:1px solid rgba(220,160,110,.5);
+    color:#f5deb3;
+    padding:9px 20px;
+    border-radius:20px;
+    font-size:13px;
+    letter-spacing:2px;
+    text-shadow:0 1px 4px #000;
+    box-shadow:0 0 16px rgba(0,0,0,.9);
+    opacity:0;
+    transition:opacity .2s ease;
+    pointer-events:none;
 }
 
-.door::before {
-    content: "";
-    position: absolute;
-    inset: 15px;
-    border: 1px solid #383838;
+#message{
+    position:absolute;
+    left:50%;
+    bottom:16%;
+    transform:translateX(-50%);
+    text-align:center;
+    width:85%;
+    max-width:620px;
+    font-size:15px;
+    letter-spacing:1.5px;
+    color:#f5efe6;
+    background:rgba(12,8,6,.82);
+    padding:10px 22px;
+    border-radius:4px;
+    border:1px solid rgba(255,255,255,.12);
+    text-shadow:0 2px 8px #000;
+    opacity:0;
+    transition:.35s;
+    pointer-events:none;
 }
 
-.door-handle {
-    position: absolute;
-    right: 13px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #777;
+#crosshair{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:4px;
+    height:4px;
+    transform:translate(-50%,-50%);
+    background:rgba(255,255,255,.75);
+    border-radius:50%;
+    box-shadow:0 0 6px rgba(255,255,255,.5);
 }
 
-.painting {
-    position: absolute;
-    left: 13%;
-    top: 33%;
-    width: 70px;
-    height: 95px;
-    background: #090909;
-    border: 5px solid #27201a;
-    box-shadow: 0 0 15px black;
+/* ================= JOYSTICK (MOBILE) ================= */
+
+#joystick{
+    position:absolute;
+    width:130px;
+    height:130px;
+    left:25px;
+    bottom:25px;
+    border:2px solid rgba(255,255,255,.16);
+    border-radius:50%;
+    background:rgba(255,255,255,.035);
+    z-index:30;
 }
 
-.painting::after {
-    content: "👁";
-    position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 35px;
-    filter: grayscale(1);
-    opacity: 0.25;
-    transition: 0.3s;
+#stick{
+    position:absolute;
+    width:55px;
+    height:55px;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:rgba(220,220,220,.2);
+    border:1px solid rgba(255,255,255,.3);
 }
 
-.painting.angry::after {
-    content: "💀";
-    filter: none;
-    opacity: 0.8;
+/* ================= INTERACT BUTTON (MOBILE) ================= */
+
+#interact{
+    position:absolute;
+    right:25px;
+    bottom:35px;
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    border:2px solid rgba(220,160,90,.6);
+    background:rgba(30,20,14,.85);
+    color:#f5deb3;
+    font-size:11px;
+    letter-spacing:1px;
+    font-weight:bold;
+    z-index:30;
+    display:none;
+    box-shadow:0 0 15px rgba(0,0,0,.7);
+    cursor:pointer;
 }
 
-.table {
-    position: absolute;
-    right: 12%;
-    bottom: 24%;
-    width: 105px;
-    height: 55px;
-    background: #17100c;
-    transform: skewY(-5deg);
-    box-shadow: 0 15px 20px black;
+#interact:active{
+    background:rgba(70,40,25,.95);
+    transform:scale(.95);
 }
 
-.table::before, .table::after {
-    content: "";
-    position: absolute;
-    bottom: -65px;
-    width: 10px;
-    height: 65px;
-    background: #0b0806;
+/* ================= SCREENS ================= */
+
+.screen{
+    position:absolute;
+    inset:0;
+    z-index:100;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:white;
+    text-align:center;
+    padding:25px;
 }
 
-.table::before { left: 12px; }
-.table::after { right: 12px; }
-
-.candle {
-    position: absolute;
-    left: 25px;
-    top: -30px;
-    width: 12px;
-    height: 30px;
-    background: #d5c7a0;
+#startScreen{
+    background:
+        radial-gradient(circle at center,
+        rgba(45,30,20,.6),
+        rgba(4,3,2,.98));
 }
 
-.flame {
-    position: absolute;
-    left: 1px;
-    top: -18px;
-    width: 10px;
-    height: 18px;
-    background: #ff8a00;
-    border-radius: 50%;
-    box-shadow: 0 0 12px #ff6a00, 0 0 30px rgba(255,100,0,0.5);
-    animation: flicker 0.12s infinite alternate;
+#startScreen h1{
+    font-size:42px;
+    letter-spacing:10px;
+    font-weight:300;
+    margin-bottom:12px;
+    text-shadow:0 0 25px rgba(255,255,255,.2);
 }
 
-@keyframes flicker {
-    from { transform: scale(0.9) rotate(-3deg); }
-    to { transform: scale(1.1) rotate(4deg); }
+#startScreen p{
+    opacity:.65;
+    font-size:13px;
+    letter-spacing:3px;
+    margin-bottom:34px;
+    max-width:500px;
+    line-height:1.7;
 }
 
-/* =========================
-   LIGHTING & VHS
-========================= */
-.darkness {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(circle at var(--lx, 50%) var(--ly, 52%), transparent 30px, rgba(0,0,0,0.72) 170px, rgba(0,0,0,0.97) 360px);
-    z-index: 20;
+/* PITCH BLACK DEATH SCREEN: Jaldi The Late */
+#gameOverScreen{
+    background:#000000;
+    z-index:120;
 }
 
-.flashlight {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 21;
-    background: radial-gradient(circle at var(--lx, 50%) var(--ly, 52%), rgba(255,255,220,0.22) 0px, rgba(255,255,220,0.06) 130px, transparent 250px);
-    mix-blend-mode: screen;
+#gameOverScreen h1{
+    font-size:44px;
+    letter-spacing:8px;
+    font-weight:600;
+    color:#b81414;
+    text-shadow:0 0 25px rgba(184,20,20,0.8), 0 0 50px rgba(100,0,0,0.9);
+    margin-bottom:16px;
+    text-transform:uppercase;
 }
 
-.vhs {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 30;
-    opacity: 0.15;
-    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,0.08) 4px);
+#gameOverScreen p{
+    color:#737373;
+    font-size:13px;
+    letter-spacing:4px;
+    margin-bottom:38px;
 }
 
-/* =========================
-   HUD & MESSAGES
-========================= */
-.hud {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    display: flex;
-    justify-content: space-between;
-    z-index: 40;
-    font-size: 12px;
-    letter-spacing: 2px;
-    color: #888;
-    text-shadow: 0 0 8px black;
+#endScreen{
+    background:
+        radial-gradient(circle at center,
+        rgba(30,45,35,.5),
+        rgba(2,5,3,.98));
 }
 
-.hud strong { color: #eee; }
-
-#message {
-    position: absolute;
-    left: 50%;
-    bottom: 35px;
-    transform: translateX(-50%);
-    z-index: 50;
-    width: 90%;
-    text-align: center;
-    font-size: 15px;
-    letter-spacing: 1px;
-    color: #ddd;
-    text-shadow: 0 0 10px black;
+#endScreen h1{
+    font-size:42px;
+    letter-spacing:9px;
+    font-weight:300;
+    color:#d4af37;
+    text-shadow:0 0 25px rgba(212,175,55,.6);
+    margin-bottom:14px;
 }
 
-/* =========================
-   VIRTUAL JOYSTICK
-========================= */
-#joystickContainer {
-    position: absolute;
-    bottom: 30px;
-    left: 30px;
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
-    z-index: 60;
-    touch-action: none;
+#endScreen p{
+    opacity:.75;
+    font-size:13px;
+    letter-spacing:3px;
+    margin-bottom:34px;
+    max-width:480px;
+    line-height:1.8;
 }
 
-#joystickKnob {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 44px;
-    height: 44px;
-    margin-top: -22px;
-    margin-left: -22px;
-    border-radius: 50%;
-    background: rgba(180, 0, 0, 0.6);
-    border: 2px solid rgba(255, 100, 100, 0.5);
-    box-shadow: 0 0 10px rgba(255,0,0,0.5);
-    pointer-events: none;
+.btn{
+    padding:14px 36px;
+    border:1px solid rgba(220,180,120,.5);
+    background:rgba(255,255,255,.06);
+    color:#f5deb3;
+    letter-spacing:4px;
+    font-size:13px;
+    cursor:pointer;
+    transition:.2s;
 }
 
-/* =========================
-   JUMPSCARE SCREEN
-========================= */
-#jumpscareOverlay {
-    position: absolute;
-    inset: 0;
-    z-index: 200;
-    background: black;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
+.btn:hover{
+    background:rgba(220,180,120,.2);
+    border-color:#f5deb3;
+    box-shadow:0 0 15px rgba(210,160,90,.35);
 }
 
-#jumpscareFace {
-    font-size: 180px;
-    color: #b00;
-    animation: shake 0.08s infinite alternate;
-    filter: drop-shadow(0 0 40px red);
+.deathBtn{
+    border-color:rgba(184,20,20,.6);
+    color:#e07a7a;
 }
 
-@keyframes shake {
-    0% { transform: scale(1.1) translate(-10px, 8px) rotate(-4deg); }
-    100% { transform: scale(1.25) translate(12px, -8px) rotate(5deg); }
+.deathBtn:hover{
+    background:rgba(184,20,20,.25);
+    border-color:#ff4444;
+    box-shadow:0 0 20px rgba(184,20,20,.5);
 }
 
-/* SCREENS */
-#startScreen, #endScreen {
-    position: absolute;
-    inset: 0;
-    z-index: 100;
-    background: radial-gradient(circle, #191919, #020202 70%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
+/* ================= HORROR ATMOSPHERE ================= */
+
+#vignette{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:15;
+    background:
+      radial-gradient(
+        ellipse at center,
+        transparent 30%,
+        rgba(0,0,0,.3) 60%,
+        rgba(0,0,0,.9) 100%
+      );
 }
 
-#endScreen { display: none; }
-
-h1 {
-    margin: 0;
-    font-size: 38px;
-    letter-spacing: 6px;
-    color: #ddd;
-    text-shadow: 0 0 15px #900, 0 0 35px #300;
+#static{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:16;
+    opacity:.035;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,.12) 0px,
+        rgba(255,255,255,.12) 1px,
+        transparent 1px,
+        transparent 4px
+      );
 }
 
-p {
-    max-width: 320px;
-    color: #777;
-    line-height: 1.6;
-    margin: 15px 20px 30px;
+#flash{
+    position:absolute;
+    inset:0;
+    z-index:80;
+    pointer-events:none;
+    background:white;
+    opacity:0;
+    transition:opacity .08s ease-out;
 }
 
-.btn {
-    padding: 14px 28px;
-    background: transparent;
-    color: #ddd;
-    border: 1px solid #555;
-    border-radius: 4px;
-    letter-spacing: 3px;
-    cursor: pointer;
-    text-decoration: none;
+#redFlash{
+    position:absolute;
+    inset:0;
+    z-index:79;
+    pointer-events:none;
+    background:rgba(160,0,0,.7);
+    opacity:0;
+    transition:opacity .15s ease-out;
 }
 
-.btn:hover {
-    background: #222;
-    border-color: #aaa;
+#scareText{
+    position:absolute;
+    inset:0;
+    z-index:90;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#ff2a2a;
+    font-size:24px;
+    letter-spacing:10px;
+    opacity:0;
+    pointer-events:none;
+    text-shadow:0 0 20px #ff0000;
+    transition:opacity .2s;
+}
+
+@media(min-width:800px){
+    #joystick{
+        display:none;
+    }
 }
 </style>
 </head>
+
 <body>
 
 <div id="game">
-    <!-- START SCREEN -->
-    <div id="startScreen">
-        <h1>THE LAST NIGHT</h1>
-        <p>Something lurks inside.<br>Use the joystick or W/A/S/D to move, inspect clues, and escape.</p>
-        <button id="startButton" class="btn">ENTER</button>
+
+<canvas id="canvas"></canvas>
+
+<div id="vignette"></div>
+<div id="static"></div>
+
+<div id="flash"></div>
+<div id="redFlash"></div>
+
+<div id="scareText">RUN</div>
+
+<div id="hud">
+    <div id="title">THE LAST NIGHT</div>
+    <div id="objectiveBox">
+        <div id="objectiveLabel">OBJECTIVE</div>
+        <div id="objective">Find a way out.</div>
     </div>
-
-    <!-- END SCREEN -->
-    <div id="endScreen">
-        <h1 id="endTitle">YOU ESCAPED</h1>
-        <p id="endDesc">You survived the night.</p>
-        <a href="index.html" class="btn">BACK TO STORE</a>
-    </div>
-
-    <!-- JUMPSCARE FLASH -->
-    <div id="jumpscareOverlay">
-        <div id="jumpscareFace">👹</div>
-    </div>
-
-    <!-- ROOM -->
-    <div class="room" id="room">
-        <div class="ceiling"></div>
-        <div class="wall-left"></div>
-        <div class="wall-right"></div>
-        <div class="floor"></div>
-
-        <div class="painting interactable" id="painting"></div>
-        <div class="door interactable" id="door">
-            <div class="door-handle"></div>
-        </div>
-        <div class="table interactable" id="table">
-            <div class="candle">
-                <div class="flame"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ATMOSPHERE -->
-    <div class="darkness"></div>
-    <div class="flashlight"></div>
-    <div class="vhs"></div>
-
-    <!-- HUD -->
-    <div class="hud">
-        <span>ITEM: <strong id="invStatus">NONE</strong></span>
-        <span>OBJECTIVE: <strong id="hudObjective">SEARCH ROOM</strong></span>
-    </div>
-
-    <div id="message">Find a way out...</div>
-
-    <!-- JOYSTICK -->
-    <div id="joystickContainer">
-        <div id="joystickKnob"></div>
-    </div>
+    <div id="interactionPrompt">[E] INTERACT</div>
+    <div id="message"></div>
+    <div id="crosshair"></div>
 </div>
 
-<!-- =========================
-     AUDIO ELEMENTS
-========================= -->
-<!-- Core sounds -->
-<audio id="audioAmbient" loop src="ambient.mp3" preload="auto"></audio>
-<audio id="audioFootstep" src="footstep.mp3" preload="auto"></audio>
-<audio id="audioUnlock" src="unlock.mp3" preload="auto"></audio>
+<div id="joystick">
+    <div id="stick"></div>
+</div>
 
-<!-- 10 Jumpscare Audios Pool -->
-<audio class="scare-sound" src="scare1.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare2.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare3.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare4.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare5.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare6.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare7.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare8.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare9.mp3" preload="auto"></audio>
-<audio class="scare-sound" src="scare10.mp3" preload="auto"></audio>
+<button id="interact">EXAMINE</button>
+
+<!-- ================= START SCREEN ================= -->
+<div id="startScreen" class="screen">
+    <h1>THE LAST NIGHT</h1>
+    <p>YOU HAVE ONLY ONE LIFE.<br>EXPLORE THE MANSION, UNLOCK THE TRUTH, AND FLEE BEFORE IT FINDS YOU.</p>
+    <button class="btn" onclick="startGame()">ENTER</button>
+</div>
+
+<!-- ================= DEATH SCREEN: Jaldi The Late ================= -->
+<div id="gameOverScreen" class="screen" style="display:none">
+    <h1>“Jaldi The Late”</h1>
+    <p>You were caught in the dark. There are no second chances.</p>
+    <button class="btn deathBtn" onclick="restartGame()">TRY AGAIN</button>
+</div>
+
+<!-- ================= ESCAPED SCREEN ================= -->
+<div id="endScreen" class="screen" style="display:none">
+    <h1>YOU ESCAPED</h1>
+    <p>The iron gates slammed behind you.<br>You survived the night... but the shadows will forever follow.</p>
+    <button class="btn" onclick="restartGame()">PLAY AGAIN</button>
+</div>
+
+</div>
+
+<!-- ================= AUDIO ELEMENTS ================= -->
+<audio id="ambient" loop src="ambient.mp3"></audio>
+<audio id="footstep" src="footstep.mp3"></audio>
+<audio id="unlock" src="unlock.mp3"></audio>
+
+<audio id="scare1" src="scare1.mp3"></audio>
+<audio id="scare2" src="scare2.mp3"></audio>
+<audio id="scare3" src="scare3.mp3"></audio>
+<audio id="scare4" src="scare4.mp3"></audio>
+<audio id="scare5" src="scare5.mp3"></audio>
+<audio id="scare6" src="scare6.mp3"></audio>
+<audio id="scare7" src="scare7.mp3"></audio>
+<audio id="scare8" src="scare8.mp3"></audio>
+<audio id="scare9" src="scare9.mp3"></audio>
+<audio id="scare10" src="scare10.mp3"></audio>
 
 <script>
-const startScreen = document.getElementById("startScreen");
-const endScreen = document.getElementById("endScreen");
-const startButton = document.getElementById("startButton");
-const message = document.getElementById("message");
-const invStatus = document.getElementById("invStatus");
-const hudObjective = document.getElementById("hudObjective");
-const room = document.getElementById("room");
-const jumpscareOverlay = document.getElementById("jumpscareOverlay");
-const paintingEl = document.getElementById("painting");
+/* ================= CANVAS SETUP ================= */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let W, H;
 
-let gameStarted = false;
-let hasKey = false;
-let paintingInspected = false;
+function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
 
-// Movement coordinates
-let posX = 0;
-let posY = 0;
-let targetX = 0;
-let targetY = 0;
+/* ================= LOAD GHOST SPRITE ================= */
+const ghostImg = new Image();
+ghostImg.src = "ghost.png";
+let ghostImgLoaded = false;
+ghostImg.onload = () => { ghostImgLoaded = true; };
 
-/* ====================================================
-   AUDIO ENGINE (Multi-Audio Support + Synth Fallback)
-==================================================== */
-const audioAmbient = document.getElementById("audioAmbient");
-const audioFootstep = document.getElementById("audioFootstep");
-const audioUnlock = document.getElementById("audioUnlock");
-const jumpscareAudios = Array.from(document.querySelectorAll(".scare-sound"));
+/* ================= ENHANCED 17x17 MANSION MAP =================
+   Includes looping corridors, secret chambers, central rotunda, and safe corners.
+   Start: (1.5, 1.5)
+   Exit Door: (15.5, 15.2)
+*/
+const map = [
+    "#################", // 0
+    "#...............#", // 1  North Grand Hallway (Start: 1.5, 1.5)
+    "#.#####.#.#####.#", // 2
+    "#.#...#.#.#...#.#", // 3  (3.5, 3.5)=Gallery Painting | (13.5, 3.5)=Dining Table & Note
+    "#.#...#.#.#...#.#", // 4
+    "#.#.###.#.###.#.#", // 5
+    "#...............#", // 6  Upper Crossroads Loop
+    "###.###.#.###.###", // 7
+    "#...#.......#...#", // 8  Central Atrium
+    "###.###.#.###.###", // 9
+    "#...............#", // 10 Lower Crossroads Loop
+    "#.#.###.#.###.#.#", // 11
+    "#.#...#.#.#...#.#", // 12 (3.5, 13.5)=Clock Chamber | (13.5, 13.5)=Exit Key Vault
+    "#.#...#.#.#...#.#", // 13
+    "#.#####.#.#####.#", // 14
+    "#...............#", // 15 South Exit Corridor (Exit Door at 15.5, 15.2)
+    "#################"  // 16
+];
 
-let audioCtx = null;
+const MAP_W = map[0].length;
+const MAP_H = map.length;
 
-function initAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    audioAmbient.play().catch(() => {
-        playSynthDrone();
-    });
+function isWall(x, y){
+    const mx = Math.floor(x);
+    const my = Math.floor(y);
+    if(my < 0 || my >= MAP_H || mx < 0 || mx >= MAP_W) return true;
+    return map[my][mx] === "#";
 }
 
-function playFootstep() {
-    if (!audioFootstep.paused) return;
-    audioFootstep.currentTime = 0;
-    audioFootstep.play().catch(() => {
-        playSynthStep();
-    });
-}
-
-function playJumpscareSound() {
-    if (jumpscareAudios.length > 0) {
-        const randomIndex = Math.floor(Math.random() * jumpscareAudios.length);
-        const selectedAudio = jumpscareAudios[randomIndex];
-
-        selectedAudio.currentTime = 0;
-        selectedAudio.play().catch(() => {
-            playSynthScreamer();
-        });
-    } else {
-        playSynthScreamer();
-    }
-}
-
-function playUnlockSound() {
-    audioUnlock.currentTime = 0;
-    audioUnlock.play().catch(() => {
-        playSynthChime();
-    });
-}
-
-// Built-in Synth generators
-function playSynthDrone() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(45, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-}
-
-function playSynthStep() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(80, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.1);
-}
-
-function playSynthScreamer() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(900, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(220, audioCtx.currentTime + 1.2);
-    gain.gain.setValueAtTime(0.7, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 1.2);
-}
-
-function playSynthChime() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.4);
-}
-
-/* ====================================================
-   START GAME
-==================================================== */
-startButton.addEventListener("click", () => {
-    gameStarted = true;
-    startScreen.style.display = "none";
-    initAudio();
-    setMessage("The door is bolted shut. Inspect the room.");
-});
-
-function setMessage(txt) {
-    message.innerText = txt;
-}
-
-/* ====================================================
-   FLASHLIGHT POINTER TRACKING
-==================================================== */
-window.addEventListener("pointermove", (e) => {
-    const x = (e.clientX / window.innerWidth) * 100;
-    const y = (e.clientY / window.innerHeight) * 100;
-    document.documentElement.style.setProperty("--lx", `${x}%`);
-    document.documentElement.style.setProperty("--ly", `${y}%`);
-});
-
-/* ====================================================
-   JUMPSCARE TRIGGER
-==================================================== */
-function triggerJumpscare() {
-    playJumpscareSound();
-    jumpscareOverlay.style.display = "flex";
-    paintingEl.classList.add("angry");
-
-    setTimeout(() => {
-        jumpscareOverlay.style.display = "none";
-        setMessage("SOMETHING WAS WATCHING YOU.");
-    }, 1100);
-}
-
-/* ====================================================
-   INTERACTIONS
-==================================================== */
-paintingEl.addEventListener("click", () => {
-    if (!gameStarted) return;
-    if (!paintingInspected) {
-        paintingInspected = true;
-        setMessage("You inspect the painting... Something rattles behind you!");
-        setTimeout(triggerJumpscare, 300);
-    } else {
-        setMessage("The eyes continue to stare unblinkingly.");
-    }
-});
-
-document.getElementById("table").addEventListener("click", () => {
-    if (!gameStarted) return;
-    if (paintingInspected && !hasKey) {
-        hasKey = true;
-        playUnlockSound();
-        invStatus.innerText = "BRASS KEY";
-        hudObjective.innerText = "UNLOCK DOOR";
-        setMessage("You found a cold brass key under the candle wax!");
-    } else if (!hasKey) {
-        setMessage("Just an old table and a burning candle.");
-    } else {
-        setMessage("Nothing else is on the table.");
-    }
-});
-
-document.getElementById("door").addEventListener("click", () => {
-    if (!gameStarted) return;
-    if (hasKey) {
-        playUnlockSound();
-        endScreen.style.display = "flex";
-        gameStarted = false;
-    } else {
-        setMessage("The door is locked. Find the key!");
-    }
-});
-
-/* ====================================================
-   JOYSTICK MECHANICS
-==================================================== */
-const joystickContainer = document.getElementById("joystickContainer");
-const joystickKnob = document.getElementById("joystickKnob");
-let joystickActive = false;
-let joystickCenter = { x: 0, y: 0 };
-const maxRadius = 40;
-
-joystickContainer.addEventListener("pointerdown", (e) => {
-    joystickActive = true;
-    const rect = joystickContainer.getBoundingClientRect();
-    joystickCenter = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-    };
-    updateJoystick(e);
-});
-
-window.addEventListener("pointermove", (e) => {
-    if (!joystickActive) return;
-    updateJoystick(e);
-});
-
-function resetJoystick() {
-    joystickActive = false;
-    joystickKnob.style.transform = `translate(0px, 0px)`;
-    targetX = 0;
-    targetY = 0;
-}
-
-window.addEventListener("pointerup", resetJoystick);
-window.addEventListener("pointercancel", resetJoystick);
-
-function updateJoystick(e) {
-    const dx = e.clientX - joystickCenter.x;
-    const dy = e.clientY - joystickCenter.y;
+/* ================= LINE OF SIGHT TEST ================= */
+function hasLineOfSight(x1, y1, x2, y2){
+    const dx = x2 - x1;
+    const dy = y2 - y1;
     const dist = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
-    const clampedDist = Math.min(dist, maxRadius);
-
-    const knobX = Math.cos(angle) * clampedDist;
-    const knobY = Math.sin(angle) * clampedDist;
-
-    joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-
-    targetX = (knobX / maxRadius);
-    targetY = -(knobY / maxRadius);
+    if(dist < 0.05) return true;
+    const steps = Math.ceil(dist / 0.1);
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+    let cx = x1;
+    let cy = y1;
+    for(let i = 0; i < steps; i++){
+        cx += stepX;
+        cy += stepY;
+        if(isWall(cx, cy)) return false;
+    }
+    return true;
 }
 
-/* ====================================================
-   KEYBOARD SUPPORT
-==================================================== */
-const keys = {};
-window.addEventListener("keydown", (e) => { keys[e.key.toLowerCase()] = true; });
-window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+/* ================= BFS PATHFINDING FOR GHOST ================= */
+function getBFSPath(startX, startY, targetX, targetY){
+    const sx = Math.floor(startX);
+    const sy = Math.floor(startY);
+    const tx = Math.floor(targetX);
+    const ty = Math.floor(targetY);
 
-/* ====================================================
-   MAIN LOOP
-==================================================== */
-let stepCounter = 0;
+    if(sx === tx && sy === ty) return [];
 
-function gameLoop() {
-    if (gameStarted) {
-        let moveX = targetX;
-        let moveY = targetY;
+    const queue = [[sx, sy]];
+    const visited = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(false));
+    const parent = {};
 
-        if (keys["w"] || keys["arrowup"]) moveY = 1;
-        if (keys["s"] || keys["arrowdown"]) moveY = -1;
-        if (keys["a"] || keys["arrowleft"]) moveX = -1;
-        if (keys["d"] || keys["arrowright"]) moveX = 1;
+    visited[sy][sx] = true;
+    let found = false;
+    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
 
-        if (moveX !== 0 || moveY !== 0) {
-            posX = Math.max(-60, Math.min(60, posX + moveX * 2));
-            posY = Math.max(-20, Math.min(60, posY + moveY * 1.5));
-
-            stepCounter++;
-            if (stepCounter % 22 === 0) {
-                playFootstep();
+    while(queue.length > 0){
+        const [cx, cy] = queue.shift();
+        if(cx === tx && cy === ty){
+            found = true;
+            break;
+        }
+        for(const [dx, dy] of dirs){
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if(nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H){
+                if(!visited[ny][nx] && map[ny][nx] !== "#"){
+                    visited[ny][nx] = true;
+                    parent[`${nx},${ny}`] = [cx, cy];
+                    queue.push([nx, ny]);
+                }
             }
-
-            room.style.transform = `scale(${1 + posY / 150}) translateX(${posX}px)`;
         }
     }
+
+    if(!found) return [];
+
+    const path = [];
+    let curr = [tx, ty];
+    while(curr){
+        if(curr[0] === sx && curr[1] === sy) break;
+        path.unshift({ x: curr[0] + 0.5, y: curr[1] + 0.5 });
+        curr = parent[`${curr[0]},${curr[1]}`];
+    }
+    return path;
+}
+
+/* ================= GAME STATE ================= */
+let gameState = {
+    started: false,
+    paintingExamined: false,
+    noteRead: false,
+    clockExamined: false,
+    keyRevealed: false,
+    keyAcquired: false,
+    doorUnlocked: false,
+    escaped: false,
+    gameOver: false,
+    survivalTimer: 0 // Tension clock
+};
+
+/* ================= PLAYER ================= */
+const player = {
+    x: 1.5,
+    y: 1.5,
+    angle: 0.1,
+    speed: 2.2,
+    radius: 0.22,
+    headBob: 0
+};
+
+let keys = {};
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+    if(e.key.toLowerCase() === "e") handleInteract();
+});
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+/* ================= AGGRESSIVE GHOST ENEMY ================= */
+const ghostEnemy = {
+    x: 8.5,
+    y: 8.5,
+    active: false,
+    speed: 1.85,           // Fast, intense chase speed
+    state: "idle",         // "idle" | "watching" | "hunting" | "chasing" | "attacking"
+    path: [],
+    pathTimer: 0,
+    seenAlert: false,
+    bobAngle: 0,
+    lungeProgress: 0
+};
+
+/* ================= WORLD OBJECTS ================= */
+const worldObjects = [
+    {
+        id: "painting",
+        x: 3.5,
+        y: 2.5,
+        type: "painting",
+        actionText: "[E] EXAMINE PORTRAIT",
+        mobileText: "EXAMINE",
+        examineMsg: "The eyes follow your movement. Cold breath touches your neck."
+    },
+    {
+        id: "table",
+        x: 13.5,
+        y: 3.2,
+        type: "table",
+        actionText: "[E] INSPECT TABLE",
+        mobileText: "INSPECT",
+        examineMsg: "An old wooden dining table. A candle flickers silently."
+    },
+    {
+        id: "note",
+        x: 13.8,
+        y: 3.8,
+        type: "note",
+        actionText: "[E] READ PARCHMENT",
+        mobileText: "READ",
+        examineMsg: "A bloody scribbled note: 'THE KEY IS WHERE THE CLOCK STOPPED.'"
+    },
+    {
+        id: "clock",
+        x: 3.5,
+        y: 13.5,
+        type: "clock",
+        actionText: "[E] CHECK CLOCK",
+        mobileText: "CLOCK",
+        examineMsg: "A towering grandfather clock. Frozen at 3:17."
+    },
+    {
+        id: "key",
+        x: 13.5,
+        y: 13.5,
+        type: "key",
+        actionText: "[E] TAKE EXIT KEY",
+        mobileText: "TAKE KEY",
+        examineMsg: "A heavy, rusted iron key. Cold as ice."
+    },
+    {
+        id: "door",
+        x: 15.5,
+        y: 15.2,
+        type: "door",
+        actionText: "[E] OPEN EXIT DOOR",
+        mobileText: "OPEN DOOR",
+        examineMsg: "A reinforced iron door leading outside. Bolted shut."
+    }
+];
+
+/* ================= SOUND ENGINE ================= */
+function playSound(id, volume = 1.0){
+    const el = document.getElementById(id);
+    if(el){
+        el.currentTime = 0;
+        el.volume = volume;
+        el.play().catch(() => {});
+    }
+}
+
+function playScareSound(){
+    const n = Math.floor(Math.random() * 10) + 1;
+    playSound("scare" + n, 1.0);
+}
+
+let footstepTimer = 0;
+function triggerFootstep(dt){
+    footstepTimer += dt;
+    if(footstepTimer > 0.42){
+        footstepTimer = 0;
+        const foot = document.getElementById("footstep");
+        if(foot){
+            foot.currentTime = 0;
+            foot.volume = 0.26;
+            foot.play().catch(() => {});
+        }
+    }
+}
+
+/* ================= RAYCASTING WITH 3D DIRECTIONAL LIGHTING ================= */
+const FOV = Math.PI / 3;
+const RAYS = 320;
+const zBuffer = new Float32Array(RAYS);
+
+function castRay(angle){
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+
+    let dist = 0;
+    const maxDist = 22;
+    const step = 0.02;
+
+    while(dist < maxDist){
+        dist += step;
+        const checkX = player.x + cos * dist;
+        const checkY = player.y + sin * dist;
+        if(isWall(checkX, checkY)){
+            // Determine wall orientation (North/South vs East/West) for directional shading
+            const prevX = checkX - cos * step;
+            const isEW = Math.floor(prevX) !== Math.floor(checkX);
+            return { dist, isEW };
+        }
+    }
+    return { dist: maxDist, isEW: false };
+}
+
+function drawWorld(){
+    // Ceiling gradient
+    const ceilGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+    ceilGrad.addColorStop(0, "#16120e");
+    ceilGrad.addColorStop(1, "#0a0705");
+    ctx.fillStyle = ceilGrad;
+    ctx.fillRect(0, 0, W, H * 0.5);
+
+    // Floor gradient
+    const floorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    floorGrad.addColorStop(0, "#140e0a");
+    floorGrad.addColorStop(1, "#030202");
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, H * 0.5, W, H * 0.5);
+
+    const stripW = W / RAYS;
+    const bobOffset = Math.sin(player.headBob) * 6;
+
+    for(let i = 0; i < RAYS; i++){
+        const cameraX = (i / RAYS) - 0.5;
+        const rayAngle = player.angle + cameraX * FOV;
+
+        const hit = castRay(rayAngle);
+        const correctedDist = hit.dist * Math.cos(rayAngle - player.angle);
+        zBuffer[i] = correctedDist;
+
+        const wallH = Math.min(H * 2.3, H / (correctedDist * 0.72));
+        const top = (H - wallH) / 2 + bobOffset;
+
+        // Realistic distance lighting + directional shading
+        let light = Math.max(0.06, 1 - (correctedDist / 13));
+        if(hit.isEW) light *= 0.75; // East-West walls are slightly darker for authentic 3D definition
+
+        const r = Math.floor(36 + light * 52);
+        const g = Math.floor(26 + light * 36);
+        const b = Math.floor(20 + light * 26);
+
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(i * stripW, top, stripW + 1, wallH);
+
+        // Subtle wooden wall panel texture
+        if(i % 11 === 0){
+            ctx.fillStyle = `rgba(255,210,160,${0.03 * light})`;
+            ctx.fillRect(i * stripW, top, 1, wallH);
+        }
+    }
+}
+
+/* ================= SPRITE PROJECTION & OCCLUSION ================= */
+function projectSprite(x, y){
+    const dx = x - player.x;
+    const dy = y - player.y;
+    const distance = Math.hypot(dx, dy);
+
+    let angle = Math.atan2(dy, dx) - player.angle;
+    while(angle > Math.PI) angle -= Math.PI * 2;
+    while(angle < -Math.PI) angle += Math.PI * 2;
+
+    if(Math.abs(angle) > FOV * 0.82) return null;
+
+    const perpDist = distance * Math.cos(angle);
+    if(perpDist <= 0.1) return null;
+
+    const screenX = (W / 2) + Math.tan(angle) * (W / 2) / Math.tan(FOV / 2);
+    const scale = Math.min(3.6, 3.8 / perpDist);
+
+    return { screenX, distance, perpDist, scale, angle };
+}
+
+function drawSprites(){
+    const renderList = [];
+
+    // World Objects
+    for(const obj of worldObjects){
+        if(obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
+
+        const proj = projectSprite(obj.x, obj.y);
+        if(proj){
+            const rayIndex = Math.floor((proj.screenX / W) * RAYS);
+            if(rayIndex >= 0 && rayIndex < RAYS){
+                if(proj.perpDist <= zBuffer[rayIndex] + 0.3){
+                    renderList.push({ type: "object", data: obj, proj });
+                }
+            }
+        }
+    }
+
+    // Ghost Sprite
+    if(ghostEnemy.active){
+        const proj = projectSprite(ghostEnemy.x, ghostEnemy.y);
+        if(proj){
+            renderList.push({ type: "ghost", data: ghostEnemy, proj });
+        }
+    }
+
+    // Back to front sorting
+    renderList.sort((a, b) => b.proj.distance - a.proj.distance);
+
+    for(const item of renderList){
+        if(item.type === "object"){
+            renderWorldObject(item.data, item.proj);
+        } else if(item.type === "ghost"){
+            renderGhostSprite(item.data, item.proj);
+        }
+    }
+}
+
+function renderWorldObject(obj, proj){
+    const s = proj.scale;
+    const cx = proj.screenX;
+    const bobOffset = Math.sin(player.headBob) * 6;
+
+    if(obj.type === "painting"){
+        const w = 95 * s;
+        const h = 130 * s;
+        ctx.fillStyle = "#2c1a0e";
+        ctx.fillRect(cx - w/2, H * 0.38 - h/2 + bobOffset, w, h);
+        ctx.fillStyle = "#0c0a08";
+        ctx.fillRect(cx - w * 0.42, H * 0.38 - h * 0.42 + bobOffset, w * 0.84, h * 0.84);
+
+        // Portrait silhouette
+        ctx.fillStyle = "#1c1714";
+        ctx.beginPath();
+        ctx.arc(cx, H * 0.36 + bobOffset, 16 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Blood-red glowing eyes
+        ctx.fillStyle = gameState.paintingExamined ? "#ff2222" : "rgba(220,210,180,.6)";
+        ctx.beginPath();
+        ctx.arc(cx - 5 * s, H * 0.36 + bobOffset, 2.4 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 5 * s, H * 0.36 + bobOffset, 2.4 * s, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else if(obj.type === "table"){
+        const w = 120 * s;
+        ctx.fillStyle = "#341d13";
+        ctx.fillRect(cx - w/2, H * 0.56 + bobOffset, w, 16 * s);
+        ctx.fillRect(cx - w * 0.35, H * 0.58 + bobOffset, 8 * s, 90 * s);
+        ctx.fillRect(cx + w * 0.28, H * 0.58 + bobOffset, 8 * s, 90 * s);
+
+        // Candle
+        ctx.fillStyle = "#e0d3b6";
+        ctx.fillRect(cx - 4 * s, H * 0.48 + bobOffset, 8 * s, 42 * s);
+        ctx.fillStyle = "#ff9922";
+        ctx.beginPath();
+        ctx.arc(cx, H * 0.47 + bobOffset, (7 + Math.sin(performance.now() * 0.01) * 1.5) * s, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else if(obj.type === "note"){
+        const w = 42 * s;
+        const h = 32 * s;
+        ctx.fillStyle = "#d0be96";
+        ctx.fillRect(cx - w/2, H * 0.54 + bobOffset, w, h);
+        ctx.fillStyle = "#7a1111";
+        ctx.font = `bold ${9 * s}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillText("RUN", cx, H * 0.54 + 20 * s + bobOffset);
+    }
+    else if(obj.type === "clock"){
+        const w = 56 * s;
+        const h = 180 * s;
+        ctx.fillStyle = "#22130c";
+        ctx.fillRect(cx - w/2, H * 0.30 + bobOffset, w, h);
+        ctx.strokeStyle = "#806040";
+        ctx.lineWidth = 3 * s;
+        ctx.strokeRect(cx - w/2, H * 0.30 + bobOffset, w, h);
+
+        // Clock face
+        ctx.fillStyle = "#eee0be";
+        ctx.beginPath();
+        ctx.arc(cx, H * 0.39 + bobOffset, 20 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hands at 3:17
+        ctx.strokeStyle = "#1a0f07";
+        ctx.lineWidth = 2.5 * s;
+        ctx.beginPath();
+        ctx.moveTo(cx, H * 0.39 + bobOffset);
+        ctx.lineTo(cx + 12 * s, H * 0.39 + 3 * s + bobOffset);
+        ctx.moveTo(cx, H * 0.39 + bobOffset);
+        ctx.lineTo(cx + 10 * s, H * 0.39 + 8 * s + bobOffset);
+        ctx.stroke();
+    }
+    else if(obj.type === "key"){
+        const hover = Math.sin(performance.now() * 0.006) * 7 * s;
+        const ky = H * 0.55 + hover + bobOffset;
+
+        ctx.fillStyle = "rgba(255,215,0,.3)";
+        ctx.beginPath();
+        ctx.arc(cx, ky, 24 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 3.5 * s;
+
+        ctx.beginPath();
+        ctx.arc(cx - 10 * s, ky, 7 * s, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 3 * s, ky);
+        ctx.lineTo(cx + 16 * s, ky);
+        ctx.moveTo(cx + 10 * s, ky);
+        ctx.lineTo(cx + 10 * s, ky + 7 * s);
+        ctx.moveTo(cx + 15 * s, ky);
+        ctx.lineTo(cx + 15 * s, ky + 5 * s);
+        ctx.stroke();
+    }
+    else if(obj.type === "door"){
+        const w = 115 * s;
+        const h = 215 * s;
+        const dy = H * 0.28 + bobOffset;
+
+        if(!gameState.doorUnlocked){
+            ctx.fillStyle = "#22120a";
+            ctx.fillRect(cx - w/2, dy, w, h);
+            ctx.strokeStyle = "#50301c";
+            ctx.lineWidth = 4 * s;
+            ctx.strokeRect(cx - w/2, dy, w, h);
+
+            // Padlock
+            ctx.fillStyle = "#8a7058";
+            ctx.fillRect(cx - 10 * s, dy + h * 0.52, 20 * s, 22 * s);
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(cx, dy + h * 0.52 + 10 * s, 3 * s, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = "#0a131c";
+            ctx.fillRect(cx - w/2, dy, w, h);
+            ctx.fillStyle = "rgba(180,220,255,.22)";
+            ctx.fillRect(cx - w * 0.45, dy, w * 0.9, h);
+        }
+    }
+}
+
+/* ================= 3D GHOST RENDERING & ATTACK LUNGE ================= */
+function renderGhostSprite(ghost, proj){
+    let spriteH = Math.min(H * 2.5, (H / proj.perpDist) * 1.4);
+    if(ghost.state === "attacking"){
+        spriteH *= 1.6; // Massive lunge surge into camera
+    }
+
+    const spriteW = spriteH * 0.65;
+    const topY = (H - spriteH) / 2 + Math.sin(ghost.bobAngle) * 14;
+
+    const startX = Math.floor(proj.screenX - spriteW / 2);
+    const endX = Math.floor(proj.screenX + spriteW / 2);
+
+    const imgW = ghostImg.naturalWidth || 400;
+    const imgH = ghostImg.naturalHeight || 600;
+
+    // Line-of-sight test to prevent ghost seeing through walls
+    const hasLOS = hasLineOfSight(player.x, player.y, ghost.x, ghost.y);
+    if(!hasLOS && ghost.state !== "attacking") return;
+
+    // Player direct gaze reaction
+    const isLookingDirectly = Math.abs(proj.angle) < FOV * 0.32;
+    if(isLookingDirectly && !ghost.seenAlert){
+        ghost.seenAlert = true;
+        playScareSound();
+        triggerGlitch();
+    }
+
+    const alpha = Math.min(1.0, Math.max(0.3, 1.3 - (proj.distance / 12)));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if(ghostImgLoaded){
+        for(let x = startX; x < endX; x += 2){
+            if(x < 0 || x >= W) continue;
+
+            const rayIdx = Math.floor((x / W) * RAYS);
+            if(rayIdx >= 0 && rayIdx < RAYS){
+                if(proj.perpDist < zBuffer[rayIdx] + 0.3 || ghost.state === "attacking"){
+                    const texX = Math.floor(((x - startX) / spriteW) * imgW);
+                    if(texX >= 0 && texX < imgW){
+                        ctx.drawImage(
+                            ghostImg,
+                            texX, 0, 2, imgH,
+                            x, topY, 2, spriteH
+                        );
+                    }
+                }
+            }
+        }
+    } else {
+        ctx.fillStyle = "rgba(240,240,255,0.7)";
+        ctx.beginPath();
+        ctx.ellipse(proj.screenX, topY + spriteH * 0.4, spriteW * 0.35, spriteH * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+/* ================= FLASHLIGHT EFFECT ================= */
+function drawFlashlight(){
+    const distToGhost = ghostEnemy.active ? Math.hypot(ghostEnemy.x - player.x, ghostEnemy.y - player.y) : 99;
+    const fear = Math.max(0, 1 - distToGhost / 5);
+
+    const grad = ctx.createRadialGradient(
+        W / 2, H * 0.52, 20,
+        W / 2, H * 0.52, Math.min(W, H) * 0.65
+    );
+
+    if(fear > 0.35){
+        const flick = Math.random() * 0.08;
+        grad.addColorStop(0, `rgba(255,160,160,${0.28 - flick})`);
+        grad.addColorStop(0.35, `rgba(220,120,120,${0.14 - flick})`);
+        grad.addColorStop(0.7, "rgba(80,0,0,.2)");
+        grad.addColorStop(1, "rgba(0,0,0,.65)");
+    } else {
+        grad.addColorStop(0, "rgba(255,235,200,.22)");
+        grad.addColorStop(0.25, "rgba(255,220,180,.13)");
+        grad.addColorStop(0.55, "rgba(255,200,150,.04)");
+        grad.addColorStop(1, "rgba(0,0,0,.38)");
+    }
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+}
+
+/* ================= GHOST ATTACK & AI LOGIC ================= */
+function updateGhostAI(dt){
+    if(!ghostEnemy.active || gameState.gameOver || gameState.escaped) return;
+
+    ghostEnemy.bobAngle += dt * 4.0;
+    const distToPlayer = Math.hypot(player.x - ghostEnemy.x, player.y - ghostEnemy.y);
+
+    // Static noise distortion based on proximity
+    const staticEl = document.getElementById("static");
+    if(distToPlayer < 7){
+        staticEl.style.opacity = (0.04 + (7 - distToPlayer) * 0.04).toString();
+    } else {
+        staticEl.style.opacity = "0.035";
+    }
+
+    // STATE: WATCHING
+    if(ghostEnemy.state === "watching"){
+        if(distToPlayer < 4.0 || ghostEnemy.seenAlert){
+            ghostEnemy.state = "chasing";
+            playScareSound();
+            showMessage("IT SPOTTED YOU! RUN!");
+        }
+    }
+    // STATE: HUNTING / CHASING (RELENTLESS ATTACK AI)
+    else if(ghostEnemy.state === "chasing" || ghostEnemy.state === "hunting"){
+        ghostEnemy.pathTimer += dt;
+        if(ghostEnemy.pathTimer > 0.3){
+            ghostEnemy.pathTimer = 0;
+            ghostEnemy.path = getBFSPath(ghostEnemy.x, ghostEnemy.y, player.x, player.y);
+        }
+
+        if(ghostEnemy.path.length > 0){
+            moveGhostAlongPath(dt, ghostEnemy.speed);
+        }
+
+        // ATTACK TRIGGER: Ghost is within strike range
+        if(distToPlayer < 0.95){
+            executeGhostAttack();
+        }
+    }
+    // STATE: ATTACKING (THE FATAL LUNGE)
+    else if(ghostEnemy.state === "attacking"){
+        // Ghost surges straight into the player's face
+        const dx = player.x - ghostEnemy.x;
+        const dy = player.y - ghostEnemy.y;
+        ghostEnemy.x += dx * 8 * dt;
+        ghostEnemy.y += dy * 8 * dt;
+    }
+}
+
+function moveGhostAlongPath(dt, speed){
+    const nextNode = ghostEnemy.path[0];
+    if(!nextNode) return;
+
+    const dx = nextNode.x - ghostEnemy.x;
+    const dy = nextNode.y - ghostEnemy.y;
+    const dist = Math.hypot(dx, dy);
+
+    if(dist < 0.16){
+        ghostEnemy.path.shift();
+    } else {
+        const step = speed * dt;
+        ghostEnemy.x += (dx / dist) * Math.min(step, dist);
+        ghostEnemy.y += (dy / dist) * Math.min(step, dist);
+    }
+}
+
+/* ================= FATAL GHOST ATTACK & DEATH ================= */
+function executeGhostAttack(){
+    if(gameState.gameOver) return;
+    ghostEnemy.state = "attacking";
+
+    // Play attack scream jumpscare
+    playScareSound();
+    playSound("scare1", 1.0);
+
+    // Violent screen shake
+    document.getElementById("game").animate([
+        { transform: "translate(0,0) scale(1)" },
+        { transform: "translate(-18px, 12px) scale(1.05)" },
+        { transform: "translate(16px, -14px) scale(1.08)" },
+        { transform: "translate(-20px, 8px) scale(1.04)" },
+        { transform: "translate(0,0) scale(1)" }
+    ], { duration: 450 });
+
+    const redFlash = document.getElementById("redFlash");
+    redFlash.style.opacity = "0.9";
+
+    // One life: Instant death -> Black screen: “Jaldi The Late”
+    setTimeout(() => {
+        triggerGameOver();
+    }, 450);
+}
+
+function triggerGameOver(){
+    gameState.gameOver = true;
+    ghostEnemy.active = false;
+
+    // Pause ambient sound
+    const ambient = document.getElementById("ambient");
+    if(ambient) ambient.pause();
+
+    // Sudden cut to pitch black
+    const redFlash = document.getElementById("redFlash");
+    redFlash.style.opacity = "0";
+
+    document.getElementById("gameOverScreen").style.display = "flex";
+}
+
+function triggerEscape(){
+    gameState.escaped = true;
+    ghostEnemy.active = false;
+
+    playSound("unlock", 1.0);
+    const ambient = document.getElementById("ambient");
+    if(ambient) ambient.pause();
+
+    const flash = document.getElementById("flash");
+    flash.style.opacity = "0.85";
+    setTimeout(() => { flash.style.opacity = "0"; }, 600);
+
+    setTimeout(() => {
+        document.getElementById("endScreen").style.display = "flex";
+    }, 700);
+}
+
+/* ================= JUMPSCARE / SCREEN FX ================= */
+function triggerGlitch(){
+    const redFlash = document.getElementById("redFlash");
+    redFlash.style.opacity = "0.4";
+    setTimeout(() => { redFlash.style.opacity = "0"; }, 140);
+
+    const scareText = document.getElementById("scareText");
+    const phrases = ["DON'T LOOK", "BEHIND YOU", "TOO LATE", "RUN", "IT'S HERE"];
+    scareText.innerText = phrases[Math.floor(Math.random() * phrases.length)];
+    scareText.style.opacity = "1";
+    setTimeout(() => { scareText.style.opacity = "0"; }, 600);
+}
+
+/* ================= HUD & OBJECTIVES ================= */
+let messageTimer = null;
+function showMessage(text){
+    const el = document.getElementById("message");
+    el.innerText = text;
+    el.style.opacity = "1";
+    clearTimeout(messageTimer);
+    messageTimer = setTimeout(() => {
+        el.style.opacity = "0";
+    }, 3600);
+}
+
+function updateObjective(text){
+    document.getElementById("objective").innerText = text;
+}
+
+/* ================= CONTROLS & HEAD BOBBING ================= */
+let moveX = 0;
+let moveY = 0;
+
+function updateMovement(dt){
+    let forward = 0;
+    let strafe = 0;
+    let turn = 0;
+
+    if(keys["w"] || keys["arrowup"]) forward += 1;
+    if(keys["s"] || keys["arrowdown"]) forward -= 1;
+    if(keys["a"]) strafe -= 1;
+    if(keys["d"]) strafe += 1;
+    if(keys["arrowleft"]) turn -= 1;
+    if(keys["arrowright"]) turn += 1;
+
+    forward += moveY;
+    strafe += moveX;
+
+    player.angle += turn * dt * 2.2;
+    const curSpeed = player.speed * dt;
+
+    const nx = player.x + Math.cos(player.angle) * forward * curSpeed + Math.cos(player.angle + Math.PI / 2) * strafe * curSpeed;
+    const ny = player.y + Math.sin(player.angle) * forward * curSpeed + Math.sin(player.angle + Math.PI / 2) * strafe * curSpeed;
+
+    const r = player.radius;
+    if(!isWall(nx + Math.sign(nx - player.x) * r, player.y)){
+        player.x = nx;
+    }
+    if(!isWall(player.x, ny + Math.sign(ny - player.y) * r)){
+        player.y = ny;
+    }
+
+    // Footsteps and head-bobbing
+    if(Math.abs(forward) + Math.abs(strafe) > 0.15){
+        player.headBob += dt * 10;
+        triggerFootstep(dt);
+    } else {
+        player.headBob = 0;
+    }
+}
+
+/* ================= MOBILE TOUCH / JOYSTICK ================= */
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+let joystickActive = false;
+
+function joystickMove(e){
+    const rect = joystick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = e.clientX - cx;
+    let dy = e.clientY - cy;
+    const max = 38;
+    const dist = Math.hypot(dx, dy);
+
+    if(dist > max){
+        dx = (dx / dist) * max;
+        dy = (dy / dist) * max;
+    }
+
+    stick.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    moveX = dx / max;
+    moveY = -dy / max;
+}
+
+joystick.addEventListener("pointerdown", e => {
+    joystickActive = true;
+    joystick.setPointerCapture(e.pointerId);
+    joystickMove(e);
+});
+joystick.addEventListener("pointermove", e => {
+    if(joystickActive) joystickMove(e);
+});
+joystick.addEventListener("pointerup", () => {
+    joystickActive = false;
+    moveX = 0;
+    moveY = 0;
+    stick.style.transform = "translate(-50%,-50%)";
+});
+
+let isPointerLooking = false;
+let lastTouchX = 0;
+
+canvas.addEventListener("pointerdown", e => {
+    isPointerLooking = true;
+    lastTouchX = e.clientX;
+});
+canvas.addEventListener("pointermove", e => {
+    if(!isPointerLooking) return;
+    const dx = e.clientX - lastTouchX;
+    player.angle += dx * 0.0042;
+    lastTouchX = e.clientX;
+});
+canvas.addEventListener("pointerup", () => { isPointerLooking = false; });
+
+/* ================= INTERACTION ENGINE ================= */
+function getNearestInteractable(){
+    let closest = null;
+    let minD = 999;
+
+    for(const obj of worldObjects){
+        if(obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
+
+        const d = Math.hypot(obj.x - player.x, obj.y - player.y);
+        if(d < minD){
+            minD = d;
+            closest = obj;
+        }
+    }
+
+    if(minD < 1.45) return closest;
+    return null;
+}
+
+function handleInteract(){
+    if(!gameState.started || gameState.gameOver || gameState.escaped) return;
+
+    const obj = getNearestInteractable();
+    if(!obj) return;
+
+    // 1. PAINTING
+    if(obj.id === "painting"){
+        gameState.paintingExamined = true;
+        showMessage(obj.examineMsg);
+        
+        // Spawn ghost watching down the hall
+        if(!ghostEnemy.active && !gameState.keyAcquired){
+            ghostEnemy.x = 8.5;
+            ghostEnemy.y = 6.5;
+            ghostEnemy.active = true;
+            ghostEnemy.state = "watching";
+            ghostEnemy.seenAlert = false;
+        }
+    }
+    // 2. NOTE
+    else if(obj.id === "note"){
+        gameState.noteRead = true;
+        showMessage(obj.examineMsg);
+        updateObjective("Search the clock frozen at 3:17.");
+        playSound("scare3", 0.6);
+    }
+    // 3. CLOCK
+    else if(obj.id === "clock"){
+        gameState.clockExamined = true;
+        if(!gameState.keyRevealed){
+            gameState.keyRevealed = true;
+            showMessage("The gears shriek. A secret vault unlocked in the East Hall!");
+            playSound("unlock", 0.85);
+            updateObjective("Retrieve the Exit Key in the East Vault.");
+
+            // Awakens ghost to hunt
+            ghostEnemy.x = 8.5;
+            ghostEnemy.y = 8.5;
+            ghostEnemy.active = true;
+            ghostEnemy.state = "hunting";
+            ghostEnemy.speed = 1.6;
+        } else {
+            showMessage(obj.examineMsg);
+        }
+    }
+    // 4. KEY
+    else if(obj.id === "key"){
+        if(!gameState.keyAcquired){
+            gameState.keyAcquired = true;
+            playSound("unlock", 1.0);
+            showMessage("EXIT KEY ACQUIRED! A blood-curdling screech roars behind you!");
+            updateObjective("RUN TO THE EXIT DOOR BEFORE IT CATCHES YOU!");
+            triggerGlitch();
+
+            // FULL AGGRESSIVE ATTACK CHASE
+            ghostEnemy.x = 8.5;
+            ghostEnemy.y = 8.5;
+            ghostEnemy.active = true;
+            ghostEnemy.state = "chasing";
+            ghostEnemy.speed = 2.0; // High-speed relentless pursuit!
+            playScareSound();
+        }
+    }
+    // 5. DOOR
+    else if(obj.id === "door"){
+        if(!gameState.keyAcquired){
+            showMessage("Locked with heavy iron chains. Find the Exit Key first.");
+            playSound("scare4", 0.6);
+        } else if(!gameState.doorUnlocked){
+            gameState.doorUnlocked = true;
+            showMessage("THE DOOR UNLOCKED! ESCAPE!");
+            playSound("unlock", 1.0);
+            setTimeout(triggerEscape, 500);
+        } else {
+            triggerEscape();
+        }
+    }
+    else {
+        showMessage(obj.examineMsg);
+    }
+}
+
+const interactBtn = document.getElementById("interact");
+interactBtn.addEventListener("click", handleInteract);
+
+/* ================= GAME LOOP ================= */
+let lastTime = performance.now();
+
+function gameLoop(now){
+    const dt = Math.min(0.06, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if(gameState.started && !gameState.gameOver && !gameState.escaped){
+        gameState.survivalTimer += dt;
+
+        // Pressure clock: If player takes longer than 45 seconds, the ghost awakens automatically
+        if(gameState.survivalTimer > 45 && !ghostEnemy.active){
+            ghostEnemy.x = 8.5;
+            ghostEnemy.y = 8.5;
+            ghostEnemy.active = true;
+            ghostEnemy.state = "hunting";
+            ghostEnemy.speed = 1.5;
+            showMessage("A cold presence hunts these halls...");
+        }
+
+        updateMovement(dt);
+        updateGhostAI(dt);
+        drawWorld();
+        drawSprites();
+        drawFlashlight();
+
+        // Prompt updates
+        const nearObj = getNearestInteractable();
+        const prompt = document.getElementById("interactionPrompt");
+
+        if(nearObj){
+            let actionText = nearObj.actionText;
+            let mobileText = nearObj.mobileText;
+
+            if(nearObj.id === "door" && gameState.doorUnlocked){
+                actionText = "[E] ESCAPE";
+                mobileText = "ESCAPE";
+            }
+
+            prompt.innerText = actionText;
+            prompt.style.opacity = "1";
+
+            interactBtn.innerText = mobileText;
+            interactBtn.style.display = "block";
+        } else {
+            prompt.style.opacity = "0";
+            interactBtn.style.display = "none";
+        }
+    }
+
     requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
 
-// Ambient whispers
-setInterval(() => {
-    if (!gameStarted) return;
-    const whispers = [
-        "Did you hear that?",
-        "Something moved behind you.",
-        "The candle is flickering...",
-        "Footsteps echo from the boards.",
-        "The air suddenly turned freezing."
-    ];
-    if (Math.random() < 0.25) {
-        setMessage(whispers[Math.floor(Math.random() * whispers.length)]);
+/* ================= START & RESTART ================= */
+function startGame(){
+    gameState.started = true;
+    document.getElementById("startScreen").style.display = "none";
+
+    const ambient = document.getElementById("ambient");
+    if(ambient){
+        ambient.volume = 0.35;
+        ambient.play().catch(() => {});
     }
-}, 7000);
+
+    updateObjective("Explore the mansion. Find a way out.");
+    showMessage("Only one life. Beware the shadows.");
+}
+
+function restartGame(){
+    gameState = {
+        started: true,
+        paintingExamined: false,
+        noteRead: false,
+        clockExamined: false,
+        keyRevealed: false,
+        keyAcquired: false,
+        doorUnlocked: false,
+        escaped: false,
+        gameOver: false,
+        survivalTimer: 0
+    };
+
+    player.x = 1.5;
+    player.y = 1.5;
+    player.angle = 0.1;
+    player.headBob = 0;
+
+    ghostEnemy.x = 8.5;
+    ghostEnemy.y = 8.5;
+    ghostEnemy.active = false;
+    ghostEnemy.state = "idle";
+    ghostEnemy.speed = 1.85;
+    ghostEnemy.path = [];
+    ghostEnemy.seenAlert = false;
+
+    document.getElementById("gameOverScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+
+    const ambient = document.getElementById("ambient");
+    if(ambient){
+        ambient.currentTime = 0;
+        ambient.play().catch(() => {});
+    }
+
+    updateObjective("Explore the mansion. Find a way out.");
+    showMessage("You awake back at the entrance... Do not hesitate.");
+}
 </script>
+
 </body>
 </html>
-
-
