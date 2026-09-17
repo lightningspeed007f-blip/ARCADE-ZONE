@@ -1,1 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Jais Express — 3D Auto Driver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+:root {
+  --bg: #070a0e;
+  --panel: #111822;
+  --line: #223040;
+  --gold: #ffcf3f;
+  --neon: #00f0ff;
+  --green: #8aff3c;
+  --red: #ff4757;
+  --text: #eef4f8;
+  --muted: #8292a4;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, #1a2533 0%, var(--bg) 65%);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  overflow-x: hidden;
+}
+
+.back {
+  position: fixed;
+  left: 14px;
+  top: 14px;
+  color: var(--gold);
+  background: rgba(17, 24, 34, 0.9);
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 30;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+}
+.back:active { transform: scale(0.95); }
+
+.sound {
+  position: fixed;
+  right: 14px;
+  top: 14px;
+  z-index: 30;
+  background: rgba(17, 24, 34, 0.9);
+  color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 390px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 8px;
+}
+.brand h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: 2px;
+  background: linear-gradient(180deg, #fff, var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 20px rgba(255, 207, 63, 0.25);
+}
+.brand span {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--neon);
+  font-size: 9px;
+  letter-spacing: 3px;
+  margin-top: 2px;
+}
+
+.hud {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.pill {
+  background: linear-gradient(180deg, rgba(24, 34, 46, 0.85), rgba(12, 17, 24, 0.95));
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  text-align: center;
+  padding: 6px 2px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.pill small {
+  display: block;
+  color: var(--muted);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 7.5px;
+  letter-spacing: 1px;
+}
+.pill strong {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+}
+.coins { color: var(--gold); }
+.score { color: var(--green); }
+.lives { color: var(--red); letter-spacing: 2px; }
+
+.stage {
+  position: relative;
+  width: 100%;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 360/520;
+  background: #090e13;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75);
+  touch-action: none;
+}
+
+.controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.steer {
+  padding: 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1c2735, #101620);
+  color: var(--gold);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  cursor: pointer;
+  user-select: none;
+}
+.steer:active {
+  transform: scale(0.96);
+  border-color: var(--gold);
+  background: rgba(255, 207, 63, 0.12);
+}
+
+.overlay {
+  position: absolute;
+  inset: 2px;
+  background: rgba(8, 12, 17, 0.93);
+  backdrop-filter: blur(8px);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 22px;
+  z-index: 20;
+  transition: opacity 0.25s ease;
+}
+.overlay.hidden { display: none; }
+
+.card { width: 100%; }
+.card-icon { font-size: 52px; margin-bottom: 4px; }
+.card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0 0 6px;
+  color: var(--gold);
+  text-shadow: 0 0 16px rgba(255, 207, 63, 0.4);
+}
+.card-sub {
+  color: #cad3df;
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin: 8px 0 16px;
+}
+
+.namebox {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.namebox input {
+  width: 200px;
+  background: #141c25;
+  color: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+.namebox input:focus { border-color: var(--gold); }
+
+.mainbtn {
+  background: var(--gold);
+  border: none;
+  border-radius: 12px;
+  padding: 13px 20px;
+  color: #0b0f15;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  width: 100%;
+  max-width: 260px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 207, 63, 0.35);
+  margin-bottom: 8px;
+}
+.mainbtn:active { transform: scale(0.97); }
+.mainbtn.secondary {
+  background: #141c25;
+  color: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: none;
+}
+
+.tip {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+
+.leader {
+  width: 100%;
+  margin-top: 12px;
+  background: linear-gradient(180deg, #121923, #0c1218);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+.leader-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+}
+.leader-head b { font-size: 11px; letter-spacing: 1px; color: var(--gold); }
+.live { font-size: 9px; color: var(--green); }
+.rows { margin-top: 6px; }
+.row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px;
+  font-weight: 600;
+}
+.row:first-child { border-top: 0; }
+.rank { color: var(--gold); font-family: 'Orbitron', sans-serif; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { color: var(--muted); text-align: center; padding: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">◀ ARCADE</a>
+<button class="sound" id="soundBtn" onclick="toggleSound()">🔊</button>
+
+<div class="wrap">
+  <div class="brand">
+    <h1>JAIS EXPRESS</h1>
+    <span>3D HIGHWAY AUTO RACER</span>
+  </div>
+
+  <div class="hud">
+    <div class="pill"><small>DISTANCE</small><strong id="dist">0m</strong></div>
+    <div class="pill"><small>COINS</small><strong class="coins" id="coins">0</strong></div>
+    <div class="pill"><small>SCORE</small><strong class="score" id="score">0</strong></div>
+    <div class="pill"><small>LIVES</small><strong class="lives" id="lives">♥♥</strong></div>
+  </div>
+
+  <div class="stage">
+    <canvas id="game" width="360" height="520"></canvas>
+    
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <div class="card-icon" id="icon">🛺</div>
+        <div class="card-title" id="title">JAIS EXPRESS</div>
+        <div class="card-sub" id="sub">
+          Race through Wahabganj, Naugaji, Bus Adda, and Shekhana in full 3D! Dodge traffic, swerve past cows, and claim the highest Jais score.
+        </div>
+        
+        <div class="namebox" id="namebox">
+          <input id="playerName" maxlength="12" placeholder="DRIVER NAME">
+        </div>
+        
+        <button class="mainbtn" id="startBtn" onclick="startGame()">START DRIVE</button>
+        <button class="mainbtn secondary" id="boardBtn" onclick="showBoard()">🏆 LIVE LEADERBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="steer" onclick="move(-1)">◀ SWERVE LEFT</button>
+    <button class="steer" onclick="move(1)">SWERVE RIGHT ▶</button>
+  </div>
+  <div class="tip">Controls: Touch buttons &bull; Keyboard ← → / A D &bull; Screen Swipe</div>
+
+  <div class="leader">
+    <div class="leader-head">
+      <b>🏆 JAIS TOP DRIVERS</b>
+      <span class="live">● ACTIVE</span>
+    </div>
+    <div class="rows" id="rows"><div class="empty">Loading leaderboard…</div></div>
+  </div>
+</div>
+
+<script>
+/*
+  LIVE LEADERBOARD:
+  Provide your Cloudflare Worker URL or Leave blank for local browser storage.
+*/
+const API_BASE = "";
+const SOUND_PATH = "sounds/";
+const carSounds = Array.from({length:10}, (_, i) => new Audio(`${SOUND_PATH}car${i+1}.mp3`));
+const crashSounds = Array.from({length:10}, (_, i) => new Audio(`${SOUND_PATH}crash${i+1}.mp3`));
+const soundEnabled = { value: true };
+
+// Synth Audio Fallback Engine
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSynthSound(type) {
+  if (!soundEnabled.value) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  if (type === 'coin') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(850, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1300, audioCtx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.12);
+  } else if (type === 'crash') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.35);
+    gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.35);
+  } else if (type === 'steer') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  }
+}
+
+function playAudioFallback(arr, synthType) {
+  if (!soundEnabled.value) return;
+  if (arr && arr.length > 0) {
+    const audio = arr[Math.floor(Math.random() * arr.length)];
+    audio.currentTime = 0;
+    audio.volume = 0.45;
+    audio.play().catch(() => playSynthSound(synthType));
+  } else {
+    playSynthSound(synthType);
+  }
+}
+
+function toggleSound() {
+  soundEnabled.value = !soundEnabled.value;
+  document.getElementById("soundBtn").textContent = soundEnabled.value ? "🔊" : "🔇";
+}
+
+// 3D Perspective Highway Constants
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const HORIZON_Y = 175;
+const PLAYER_Y = 445;
+const LANES_Z = [-0.7, 0, 0.7]; // Normalised offsets from road center
+
+let currentLane = 1;
+let playerTrackX = 0;
+let targetTrackX = 0;
+let distance = 0;
+let coins = 0;
+let score = 0;
+let speed = 5.2;
+let lives = 2;
+let playing = false;
+
+let roadCurve = 0;
+let roadPos = 0;
+let routeIndex = 0;
+let runStarted = 0;
+let lastTime = 0;
+let invulnerableUntil = 0;
+let screenShake = 0;
+let raf = null;
+
+let obstacles = [];
+let pickups = [];
+
+const routes = [
+  "WAHABGANJ", "NAUGAJI", "BUS ADDA", "SHEKHANA", 
+  "ALIA MARKET", "CHAUDHRANA", "NASIRABAD", "KASIMPUR", 
+  "KHARKA", "MALIK MOHAMMAD JAISI"
+];
+
+// Controls
+function move(dir) {
+  if (!playing) return;
+  const n = Math.max(0, Math.min(2, currentLane + dir));
+  if (n !== currentLane) {
+    currentLane = n;
+    targetTrackX = LANES_Z[currentLane];
+    playSynthSound('steer');
+  }
+}
+
+window.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") move(-1);
+  if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") move(1);
+});
+
+let touchStartX = 0;
+canvas.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, { passive: true });
+canvas.addEventListener("touchend", e => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 28) move(diff > 0 ? 1 : -1);
+}, { passive: true });
+
+function startGame() {
+  const nm = document.getElementById("playerName").value.trim().toUpperCase() || "PLAYER";
+  localStorage.setItem("jais_driver_name", nm);
+
+  currentLane = 1;
+  playerTrackX = 0;
+  targetTrackX = 0;
+  distance = 0;
+  coins = 0;
+  score = 0;
+  speed = 5.2;
+  lives = 2;
+  roadPos = 0;
+  routeIndex = 0;
+  obstacles = [];
+  pickups = [];
+  invulnerableUntil = 0;
+  screenShake = 0;
+
+  playing = true;
+  runStarted = performance.now();
+  lastTime = performance.now();
+
+  document.getElementById("overlay").classList.add("hidden");
+  updateHud();
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(loop);
+}
+
+function updateHud() {
+  document.getElementById("dist").textContent = Math.floor(distance) + "m";
+  document.getElementById("coins").textContent = coins;
+  document.getElementById("score").textContent = Math.floor(score);
+  document.getElementById("lives").textContent = "♥".repeat(lives) + "♡".repeat(2 - lives);
+}
+
+// 3D Projection Helpers
+function project(normX, z) {
+  // z: 0 (camera position) -> 1 (vanishing horizon)
+  const scale = (1 - z);
+  const screenY = HORIZON_Y + (canvas.height - HORIZON_Y) * scale;
+  const roadWidth = 26 + (300 - 26) * scale;
+  const screenX = (canvas.width / 2) + (normX * roadWidth * 0.42) + (roadCurve * (1 - scale) * 40);
+  return { x: screenX, y: screenY, scale: scale };
+}
+
+function spawn() {
+  if (Math.random() < 0.024 + (speed - 5) * 0.001) {
+    const laneIdx = Math.floor(Math.random() * 3);
+    if (!obstacles.some(o => o.lane === laneIdx && o.z > 0.85)) {
+      const types = ['auto', 'bus', 'cow', 'barricade', 'suv'];
+      obstacles.push({
+        lane: laneIdx,
+        normX: LANES_Z[laneIdx],
+        z: 1, // Start at horizon
+        type: types[Math.floor(Math.random() * types.length)]
+      });
+    }
+  }
+
+  if (Math.random() < 0.035) {
+    const laneIdx = Math.floor(Math.random() * 3);
+    if (!obstacles.some(o => o.lane === laneIdx && o.z > 0.82)) {
+      const pTypes = [
+        { type: 'coin', val: 10 },
+        { type: 'coin', val: 10 },
+        { type: 'mithai', val: 30 }
+      ];
+      const p = pTypes[Math.floor(Math.random() * pTypes.length)];
+      pickups.push({
+        lane: laneIdx,
+        normX: LANES_Z[laneIdx],
+        z: 1,
+        type: p.type,
+        val: p.val
+      });
+    }
+  }
+}
+
+function hitObstacle(o) {
+  if (performance.now() < invulnerableUntil) return;
+  lives--;
+  screenShake = 18;
+  invulnerableUntil = performance.now() + 1400;
+  playAudioFallback(crashSounds, 'crash');
+  score = Math.max(0, score - 80);
+  updateHud();
+
+  if (lives <= 0) {
+    endGame();
+  } else {
+    obstacles = obstacles.filter(x => x !== o);
+    speed = Math.max(4.8, speed - 0.7);
+  }
+}
+
+function loop(now) {
+  if (!playing) return;
+  const dt = Math.min(32, now - lastTime);
+  lastTime = now;
+
+  playerTrackX += (targetTrackX - playerTrackX) * 0.24;
+  distance += speed * dt / 1000 * 9;
+  speed = Math.min(12.5, 5.2 + distance / 800);
+  score = distance + coins * 3;
+  roadPos = (roadPos + speed * dt * 0.02) % 1;
+
+  // Curvature oscillation
+  roadCurve = Math.sin(distance * 0.003) * 0.8;
+
+  if (screenShake > 0) screenShake *= 0.86;
+
+  spawn();
+
+  // Move entities toward player
+  const advance = (speed * dt * 0.00065);
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    o.z -= advance;
+
+    // Collision detection near screen bottom
+    if (o.z <= 0.16 && o.z >= 0.04 && Math.abs(o.normX - playerTrackX) < 0.38) {
+      hitObstacle(o);
+      if (!playing) return;
+    }
+    if (o.z < 0) obstacles.splice(i, 1);
+  }
+
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const p = pickups[i];
+    p.z -= advance;
+
+    if (p.z <= 0.16 && p.z >= 0.03 && Math.abs(p.normX - playerTrackX) < 0.34) {
+      coins += p.val;
+      playSynthSound('coin');
+      pickups.splice(i, 1);
+      continue;
+    }
+    if (p.z < 0) pickups.splice(i, 1);
+  }
+
+  routeIndex = Math.min(routes.length - 1, Math.floor(distance / 280));
+  updateHud();
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+
+// Vector Sprite Renderers
+function drawSkyAndTown() {
+  // Shifting sky based on route milestone
+  const skyPhase = (routeIndex % 3);
+  let grad = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
+  if (skyPhase === 0) {
+    // Dawn / Bright
+    grad.addColorStop(0, '#101d2c');
+    grad.addColorStop(1, '#344759');
+  } else if (skyPhase === 1) {
+    // Dusk Amber
+    grad.addColorStop(0, '#1e1b2e');
+    grad.addColorStop(0.7, '#64383a');
+    grad.addColorStop(1, '#b06f47');
+  } else {
+    // Neon Night
+    grad.addColorStop(0, '#060a10');
+    grad.addColorStop(1, '#152438');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
+
+  // Distant Town Skyline Silhouettes
+  ctx.fillStyle = "rgba(10, 15, 22, 0.9)";
+  for (let x = -20; x < canvas.width + 40; x += 38) {
+    const h = 25 + ((Math.abs(x * 13)) % 40);
+    ctx.fillRect(x + roadCurve * 15, HORIZON_Y - h, 34, h);
+    ctx.fillStyle = "#ffcf3f";
+    if ((x % 3) === 0) ctx.fillRect(x + roadCurve * 15 + 8, HORIZON_Y - h + 10, 4, 6);
+    ctx.fillStyle = "rgba(10, 15, 22, 0.9)";
+  }
+}
+
+function drawRoad3D() {
+  const strips = 32;
+  for (let i = 0; i < strips; i++) {
+    const z1 = 1 - (i / strips);
+    const z2 = 1 - ((i + 1) / strips);
+
+    const p1 = project(0, z1);
+    const p2 = project(0, z2);
+
+    const isEven = ((i + Math.floor(roadPos * 10)) % 2 === 0);
+
+    // Terrain grass sides
+    ctx.fillStyle = isEven ? '#121815' : '#0e1411';
+    ctx.fillRect(0, p1.y, canvas.width, p2.y - p1.y);
+
+    // Road surface
+    const w1 = (26 + (300 - 26) * p1.scale) / 2;
+    const w2 = (26 + (300 - 26) * p2.scale) / 2;
+
+    ctx.fillStyle = isEven ? '#202830' : '#1c232a';
+    ctx.beginPath();
+    ctx.moveTo(p1.x - w1, p1.y);
+    ctx.lineTo(p1.x + w1, p1.y);
+    ctx.lineTo(p2.x + w2, p2.y);
+    ctx.lineTo(p2.x - w2, p2.y);
+    ctx.fill();
+
+    // Vibrant Red & White Curb Rumble Strips
+    const curbW1 = Math.max(3, 16 * p1.scale);
+    const curbW2 = Math.max(3, 16 * p2.scale);
+
+    ctx.fillStyle = isEven ? '#ff4757' : '#ffffff';
+    // Left curb
+    ctx.beginPath();
+    ctx.moveTo(p1.x - w1, p1.y);
+    ctx.lineTo(p1.x - w1 + curbW1, p1.y);
+    ctx.lineTo(p2.x - w2 + curbW2, p2.y);
+    ctx.lineTo(p2.x - w2, p2.y);
+    ctx.fill();
+
+    // Right curb
+    ctx.beginPath();
+    ctx.moveTo(p1.x + w1 - curbW1, p1.y);
+    ctx.lineTo(p1.x + w1, p1.y);
+    ctx.lineTo(p2.x + w2, p2.y);
+    ctx.lineTo(p2.x + w2 - curbW2, p2.y);
+    ctx.fill();
+
+    // Dashed center line
+    if (isEven) {
+      const lineW1 = Math.max(1.5, 4 * p1.scale);
+      const lineW2 = Math.max(1.5, 4 * p2.scale);
+      ctx.fillStyle = 'rgba(255, 207, 63, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo(p1.x - lineW1, p1.y);
+      ctx.lineTo(p1.x + lineW1, p1.y);
+      ctx.lineTo(p2.x + lineW2, p2.y);
+      ctx.lineTo(p2.x - lineW2, p2.y);
+      ctx.fill();
+    }
+  }
+}
+
+function drawObstacleSprite(o) {
+  const p = project(o.normX, o.z);
+  const s = p.scale;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Soft drop shadow
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 24 * s, 8 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (o.type === 'cow') {
+    // Stylized Desi Cow
+    ctx.fillStyle = "#ded3c2";
+    ctx.fillRect(-18 * s, -22 * s, 36 * s, 18 * s);
+    ctx.fillStyle = "#553b26";
+    ctx.fillRect(-8 * s, -20 * s, 12 * s, 12 * s); // Brown Patch
+    ctx.fillStyle = "#ded3c2";
+    ctx.fillRect(10 * s, -28 * s, 12 * s, 14 * s); // Head
+    ctx.fillStyle = "#8a7561";
+    ctx.fillRect(18 * s, -32 * s, 4 * s, 6 * s); // Horns
+  } else if (o.type === 'bus') {
+    // UP Roadways Style Bus
+    ctx.fillStyle = "#1e72b8";
+    ctx.fillRect(-22 * s, -45 * s, 44 * s, 40 * s);
+    ctx.fillStyle = "#dff1ff";
+    ctx.fillRect(-18 * s, -38 * s, 36 * s, 14 * s); // Rear Glass
+    ctx.fillStyle = "#ff4757";
+    ctx.fillRect(-18 * s, -12 * s, 10 * s, 6 * s); // Tail lamps
+    ctx.fillRect(8 * s, -12 * s, 10 * s, 6 * s);
+  } else if (o.type === 'barricade') {
+    // Police / UP Road Barricade
+    ctx.fillStyle = "#ffbb00";
+    ctx.fillRect(-18 * s, -22 * s, 36 * s, 18 * s);
+    ctx.fillStyle = "#1a1e24";
+    ctx.beginPath();
+    ctx.moveTo(-12 * s, -22 * s); ctx.lineTo(-6 * s, -4 * s); ctx.lineTo(0, -4 * s); ctx.lineTo(-6 * s, -22 * s);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(4 * s, -22 * s); ctx.lineTo(10 * s, -4 * s); ctx.lineTo(16 * s, -4 * s); ctx.lineTo(10 * s, -22 * s);
+    ctx.fill();
+  } else {
+    // Traffic Car
+    ctx.fillStyle = "#e03131";
+    ctx.fillRect(-18 * s, -28 * s, 36 * s, 24 * s);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(-15 * s, -24 * s, 30 * s, 10 * s);
+    ctx.fillStyle = "#ffcf3f";
+    ctx.fillRect(-16 * s, -8 * s, 6 * s, 4 * s);
+    ctx.fillRect(10 * s, -8 * s, 6 * s, 4 * s);
+  }
+  ctx.restore();
+}
+
+function drawPickupSprite(p) {
+  const pr = project(p.normX, p.z);
+  const s = pr.scale;
+  ctx.save();
+  ctx.translate(pr.x, pr.y - (Math.sin(distance * 0.05 + pr.x) * 6 * s));
+
+  // Glowing pickup aura
+  ctx.fillStyle = p.type === 'mithai' ? "rgba(255, 122, 26, 0.4)" : "rgba(255, 207, 63, 0.45)";
+  ctx.beginPath();
+  ctx.arc(0, -10 * s, 16 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = `${Math.floor(26 * s)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(p.type === 'mithai' ? '🍬' : '🪙', 0, 0);
+  ctx.restore();
+}
+
+function drawPlayerAuto() {
+  const proj = project(playerTrackX, 0.08);
+  const px = proj.x;
+  const py = PLAYER_Y;
+
+  ctx.save();
+  ctx.translate(px, py);
+
+  // Dynamic steering tilt
+  const tilt = (targetTrackX - playerTrackX) * 0.35;
+  ctx.rotate(tilt);
+
+  // Invulnerability flashing
+  if (performance.now() < invulnerableUntil && Math.floor(performance.now() / 80) % 2 === 0) {
+    ctx.globalAlpha = 0.35;
+  }
+
+  // Underbody Ground Shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 42, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wheels
+  ctx.fillStyle = "#121418";
+  ctx.fillRect(-36, -8, 10, 18);
+  ctx.fillRect(26, -8, 10, 18);
+
+  // Lower Chassis (CNG Green & Yellow Auto)
+  ctx.fillStyle = "#2ecc71"; // Lower Green band
+  ctx.fillRect(-32, -32, 64, 26);
+
+  // Upper Body (Auto Yellow / Gold Hood)
+  ctx.fillStyle = "#ffcf3f";
+  ctx.beginPath();
+  ctx.moveTo(-32, -32);
+  ctx.lineTo(-24, -68);
+  ctx.lineTo(24, -68);
+  ctx.lineTo(32, -32);
+  ctx.closePath();
+  ctx.fill();
+
+  // Windshield & Rear View
+  ctx.fillStyle = "#1e2936";
+  ctx.fillRect(-20, -62, 40, 24);
+
+  // Headlight Beams illuminating forward
+  ctx.fillStyle = "rgba(255, 235, 120, 0.18)";
+  ctx.beginPath();
+  ctx.moveTo(-16, -65);
+  ctx.lineTo(-45, -160);
+  ctx.lineTo(45, -160);
+  ctx.lineTo(16, -65);
+  ctx.closePath();
+  ctx.fill();
+
+  // Chrome Guard & Indicators
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillRect(-28, -10, 56, 4);
+
+  ctx.fillStyle = "#ff4757";
+  ctx.fillRect(-28, -26, 8, 6);
+  ctx.fillRect(20, -26, 8, 6);
+
+  ctx.restore();
+}
+
+function draw() {
+  ctx.save();
+  if (screenShake > 0) {
+    const rx = (Math.random() - 0.5) * screenShake;
+    const ry = (Math.random() - 0.5) * screenShake;
+    ctx.translate(rx, ry);
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawSkyAndTown();
+  drawRoad3D();
+
+  // Sort objects by depth for accurate perspective occluding
+  const allDrawables = [
+    ...obstacles.map(o => ({ type: 'obs', data: o, z: o.z })),
+    ...pickups.map(p => ({ type: 'pick', data: p, z: p.z }))
+  ];
+  allDrawables.sort((a, b) => b.z - a.z);
+
+  allDrawables.forEach(item => {
+    if (item.type === 'obs') drawObstacleSprite(item.data);
+    else drawPickupSprite(item.data);
+  });
+
+  drawPlayerAuto();
+
+  // Active City Header Badge
+  ctx.fillStyle = "rgba(10, 16, 22, 0.85)";
+  ctx.fillRect(35, 14, 290, 36);
+  ctx.strokeStyle = "var(--line)";
+  ctx.strokeRect(35, 14, 290, 36);
+
+  ctx.fillStyle = "#ffcf3f";
+  ctx.font = "900 13px 'Orbitron', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("JAIS • " + routes[routeIndex], 180, 37);
+
+  ctx.restore();
+}
+
+async function endGame() {
+  playing = false;
+  cancelAnimationFrame(raf);
+  draw();
+
+  const finalScore = Math.floor(score);
+  const name = localStorage.getItem("jais_driver_name") || "PLAYER";
+
+  let rankText = "";
+  try {
+    const r = await submitScore(name, finalScore, Math.floor(distance), coins);
+    if (r?.rank) rankText = `<br><b style="color:var(--green)">LIVE RANK: #${r.rank}</b>`;
+  } catch (e) {}
+
+  saveLocal(name, finalScore);
+
+  document.getElementById("icon").textContent = "💥";
+  document.getElementById("title").textContent = "RIDE OVER";
+  document.getElementById("sub").innerHTML = `
+    <b>${distance | 0}m</b> navigated &bull; <b>${coins}</b> coins collected &bull; <b>${finalScore}</b> score ${rankText}<br>
+    <span style="color:var(--green);font-weight:700;">Drive again and climb the Jais leaderboard!</span>
+  `;
+  document.getElementById("startBtn").textContent = "DRIVE AGAIN";
+  document.getElementById("namebox").style.display = "none";
+  document.getElementById("overlay").classList.remove("hidden");
+  loadLeaderboard();
+}
+
+function saveLocal(name, s) {
+  let a = JSON.parse(localStorage.getItem("jais_local_scores") || "[]");
+  a.push({ name, score: s });
+  a.sort((x, y) => y.score - x.score);
+  localStorage.setItem("jais_local_scores", JSON.stringify(a.slice(0, 10)));
+}
+
+async function submitScore(name, s, d, c) {
+  if (!API_BASE) return null;
+  const res = await fetch(API_BASE + "/score", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, score: s, distance: d, coins: c, startedAt: runStarted })
+  });
+  if (!res.ok) throw new Error("score rejected");
+  return res.json();
+}
+
+async function getScores() {
+  if (API_BASE) {
+    const r = await fetch(API_BASE + "/leaderboard?limit=10", { cache: "no-store" });
+    if (!r.ok) throw new Error("leaderboard");
+    return r.json();
+  }
+  return JSON.parse(localStorage.getItem("jais_local_scores") || "[]");
+}
+
+async function loadLeaderboard() {
+  const box = document.getElementById("rows");
+  try {
+    const data = await getScores();
+    const rows = data.rows || data;
+    box.innerHTML = rows.length ? rows.slice(0, 10).map((r, i) => `
+      <div class="row">
+        <span class="rank">#${i + 1}</span>
+        <span class="name">${escapeHtml(r.name)}</span>
+        <b>${Number(r.score).toLocaleString()}</b>
+      </div>
+    `).join("") : `<div class="empty">No scores yet — be the first to set the record!</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">Leaderboard loading...</div>`;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+function showBoard() {
+  document.getElementById("namebox").style.display = "none";
+  document.getElementById("icon").textContent = "🏆";
+  document.getElementById("title").textContent = "TOP JAIS DRIVERS";
+  document.getElementById("sub").textContent = "Highest scores clocked across all city routes.";
+  document.getElementById("startBtn").textContent = "START DRIVE";
+  document.getElementById("overlay").classList.remove("hidden");
+  loadLeaderboard();
+}
+
+document.getElementById("playerName").value = localStorage.getItem("jais_driver_name") || "";
+loadLeaderboard();
+draw();
+</script>
+</body>
+</html>
 
