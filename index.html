@@ -11,78 +11,117 @@
             background: #060609; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden; color: #ffffff;
         }
+
+        /* Background Video Container */
+        #bg-video-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: 0;
+        }
+        #bg-video-wrapper video {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: brightness(0.35) contrast(1.2) blur(2px);
+        }
+        .video-overlay {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at center, rgba(21, 16, 37, 0.4) 0%, rgba(6, 6, 9, 0.85) 100%);
+        }
+
         .scene {
             width: 100%; height: 100vh; perspective: 1400px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            position: relative; background: radial-gradient(circle at center, #151025 0%, #060609 100%);
+            position: relative; z-index: 1;
         }
         .header-title {
             position: absolute; top: 25px; text-align: center; z-index: 10;
         }
         .header-title h1 {
-            margin: 0; font-size: 2.3rem; letter-spacing: 3px;
+            margin: 0; font-size: 2.5rem; letter-spacing: 4px;
             background: linear-gradient(45deg, #00ffff, #ff007f);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+            text-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
         }
         .header-title p {
-            margin: 5px 0 0 0; color: #8a8aa3; font-size: 0.85rem; letter-spacing: 1px;
+            margin: 5px 0 0 0; color: #a0a0c0; font-size: 0.85rem; letter-spacing: 2px;
+            text-transform: uppercase;
         }
+
+        /* 3D Cylinder Carousel */
         .carousel-container {
-            width: 260px; height: 360px; position: relative;
-            transform-style: preserve-3d; transition: transform 0.15s cubic-bezier(0.1, 0.7, 0.1, 1);
+            width: 260px; height: 370px; position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.15s cubic-bezier(0.1, 0.7, 0.1, 1);
             cursor: grab;
         }
         .carousel-container:active { cursor: grabbing; }
+
         .card {
             position: absolute; width: 100%; height: 100%; left: 0; top: 0;
-            background: linear-gradient(135deg, rgba(18, 18, 30, 0.95), rgba(35, 25, 55, 0.95));
-            border: 2px solid rgba(0, 255, 255, 0.35); border-radius: 24px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(255, 0, 127, 0.15);
+            background: rgba(18, 18, 30, 0.75);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(0, 255, 255, 0.4); border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 127, 0.2);
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             padding: 35px 20px; text-align: center; text-decoration: none; color: white;
             backface-visibility: hidden; transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
         }
         .card:hover {
             border-color: #ff007f;
-            box-shadow: 0 15px 45px rgba(255, 0, 127, 0.4), inset 0 0 25px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 15px 45px rgba(255, 0, 127, 0.5), inset 0 0 25px rgba(0, 255, 255, 0.4);
         }
-        .card-icon { font-size: 4.5rem; margin-top: 10px; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.3)); }
-        .card-content h2 { font-size: 1.35rem; margin: 10px 0 5px 0; color: #fff; }
-        .card-content p { font-size: 0.8rem; color: #9d9dbd; margin: 0; line-height: 1.4; }
+        .card-icon {
+            font-size: 4.8rem; margin-top: 10px;
+            filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.6));
+            animation: floatIcon 3s ease-in-out infinite alternate;
+        }
+        @keyframes floatIcon {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-8px) rotate(3deg); }
+        }
+
+        .card-content h2 { font-size: 1.4rem; margin: 10px 0 5px 0; color: #fff; }
+        .card-content p { font-size: 0.8rem; color: #b0b0d0; margin: 0; line-height: 1.4; }
+        
         .play-btn {
             background: linear-gradient(45deg, #ff007f, #7f00ff); color: white;
             padding: 10px 28px; border-radius: 30px; font-weight: bold; font-size: 0.85rem;
-            letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.4);
+            letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.5);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .card:hover .play-btn {
-            transform: scale(1.06); box-shadow: 0 6px 20px rgba(255, 0, 127, 0.6);
+            transform: scale(1.08); box-shadow: 0 6px 20px rgba(255, 0, 127, 0.8);
         }
+
         .nav-controls {
-            position: absolute; bottom: 35px; display: flex; gap: 15px; z-index: 10;
+            position: absolute; bottom: 35px; display: flex; gap: 18px; z-index: 10;
         }
         .nav-btn {
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.25);
-            color: white; padding: 10px 22px; border-radius: 30px; cursor: pointer;
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; padding: 10px 24px; border-radius: 30px; cursor: pointer;
             font-weight: bold; font-size: 0.9rem; transition: all 0.3s; backdrop-filter: blur(8px);
         }
-        .nav-btn:hover { background: rgba(0, 255, 255, 0.2); border-color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.3); }
+        .nav-btn:hover { background: rgba(0, 255, 255, 0.25); border-color: #00ffff; box-shadow: 0 0 18px rgba(0,255,255,0.4); }
         .swipe-hint {
-            position: absolute; bottom: 12px; font-size: 0.75rem; color: rgba(255, 255, 255, 0.35); letter-spacing: 1px;
+            position: absolute; bottom: 14px; font-size: 0.75rem; color: rgba(255, 255, 255, 0.45); letter-spacing: 1px;
         }
         footer {
             position: absolute; bottom: 0; width: 100%; text-align: center; font-size: 0.7rem;
-            color: rgba(255,255,255,0.2); padding: 4px; pointer-events: none;
+            color: rgba(255,255,255,0.3); padding: 4px; pointer-events: none; z-index: 10;
         }
     </style>
 </head>
 <body>
 
+    <div id="bg-video-wrapper">
+        <video autoplay loop muted playsinline poster="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23060609'/></svg>">
+            <source src="spin_bg.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
     <div class="scene">
         <div class="header-title">
             <h1>ARCADE ZONE</h1>
-            <p>Swipe or Drag to Rotate Store Cylinder</p>
+            <p>Select Game &bull; Drag to Rotate</p>
         </div>
 
         <div class="carousel-container" id="carousel">
@@ -90,18 +129,18 @@
             <a href="horror.html" class="card" style="transform: rotateY(0deg) translateZ(360px);">
                 <div class="card-icon">👻</div>
                 <div class="card-content">
-                    <h2>Horror Game</h2>
-                    <p>Enter if you dare. Survive the dark shadows.</p>
+                    <h2>The Last Night</h2>
+                    <p>Survive the haunted estate and find the secret mystery key.</p>
                 </div>
                 <div class="play-btn">PLAY NOW</div>
             </a>
 
             <!-- 2. Jais Express -->
             <a href="jais_express.html" class="card" style="transform: rotateY(72deg) translateZ(360px);">
-                <div class="card-icon">🚂</div>
+                <div class="card-icon">🛺</div>
                 <div class="card-content">
                     <h2>Jais Express</h2>
-                    <p>Embark on the high-speed transit journey.</p>
+                    <p>High-speed 3D auto driver highway arcade racer.</p>
                 </div>
                 <div class="play-btn">PLAY NOW</div>
             </a>
@@ -111,7 +150,7 @@
                 <div class="card-icon">🎯</div>
                 <div class="card-content">
                     <h2>Spin The Wheel</h2>
-                    <p>Spin to win Teddy Bear or Toffees!</p>
+                    <p>Test your luck to win Teddy Bears & Prizes!</p>
                 </div>
                 <div class="play-btn">PLAY NOW</div>
             </a>
@@ -121,7 +160,7 @@
                 <div class="card-icon">🐼</div>
                 <div class="card-content">
                     <h2>Tap The Panda</h2>
-                    <p>Whack to win +10 coins • Max 10 misses</p>
+                    <p>Fast-paced reflex challenge with dynamic speed scaling!</p>
                 </div>
                 <div class="play-btn">PLAY NOW</div>
             </a>
@@ -131,7 +170,7 @@
                 <div class="card-icon">🏹</div>
                 <div class="card-content">
                     <h2>Dharma Quiz</h2>
-                    <p>धर्म प्रश्नोत्तरी: Test your knowledge</p>
+                    <p>धर्म प्रश्नोत्तरी: 150 mythological questions & 3 lifelines.</p>
                 </div>
                 <div class="play-btn">PLAY NOW</div>
             </a>
@@ -141,10 +180,10 @@
             <button class="nav-btn" id="prevBtn">&#10094; Prev</button>
             <button class="nav-btn" id="nextBtn">Next &#10095;</button>
         </div>
-        <div class="swipe-hint">← Drag horizontally or use buttons →</div>
+        <div class="swipe-hint">&larr; Swipe horizontally or use arrow buttons &rarr;</div>
     </div>
 
-    <footer>✨ Maa Kamakhya Group • 3D Cylinder Store Experience ✨</footer>
+    <footer>✨ Maa Kamakhya Group &bull; 3D Game Store Hub ✨</footer>
 
     <script>
         const carousel = document.getElementById('carousel');
@@ -167,7 +206,7 @@
         carousel.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX; });
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            currentAngleOffset = (e.clientX - startX) * 0.5;
+            currentAngleOffset = (e.clientX - startX) * 0.45;
             carousel.style.transform = `rotateY(${currAngle + currentAngleOffset}deg)`;
         });
         window.addEventListener('mouseup', () => {
@@ -181,7 +220,7 @@
         carousel.addEventListener('touchstart', (e) => { isDragging = true; startX = e.touches[0].clientX; });
         window.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            currentAngleOffset = (e.touches[0].clientX - startX) * 0.5;
+            currentAngleOffset = (e.touches[0].clientX - startX) * 0.45;
             carousel.style.transform = `rotateY(${currAngle + currentAngleOffset}deg)`;
         });
         window.addEventListener('touchend', () => {
