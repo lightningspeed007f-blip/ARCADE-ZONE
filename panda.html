@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tap The Panda - Arcade Zone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; min-height: 100vh; background: #080c10;
+            font-family: 'Rajdhani', sans-serif; color: #fff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 12px; overflow: hidden;
+        }
+
+        .header-nav {
+            width: 100%; max-width: 420px; display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 12px;
+        }
+        .back-btn {
+            color: #ffcf3f; background: rgba(17, 24, 34, 0.9); border: 1px solid #223040;
+            padding: 8px 14px; border-radius: 10px; text-decoration: none;
+            font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+        }
+
+        .title-box { text-align: center; }
+        .title-box h1 {
+            font-family: 'Orbitron', sans-serif; font-size: 20px; margin: 0;
+            background: linear-gradient(180deg, #fff, #00f0ff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Scoreboard Panel */
+        .hud-grid {
+            width: 100%; max-width: 420px; display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 6px; margin-bottom: 14px;
+        }
+        .hud-card {
+            background: #111822; border: 1.5px solid #223040; border-radius: 10px;
+            padding: 8px 4px; text-align: center;
+        }
+        .hud-card small { display: block; color: #8292a4; font-size: 9px; font-family: 'Orbitron', sans-serif; }
+        .hud-card strong { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 800; }
+        .val-score { color: #8aff3c; }
+        .val-streak { color: #ff007f; }
+        .val-coins { color: #ffcf3f; }
+        .val-misses { color: #ff4757; }
+
+        /* Game Arena */
+        .grid-container {
+            width: 100%; max-width: 420px; aspect-ratio: 1;
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 12px; background: #121923; border: 2px solid #223040; border-radius: 20px;
+            padding: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.8); position: relative;
+        }
+
+        .hole {
+            background: radial-gradient(circle at center, #0a0d12 40%, #17212d 100%);
+            border: 2px solid #1c2735; border-radius: 16px; position: relative;
+            overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        .panda {
+            font-size: 3.2rem; position: absolute; bottom: -100%;
+            transition: bottom 0.15s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); pointer-events: none;
+        }
+
+        .hole.active .panda { bottom: 8%; }
+        .hole.hit .panda { transform: scale(0.8) rotate(15deg); opacity: 0.5; }
+
+        /* Overlays */
+        .modal {
+            position: absolute; inset: 0; background: rgba(8, 12, 17, 0.94);
+            backdrop-filter: blur(8px); border-radius: 18px; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px; z-index: 30;
+        }
+        .modal.hidden { display: none; }
+        .modal h2 { font-family: 'Orbitron', sans-serif; font-size: 26px; color: #ffcf3f; margin-bottom: 10px; }
+        .modal p { color: #cad3df; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+
+        .btn-start {
+            background: #ffcf3f; border: none; border-radius: 12px; padding: 12px 28px;
+            color: #0b0f15; font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 900;
+            cursor: pointer; box-shadow: 0 6px 18px rgba(255, 207, 63, 0.4);
+        }
+        .btn-start:active { transform: scale(0.96); }
+    </style>
+</head>
+<body>
+
+    <div class="header-nav">
+        <a href="index.html" class="back-btn">&l166; ARCADE</a>
+        <div class="title-box">
+            <h1>TAP THE PANDA</h1>
+        </div>
+        <div style="width:70px;"></div>
+    </div>
+
+    <!-- Scoreboard HUD -->
+    <div class="hud-grid">
+        <div class="hud-card"><small>SCORE</small><strong class="val-score" id="score">0</strong></div>
+        <div class="hud-card"><small>STREAK</small><strong class="val-streak" id="streak">0x</strong></div>
+        <div class="hud-card"><small>COINS</small><strong class="val-coins" id="coins">0</strong></div>
+        <div class="hud-card"><small>MISSES</small><strong class="val-misses" id="misses">0/10</strong></div>
+    </div>
+
+    <!-- Game Arena -->
+    <div class="grid-container" id="grid">
+        <div class="hole" data-idx="0"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="1"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="2"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="3"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="4"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="5"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="6"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="7"><div class="panda">🐼</div></div>
+        <div class="hole" data-idx="8"><div class="panda">🐼</div></div>
+
+        <div class="modal" id="overlay">
+            <h2 id="modalTitle">TAP THE PANDA</h2>
+            <p id="modalSub">Whack pandas as they pop up! Building streak combos speeds up the pandas.<br>Max 10 misses allowed.</p>
+            <button class="btn-start" onclick="startGame()">START GAME</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let streak = 0;
+        let coins = 0;
+        let misses = 0;
+        let gameActive = false;
+        let lastHole = -1;
+        let timer = null;
+        let baseSpeed = 1200;
+
+        const holes = document.querySelectorAll('.hole');
+        const scoreEl = document.getElementById('score');
+        const streakEl = document.getElementById('streak');
+        const coinsEl = document.getElementById('coins');
+        const missesEl = document.getElementById('misses');
+        const overlay = document.getElementById('overlay');
+
+        // Synth Sound FX Fallback
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playPopSound(freq = 600) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq + 300, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function getRandomHole() {
+            let idx = Math.floor(Math.random() * holes.length);
+            while (idx === lastHole) { idx = Math.floor(Math.random() * holes.length); }
+            lastHole = idx;
+            return holes[idx];
+        }
+
+        function popPanda() {
+            if (!gameActive) return;
+
+            // Remove active status from all
+            holes.forEach(h => {
+                if (h.classList.contains('active') && !h.classList.contains('hit')) {
+                    misses++;
+                    streak = 0;
+                    updateHud();
+                    if (misses >= 10) { endGame(); return; }
+                }
+                h.classList.remove('active', 'hit');
+            });
+
+            const hole = getRandomHole();
+            hole.classList.add('active');
+
+            // Speed calculation based on streak
+            const currentSpeed = Math.max(380, baseSpeed - (streak * 45));
+            timer = setTimeout(popPanda, currentSpeed);
+        }
+
+        holes.forEach(hole => {
+            hole.addEventListener('pointerdown', () => {
+                if (!gameActive) return;
+                if (hole.classList.contains('active') && !hole.classList.contains('hit')) {
+                    hole.classList.add('hit');
+                    score += 10 + (streak * 2);
+                    streak++;
+                    coins += 1;
+                    playPopSound(400 + (streak * 30));
+                    updateHud();
+                }
+            });
+        });
+
+        function updateHud() {
+            scoreEl.textContent = score;
+            streakEl.textContent = streak + 'x';
+            coinsEl.textContent = coins;
+            missesEl.textContent = misses + '/10';
+        }
+
+        function startGame() {
+            score = 0; streak = 0; coins = 0; misses = 0;
+            gameActive = true;
+            updateHud();
+            overlay.classList.add('hidden');
+            popPanda();
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearTimeout(timer);
+            holes.forEach(h => h.classList.remove('active', 'hit'));
+            
+            document.getElementById('modalTitle').textContent = "GAME OVER";
+            document.getElementById('modalSub').innerHTML = `Final Score: <b>${score}</b> &bull; Total Coins: <b>${coins}</b><br>Highest Streak: <b>${streak}x</b>`;
+            overlay.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
