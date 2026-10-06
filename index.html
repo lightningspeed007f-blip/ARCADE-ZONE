@@ -21,17 +21,10 @@ html, body {
 }
 
 /* ===================== BACKGROUND ===================== */
-/* Blurred copy fills the whole screen */
-#bgBlur {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 0; pointer-events: none;
-  filter: blur(22px) brightness(0.45) saturate(1.3);
-  transform: scale(1.15);
-}
-/* Sharp copy shows the WHOLE horizontal video */
+/* Video fills the whole screen (vertical) */
 #bgVideo {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: contain; z-index: 1; pointer-events: none;
+  object-fit: cover; z-index: 0; pointer-events: none;
 }
 #bgShade {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -143,7 +136,6 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
 .card {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   border-radius: 22px; border: 2px solid rgba(255,255,255,0.2);
-  overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 14px 10px;
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
@@ -151,13 +143,6 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
   opacity: 0.4;
 }
 .card.active { opacity: 1; }
-.card.active::after { /* light sweep across the selected card */
-  content: ""; position: absolute; top: -20%; left: -60%; width: 40%; height: 140%;
-  background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%);
-  transform: rotate(12deg);
-  animation: sweep 3.2s ease-in-out infinite;
-}
-@keyframes sweep { 0% { left: -60%; } 55%,100% { left: 130%; } }
 .card .icon { font-size: calc(var(--cw) * 0.38); line-height: 1.1; }
 .card.active .icon { animation: bob 2.2s ease-in-out infinite alternate; }
 @keyframes bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-8px) rotate(3deg); } }
@@ -200,7 +185,7 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
 .ticker-track {
   display: flex; width: -webkit-max-content; width: max-content;
   white-space: nowrap;
-  animation: tickerLR 18s linear infinite;   /* moves left ➜ right */
+  animation: tickerRL 18s linear infinite;   /* moves right ➜ left */
 }
 .ticker-item {
   font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
@@ -208,23 +193,20 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
   color: #ffd700; padding-right: 60px;
   text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.55);
 }
-@keyframes tickerLR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes tickerRL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 @media (min-height: 760px) {
   header h1 { font-size: 27px; }
   .splash-title { font-size: 46px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .card.active::after, .card.active .icon { animation: none; }
+  .card.active .icon { animation: none; }
 }
 </style>
 </head>
 <body>
 
 <!-- ========== BACKGROUND VIDEO (bg.mp4) ========== -->
-<video id="bgBlur" autoplay muted loop playsinline webkit-playsinline>
-  <source src="bg.mp4" type="video/mp4">
-</video>
 <video id="bgVideo" autoplay muted loop playsinline webkit-playsinline>
   <source id="bgSource" src="bg.mp4" type="video/mp4">
 </video>
@@ -365,155 +347,5 @@ GAMES.forEach(function (g, i) {
   c.style.background = "radial-gradient(circle at 50% 30%, " + rgba(g.color, 0.3) + ", rgba(0,0,0,0) 65%), linear-gradient(180deg, rgba(24,26,44,0.95), rgba(10,11,20,0.97))";
   c.innerHTML =
     '<div class="icon">' + g.icon + '</div>' +
-    '<div class="name">' + g.name + '</div>' +
-    '<div class="tag" style="color:' + g.color + ';border-color:' + rgba(g.color, 0.6) + '">' + g.tag + '</div>' +
-    '<div class="tap">TAP TO PLAY</div>';
-  ring.appendChild(c);
-  cards.push(c);
-  var d = document.createElement("span");
-  dotsBox.appendChild(d);
-  dots.push(d);
-});
-
-function layout() {
-  var w = Math.min(window.innerWidth * 0.5, stage.clientHeight * 0.64, 240);
-  w = Math.max(110, Math.round(w));
-  ring.style.width = w + "px";
-  ring.style.height = Math.round(w * 1.38) + "px";
-  ring.style.setProperty("--cw", w + "px");
-  radius = Math.round((w / 2) / Math.tan(Math.PI / N) + w * 0.15);
-  cards.forEach(function (c, i) {
-    c.style.transform = "rotateY(" + (i * STEP) + "deg) translateZ(" + radius + "px)";
-  });
-  render(0);
-}
-
-/* Ring pushed back by its radius = spins on the spot */
-function render(dragDeg) {
-  var z = launching ? radius * 0.9 : 0;
-  ring.style.transform = "translateZ(" + (-radius + z) + "px) rotateY(" + (-index * STEP + dragDeg) + "deg)";
-}
-function activeIndex() { return ((index % N) + N) % N; }
-
-var shownIndex = -1;
-function update() {
-  render(0);
-  var a = activeIndex(), g = GAMES[a];
-  if (shownIndex !== -1 && shownIndex !== a) { blip(520, 0.07, 0.06, "triangle"); buzz(8); }
-  shownIndex = a;
-  cards.forEach(function (c, i) {
-    var on = i === a, col = GAMES[i].color;
-    c.classList.toggle("active", on);
-    c.style.borderColor = rgba(col, on ? 1 : 0.35);
-    c.style.boxShadow = on ? "0 0 34px " + rgba(col, 0.55) + ", inset 0 0 22px " + rgba(col, 0.22) : "none";
-  });
-  dots.forEach(function (d, i) {
-    d.className = i === a ? "on" : "";
-    d.style.background = i === a ? g.color : "";
-  });
-  var nm = document.getElementById("gameName");
-  nm.textContent = g.name;
-  nm.style.color = g.color;
-  document.getElementById("gameDesc").textContent = g.desc;
-}
-
-function goTo(i) {
-  var diff = i - activeIndex();
-  if (diff > N / 2) diff -= N;
-  if (diff < -N / 2) diff += N;
-  index += diff;
-  update();
-}
-
-function openGame() {
-  if (launching) return;
-  launching = true;
-  var a = activeIndex();
-  setStore("localStorage", "gz_last", a);
-  blip(300, 0.35, 0.12, "sawtooth");
-  buzz(30);
-  fadeOutMusic(400);                 // hub music stops when a game starts
-  ring.classList.add("launch");
-  render(0);                         // card flies towards you
-  document.body.classList.add("leaving");
-  setTimeout(function () { location.href = GAMES[a].href; }, 450);
-}
-
-/* ================= SWIPE / TAP ================= */
-var SENS = 0.4;
-var pressing = false, dragging = false, startX = 0, lastX = 0, lastT = 0, vel = 0, dragDeg = 0, pressedCard = null;
-
-function down(x, target) {
-  lastInteract = Date.now();
-  pressing = true; dragging = false;
-  startX = lastX = x; lastT = Date.now(); vel = 0; dragDeg = 0;
-  pressedCard = target && target.closest ? target.closest(".card") : null;
-}
-function moveTo(x) {
-  if (!pressing) return;
-  var now = Date.now();
-  vel = (x - lastX) / Math.max(1, now - lastT);
-  lastX = x; lastT = now;
-  var dx = x - startX;
-  if (!dragging && Math.abs(dx) > 8) { dragging = true; ring.classList.add("dragging"); }
-  if (dragging) { dragDeg = dx * SENS; render(dragDeg); }
-}
-function up() {
-  if (!pressing) return;
-  pressing = false;
-  lastInteract = Date.now();
-  ring.classList.remove("dragging");
-  if (dragging) {
-    var flick = Math.max(-1.5, Math.min(1.5, vel)) * 180 * SENS;
-    index = Math.round(index - (dragDeg + flick) / STEP);
-    update();
-  } else if (pressedCard && Date.now() - enteredAt > 500) {
-    var i = Number(pressedCard.getAttribute("data-i"));
-    if (i === activeIndex()) openGame(); else goTo(i);
-  }
-  pressedCard = null;
-}
-stage.addEventListener("touchstart", function (e) { down(e.touches[0].clientX, e.target); }, { passive: true });
-stage.addEventListener("touchmove",  function (e) { moveTo(e.touches[0].clientX); }, { passive: true });
-stage.addEventListener("touchend", up);
-stage.addEventListener("touchcancel", up);
-stage.addEventListener("mousedown", function (e) { down(e.clientX, e.target); });
-window.addEventListener("mousemove", function (e) { moveTo(e.clientX); });
-window.addEventListener("mouseup", up);
-window.addEventListener("keydown", function (e) {
-  if (splashOpen) { enter(); return; }
-  lastInteract = Date.now();
-  if (e.key === "ArrowLeft")  { index--; update(); }
-  if (e.key === "ArrowRight") { index++; update(); }
-  if (e.key === "Enter") openGame();
-});
-
-/* Attract mode: if nobody touches for 10 s, cards slowly turn by themselves */
-setInterval(function () {
-  if (!splashOpen && !pressing && !launching && Date.now() - lastInteract > 10000) {
-    index++;
-    shownIndex = activeIndex();      // no click sound for auto-turns
-    update();
-  }
-}, 3500);
-
-/* ================= VIDEO ================= */
-var videos = [document.getElementById("bgVideo"), document.getElementById("bgBlur")];
-function startVideo() {
-  videos.forEach(function (v) {
-    v.muted = true;
-    if (v.paused) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
-  });
-}
-startVideo();
-videos[0].addEventListener("loadeddata", startVideo);
-document.getElementById("bgSource").addEventListener("error", function () {
-  document.getElementById("videoMsg").style.display = "block";
-});
-
-/* ================= SPLASH ================= */
-var splash = document.getElementById("splash");
-var splashOpen = true;
-var enteredAt = 0;
-function enter() {
-  if
+    '<div
+    
