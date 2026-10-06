@@ -3,2287 +3,300 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>The Last Night - Ravi Ka Badla</title>
-
+<title>The Last Night — Ravi Ka Badla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    -webkit-user-select: none;
+:root {
+    --ink: #e9dfcf;
+    --dim: #a4978a;
+    --blood: #8e1d1d;
+    --paper: #d9cfb6;
+    --serif: "IM Fell English", Georgia, "Times New Roman", serif;
+    --sc: "IM Fell English SC", Georgia, serif;
+    --hand: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
+    --type: "Special Elite", "Courier New", monospace;
 }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: var(--ink); font-family: var(--serif); touch-action: none; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: none; image-rendering: pixelated; image-rendering: crisp-edges; }
 
-html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #000000;
-    font-family: 'Courier New', Courier, monospace, sans-serif;
-    touch-action: none;
-}
+/* atmosphere layers */
+#vignette { position: fixed; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(ellipse at 50% 52%, transparent 38%, rgba(0,0,0,.4) 78%, rgba(0,0,0,.85) 100%); }
+#fade { position: fixed; inset: 0; background: #000; pointer-events: none; z-index: 40; opacity: 1; }
+#whiteout { position: fixed; inset: 0; background: #d9dde2; pointer-events: none; z-index: 60; opacity: 0; transition: opacity 3.4s ease-in; }
+#whiteout.on { opacity: 1; }
+#hideMask { position: fixed; inset: 0; pointer-events: none; z-index: 6; display: none; }
+#hideMask.show { display: block; }
+#hideMask.gap { background: linear-gradient(90deg, #000 0 42%, rgba(0,0,0,.15) 46%, rgba(0,0,0,.15) 54%, #000 58% 100%); }
+#hideMask.slats { background: repeating-linear-gradient(180deg, #000 0 20px, rgba(0,0,0,.18) 20px 34px); }
+#hideMask.curtain { background: repeating-linear-gradient(90deg, rgba(20,18,14,.93) 0 38px, rgba(28,26,20,.78) 38px 70px), linear-gradient(transparent 70%, #000); }
+#hideMask.crates { background: linear-gradient(90deg, #000 0 30%, transparent 40%, transparent 70%, #000 78%), linear-gradient(transparent 55%, #000 72%); }
 
-#game {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    background: #050403;
-}
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+#dot { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: rgba(240,230,210,.45); transition: transform .15s, background .15s; }
+#dot.live { transform: scale(1.8); background: rgba(240,225,190,.85); }
+#holdRing { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; opacity: 0; -webkit-mask: radial-gradient(circle, transparent 12px, #000 13px); mask: radial-gradient(circle, transparent 12px, #000 13px); }
+#prompt { position: absolute; left: 50%; top: calc(50% + 28px); transform: translateX(-50%); display: flex; gap: 10px; align-items: center; opacity: 0; transition: opacity .2s; font-size: 17px; letter-spacing: .5px; color: #efe5d2; text-shadow: 0 1px 6px #000, 0 0 2px #000; white-space: nowrap; }
+#prompt.on { opacity: 1; }
+#prompt kbd { font-family: var(--sc); font-size: 13px; border: 1px solid rgba(239,229,210,.55); border-radius: 3px; padding: 1px 6px; background: rgba(0,0,0,.35); }
+#prompt i { color: var(--dim); font-size: 14px; }
+#thought { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); width: min(720px, 88vw); text-align: center; font-style: italic; font-size: 20px; line-height: 1.45; color: #efe6d6; text-shadow: 0 2px 10px #000, 0 0 3px #000; opacity: 0; transition: opacity .6s; }
+#thought.on { opacity: 1; }
+#subtitle { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); width: min(640px, 88vw); text-align: center; font-size: 21px; color: #f2eadb; text-shadow: 0 2px 10px #000; opacity: 0; transition: opacity .4s; }
+#subtitle.on { opacity: 1; }
+#subtitle i { color: var(--dim); font-size: 17px; }
+#toast { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); font-family: var(--sc); font-size: 15px; letter-spacing: 2px; color: #e8dcc6; text-shadow: 0 1px 8px #000; opacity: 0; transition: opacity .5s; }
+#toast.on { opacity: .9; }
+#inv { position: absolute; right: 18px; top: 16px; display: flex; gap: 6px; }
+#inv .slot { width: 38px; height: 38px; border-radius: 4px; background: rgba(10,8,6,.55) center/80% no-repeat; border: 1px solid rgba(230,215,190,.18); }
+#stamina { position: absolute; left: 50%; bottom: 6%; width: 120px; height: 2px; margin-left: -60px; background: rgba(255,255,255,.08); opacity: 0; transition: opacity .4s; }
+#stamina > div { height: 100%; background: rgba(230,220,200,.6); transform-origin: left; }
+#stamina.tired > div { background: rgba(170,60,50,.7); }
+#lockHint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); font-family: var(--sc); letter-spacing: 3px; font-size: 14px; color: #e6dccb; text-shadow: 0 1px 8px #000; opacity: 0; transition: opacity .4s; }
+#lockHint.on { opacity: .85; }
+body.touch #lockHint { display: none; }
+#controlsHint { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); font-family: var(--sc); font-size: 13px; letter-spacing: 1.5px; color: var(--dim); opacity: 0; transition: opacity 1.2s; white-space: nowrap; text-shadow: 0 1px 4px #000; }
+#controlsHint.on { opacity: .85; }
+body.touch #controlsHint { display: none; }
 
-canvas#canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    image-rendering: pixelated;
-}
+/* overlays */
+.overlay { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.72); padding: 20px; }
+.overlay.show { display: flex; }
+.card { max-width: 560px; width: 100%; max-height: 86vh; overflow: auto; padding: 34px 38px; position: relative; box-shadow: 0 10px 50px #000; }
+.hintline { margin-top: 22px; font-family: var(--sc); font-size: 12px; letter-spacing: 2px; color: rgba(60,40,25,.6); text-align: center; }
+.note-paper .card { background: var(--paper); color: #2b2016; font-family: var(--hand); font-size: 24px; line-height: 1.35; transform: rotate(-.6deg); background-image: linear-gradient(transparent 96%, rgba(70,90,140,.18) 96%); background-size: 100% 32px; }
+.note-paper .card h2 { font-family: var(--serif); font-size: 15px; letter-spacing: 2px; color: rgba(60,40,25,.6); margin-bottom: 14px; text-transform: uppercase; }
+.note-paper p { margin-bottom: 10px; }
+.note-paper .date { color: #6b2a1c; }
+.note-paper .sign { text-align: right; }
+.note-scrawl .card { background: #cfc3a4; color: #1d1610; font-family: var(--hand); font-size: 25px; line-height: 1.3; transform: rotate(.8deg); }
+.note-scrawl .card h2 { font-family: var(--serif); font-size: 15px; letter-spacing: 2px; color: rgba(60,40,25,.6); margin-bottom: 14px; text-transform: uppercase; }
+.note-scrawl p { margin-bottom: 12px; }
+.note-scrawl .big { font-size: 29px; font-weight: 700; color: #4a160e; letter-spacing: .5px; }
+.note-news .card { background: #cdc4ab; color: #221b13; font-family: var(--type); font-size: 15px; line-height: 1.6; clip-path: polygon(0 0, 100% 0, 100% 78%, 93% 84%, 85% 79%, 74% 90%, 63% 82%, 50% 93%, 38% 84%, 25% 91%, 12% 83%, 0 92%); padding-bottom: 80px; }
+.note-news .card h2 { display: none; }
+.note-news .mast { font-family: var(--sc); font-size: 30px; text-align: center; border-bottom: 3px double #3a2e20; padding-bottom: 4px; }
+.note-news .date { text-align: center; font-size: 12px; margin: 4px 0 14px; }
+.note-news h3 { font-family: var(--sc); font-size: 22px; margin-bottom: 10px; text-align: center; }
+.note-news p { margin-bottom: 10px; }
+.note-photo .card, .note-drawing .card { background: #1a1612; color: var(--ink); text-align: center; font-size: 18px; }
+.note-photo .card h2, .note-drawing .card h2 { font-family: var(--sc); font-size: 14px; letter-spacing: 3px; color: var(--dim); margin-bottom: 16px; font-weight: normal; }
+.note-photo canvas { width: 100%; max-width: 420px; transform: rotate(-1.5deg); box-shadow: 0 6px 24px #000; }
+.note-photo .back, .note-drawing .back { margin-top: 18px; font-style: italic; color: #cbbfae; }
+.note-photo .hintline, .note-drawing .hintline { color: var(--dim); }
+#noteArt { width: 100%; max-width: 440px; aspect-ratio: 68 / 66; background: #d8d2be; box-shadow: 0 6px 24px #000; transform: rotate(1deg); }
 
-/* ================= HUD ================= */
-#hud {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    color: white;
-    z-index: 20;
-}
+#journal .card, #pause .card { background: #15110d; border: 1px solid rgba(220,200,170,.15); color: var(--ink); max-width: 720px; }
+#journal h2, #pause h2 { font-family: var(--sc); font-weight: normal; letter-spacing: 4px; font-size: 22px; margin-bottom: 18px; color: #e8dcc8; }
+#journal h3 { font-family: var(--sc); font-weight: normal; letter-spacing: 3px; font-size: 13px; color: var(--dim); margin: 6px 0 10px; }
+.jcols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.jitem { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+.jitem img { width: 42px; height: 42px; background: rgba(255,255,255,.04); border-radius: 4px; flex: none; }
+.jitem b { display: block; font-weight: normal; font-size: 18px; }
+.jitem span { font-size: 15px; color: var(--dim); font-style: italic; }
+.jnote { display: block; width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid rgba(220,200,170,.12); color: var(--ink); font-family: var(--serif); font-size: 18px; padding: 8px 2px; cursor: pointer; }
+.jnote:hover { color: #fff; background: rgba(255,255,255,.04); }
+.empty { color: var(--dim); font-style: italic; }
+.btn { font-family: var(--sc); letter-spacing: 4px; font-size: 15px; color: #eadfcc; background: rgba(255,255,255,.03); border: 1px solid rgba(230,215,190,.35); padding: 12px 30px; cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.btn:hover { background: rgba(230,215,190,.1); border-color: rgba(230,215,190,.7); color: #fff; }
+.btn.quiet { border-color: transparent; color: var(--dim); }
+.row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+#pause .card { text-align: center; max-width: 460px; }
+#pause .keys { text-align: left; font-size: 15px; color: var(--dim); line-height: 1.9; margin: 8px auto 0; max-width: 300px; }
+#pause .keys b { color: var(--ink); font-weight: normal; font-family: var(--sc); letter-spacing: 1px; display: inline-block; min-width: 92px; }
+#pause label { display: block; margin-top: 18px; font-size: 14px; color: var(--dim); }
+#pause input[type=range] { width: 200px; vertical-align: middle; accent-color: #b9a684; }
 
-#title {
-    position: absolute;
-    top: 18px;
-    left: 20px;
-    font-size: 11px;
-    letter-spacing: 4px;
-    opacity: .55;
-}
+/* clock puzzle */
+#clockView .card { background: #15110d; border: 1px solid rgba(220,200,170,.15); text-align: center; max-width: 470px; }
+#clockIntro { font-style: italic; color: var(--dim); font-size: 16px; line-height: 1.5; margin-bottom: 16px; }
+#clockCanvas { width: min(260px, 36vh); height: min(260px, 36vh); }
+#clockView .card { padding: 22px 28px; }
+#clockIntro { margin-bottom: 10px; }
+#clockRead { font-family: var(--sc); letter-spacing: 3px; color: var(--dim); margin: 6px 0 10px; }
+.cgrid { display: grid; grid-template-columns: auto auto; gap: 10px 28px; justify-content: center; align-items: center; margin-bottom: 8px; }
+.cgrid span { font-family: var(--sc); letter-spacing: 2px; color: var(--dim); font-size: 13px; text-align: right; }
+.cgrid div { display: flex; gap: 6px; }
+.cbtn { font-family: var(--serif); font-size: 18px; width: 44px; height: 36px; background: rgba(255,255,255,.04); color: var(--ink); border: 1px solid rgba(230,215,190,.25); cursor: pointer; }
+.cbtn:hover { background: rgba(255,255,255,.1); }
+.ckeys { font-size: 12px; color: rgba(164,151,138,.7); margin-top: 6px; font-family: var(--sc); letter-spacing: 1.5px; }
 
-#objectiveBox {
-    position: absolute;
-    top: 42px;
-    left: 20px;
-    background: rgba(8, 5, 4, 0.88);
-    padding: 10px 18px;
-    border-left: 3px solid #8b0000;
-    border-radius: 2px;
-    box-shadow: 0 0 16px rgba(0, 0, 0, 0.95);
-    max-width: 320px;
-}
+/* screens */
+.screen { position: fixed; inset: 0; z-index: 80; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+.screen.show { display: flex; }
+#loading { background: #000; color: var(--dim); font-family: var(--sc); letter-spacing: 4px; font-size: 14px; }
+#titleScreen { background: radial-gradient(ellipse at 50% 40%, rgba(46,30,22,.9), #030202 70%); }
+#titleScreen h1 { font-family: var(--sc); font-weight: normal; font-size: clamp(40px, 8vw, 84px); letter-spacing: .14em; color: #e4d6c1; text-shadow: 0 0 30px rgba(255,190,140,.12); }
+#titleScreen .sub { font-family: var(--serif); font-style: italic; font-size: clamp(16px, 2.4vw, 22px); color: #9c3a2e; margin: 6px 0 34px; letter-spacing: 2px; }
+#titleScreen .tip { margin-top: 38px; font-size: 14px; color: var(--dim); line-height: 1.9; font-family: var(--sc); letter-spacing: 1.5px; }
+#titleScreen .back { position: absolute; left: 20px; top: 18px; font-family: var(--sc); letter-spacing: 2px; font-size: 13px; color: var(--dim); text-decoration: none; }
+#story { background: #000; z-index: 90; cursor: pointer; }
+#storyVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
+#storyImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s; }
+#storyImage.on { opacity: 1; }
+#storyHint { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); font-family: var(--sc); letter-spacing: 2px; font-size: 12px; color: rgba(200,190,170,.5); }
+#storySkip { position: absolute; right: 22px; top: 18px; z-index: 2; }
+#storyLoading { color: var(--dim); font-family: var(--sc); letter-spacing: 3px; }
+#deathScreen { background: rgba(0,0,0,.92); }
+#deathScreen h1 { font-family: var(--sc); font-weight: normal; letter-spacing: .2em; font-size: clamp(30px, 6vw, 54px); color: #a02a22; }
+#deathScreen p { font-style: italic; color: var(--dim); margin: 14px 0 30px; font-size: 18px; }
+#endScreen { background: #0b0b0d; }
+#endScreen .story { max-width: 560px; font-size: 20px; line-height: 1.75; color: #d9d2c6; }
+#endScreen .story p { opacity: 0; animation: rise 2.4s forwards; }
+#endScreen .story p:nth-child(2) { animation-delay: 2.6s; }
+#endScreen .story p:nth-child(3) { animation-delay: 5.2s; }
+#endScreen .story p:nth-child(4) { animation-delay: 7.6s; }
+#endScreen .story p.last { animation-delay: 9.6s; font-family: var(--sc); font-size: 34px; letter-spacing: .3em; color: #a43226; margin-top: 10px; }
+#endScreen h1 { font-family: var(--sc); font-weight: normal; letter-spacing: .2em; font-size: 26px; color: #8c8378; margin-top: 40px; opacity: 0; animation: rise 2s 12s forwards; }
+#endScreen .row { opacity: 0; animation: rise 2s 13s forwards; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-#objectiveLabel {
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: #b56060;
-    margin-bottom: 3px;
-    font-weight: bold;
-}
-
-#objective {
-    font-size: 13px;
-    color: #f2e6dc;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 5px black;
-    line-height: 1.4;
-}
-
-#interactionPrompt {
-    position: absolute;
-    left: 50%;
-    top: 62%;
-    transform: translateX(-50%);
-    background: rgba(15, 10, 8, .94);
-    border: 1px solid rgba(212, 160, 100, .7);
-    color: #f5deb3;
-    padding: 9px 24px;
-    border-radius: 20px;
-    font-size: 13px;
-    letter-spacing: 2px;
-    text-shadow: 0 1px 4px #000;
-    box-shadow: 0 0 20px rgba(0, 0, 0, .95);
-    opacity: 0;
-    transition: opacity .2s ease;
-    pointer-events: none;
-}
-
-#message {
-    position: absolute;
-    left: 50%;
-    bottom: 16%;
-    transform: translateX(-50%);
-    text-align: center;
-    width: 85%;
-    max-width: 640px;
-    font-size: 15px;
-    letter-spacing: 1.5px;
-    color: #f5efe6;
-    background: rgba(12, 6, 5, .92);
-    padding: 12px 24px;
-    border-radius: 4px;
-    border: 1px solid rgba(160, 30, 30, .5);
-    text-shadow: 0 2px 8px #000;
-    opacity: 0;
-    transition: .35s;
-    pointer-events: none;
-    line-height: 1.5;
-}
-
-#crosshair {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 4px;
-    height: 4px;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, .65);
-    border-radius: 50%;
-    box-shadow: 0 0 6px rgba(255, 255, 255, .4);
-}
-
-/* ================= JOYSTICK & TOUCH ================= */
-#joystick {
-    position: absolute;
-    width: 130px;
-    height: 130px;
-    left: 25px;
-    bottom: 25px;
-    border: 2px solid rgba(255, 255, 255, .16);
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .035);
-    z-index: 30;
-}
-
-#stick {
-    position: absolute;
-    width: 55px;
-    height: 55px;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: rgba(220, 220, 220, .2);
-    border: 1px solid rgba(255, 255, 255, .3);
-}
-
-#interact {
-    position: absolute;
-    right: 25px;
-    bottom: 35px;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    border: 2px solid rgba(220, 160, 90, .6);
-    background: rgba(30, 20, 14, .85);
-    color: #f5deb3;
-    font-size: 11px;
-    letter-spacing: 1px;
-    font-weight: bold;
-    z-index: 30;
-    display: none;
-    box-shadow: 0 0 15px rgba(0, 0, 0, .7);
-    cursor: pointer;
-}
-
-#interact:active {
-    background: rgba(70, 40, 25, .95);
-    transform: scale(.95);
-}
-
-/* ================= SCREENS ================= */
-.screen {
-    position: absolute;
-    inset: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    color: white;
-    text-align: center;
-    padding: 25px;
-}
-
-#startScreen {
-    background: radial-gradient(circle at center, rgba(40, 20, 15, .75), rgba(4, 2, 2, .98));
-}
-
-#startScreen h1 {
-    font-size: 42px;
-    letter-spacing: 10px;
-    font-weight: 300;
-    margin-bottom: 12px;
-    color: #e6d3be;
-    text-shadow: 0 0 25px rgba(255, 200, 160, .3);
-}
-
-#startScreen p {
-    opacity: .8;
-    font-size: 13px;
-    letter-spacing: 3px;
-    margin-bottom: 34px;
-    max-width: 580px;
-    line-height: 1.8;
-}
-
-#gameOverScreen {
-    background: #000000;
-    z-index: 120;
-}
-
-#gameOverScreen h1 {
-    font-size: 44px;
-    letter-spacing: 8px;
-    font-weight: 700;
-    color: #b81414;
-    text-shadow: 0 0 25px rgba(184, 20, 20, 0.8), 0 0 50px rgba(100, 0, 0, 0.9);
-    margin-bottom: 16px;
-    text-transform: uppercase;
-}
-
-#gameOverScreen p {
-    color: #808080;
-    font-size: 13px;
-    letter-spacing: 4px;
-    margin-bottom: 38px;
-}
-
-#endScreen {
-    background: radial-gradient(circle at center, rgba(45, 15, 15, .8), rgba(3, 1, 1, .99));
-}
-
-#endScreen h1 {
-    font-size: 44px;
-    letter-spacing: 9px;
-    font-weight: 700;
-    color: #c71f1f;
-    text-shadow: 0 0 30px rgba(199, 31, 31, .8), 0 0 60px rgba(120, 0, 0, .9);
-    margin-bottom: 16px;
-}
-
-#endScreen p {
-    opacity: .85;
-    font-size: 14px;
-    letter-spacing: 3px;
-    margin-bottom: 34px;
-    max-width: 560px;
-    line-height: 1.9;
-    color: #ebd6cc;
-}
-
-.btn {
-    padding: 14px 38px;
-    border: 1px solid rgba(220, 180, 120, .5);
-    background: rgba(255, 255, 255, .06);
-    color: #f5deb3;
-    letter-spacing: 4px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: .2s;
-}
-
-.btn:hover {
-    background: rgba(220, 180, 120, .2);
-    border-color: #f5deb3;
-    box-shadow: 0 0 15px rgba(210, 160, 90, .35);
-}
-
-.deathBtn {
-    border-color: rgba(184, 20, 20, .6);
-    color: #e07a7a;
-}
-
-.deathBtn:hover {
-    background: rgba(184, 20, 20, .25);
-    border-color: #ff4444;
-    box-shadow: 0 0 20px rgba(184, 20, 20, .5);
-}
-
-/* ================= ATMOSPHERE & SHADERS ================= */
-#vignette {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 15;
-    background: radial-gradient(ellipse at center, transparent 25%, rgba(0, 0, 0, .45) 60%, rgba(0, 0, 0, .96) 100%);
-}
-
-#static {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 16;
-    opacity: .04;
-    background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, .12) 0px, rgba(255, 255, 255, .12) 1px, transparent 1px, transparent 4px);
-}
-
-#flash {
-    position: absolute;
-    inset: 0;
-    z-index: 80;
-    pointer-events: none;
-    background: white;
-    opacity: 0;
-    transition: opacity .08s ease-out;
-}
-
-#redFlash {
-    position: absolute;
-    inset: 0;
-    z-index: 79;
-    pointer-events: none;
-    background: rgba(160, 0, 0, .75);
-    opacity: 0;
-    transition: opacity .15s ease-out;
-}
-
-#scareText {
-    position: absolute;
-    inset: 0;
-    z-index: 90;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ff2a2a;
-    font-size: 32px;
-    letter-spacing: 12px;
-    opacity: 0;
-    pointer-events: none;
-    text-shadow: 0 0 25px #ff0000;
-    transition: opacity .2s;
-    font-weight: bold;
-}
-
-@media(min-width: 800px) {
-    #joystick {
-        display: none;
-    }
+/* touch */
+#joy, #btnUse, #btnRun, #btnJournal { display: none; }
+body.touch #joy { display: block; position: fixed; left: 24px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); z-index: 30; touch-action: none; }
+body.touch #stick { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%; transform: translate(-50%,-50%); background: rgba(230,220,200,.16); border: 1px solid rgba(255,255,255,.25); }
+body.touch #btnUse { display: block; position: fixed; right: 26px; bottom: 120px; width: 84px; height: 84px; border-radius: 50%; z-index: 30; font-family: var(--sc); font-size: 13px; letter-spacing: 1px; color: #efe3cc; background: rgba(30,22,16,.75); border: 1px solid rgba(230,200,150,.45); opacity: .25; transition: opacity .2s; }
+body.touch #btnUse.on { opacity: 1; }
+body.touch #btnRun { display: block; position: fixed; right: 120px; bottom: 32px; width: 70px; height: 70px; border-radius: 50%; z-index: 30; font-family: var(--sc); font-size: 12px; color: #d8ccb6; background: rgba(20,16,12,.6); border: 1px solid rgba(255,255,255,.18); }
+body.touch #btnRun.on { background: rgba(120,40,30,.5); }
+body.touch #btnJournal { display: block; position: fixed; left: 18px; top: 14px; width: 44px; height: 44px; z-index: 31; font-size: 22px; color: #d8ccb6; background: rgba(20,16,12,.6); border: 1px solid rgba(255,255,255,.18); border-radius: 6px; }
+body.touch #inv { top: 14px; right: 14px; }
+@media (max-width: 640px) {
+    .jcols { grid-template-columns: 1fr; }
+    .card { padding: 26px 22px; }
+    #thought { font-size: 17px; bottom: 30%; }
+    .note-paper .card, .note-scrawl .card { font-size: 21px; }
 }
 </style>
 </head>
 <body>
+<canvas id="view"></canvas>
+<div id="hideMask"></div>
+<div id="vignette"></div>
 
-<div id="game">
-    <canvas id="canvas"></canvas>
-    <div id="vignette"></div>
-    <div id="static"></div>
-    <div id="flash"></div>
-    <div id="redFlash"></div>
-    <div id="scareText">RUN</div>
+<div id="hud">
+    <div id="dot"></div>
+    <div id="holdRing"></div>
+    <div id="prompt"></div>
+    <div id="thought"></div>
+    <div id="subtitle"></div>
+    <div id="toast"></div>
+    <div id="inv"></div>
+    <div id="stamina"><div></div></div>
+    <div id="lockHint">Click to look around</div>
+    <div id="controlsHint">WASD move · Mouse look · Shift run · E interact · Tab journal · F torch · Esc pause</div>
+</div>
 
-    <div id="hud">
-        <div id="title">THE LAST NIGHT</div>
-        <div id="objectiveBox">
-            <div id="objectiveLabel">OBJECTIVE</div>
-            <div id="objective">Explore the expansive mansion. Find the secret to unlocking the exit gate.</div>
+<div id="joy"><div id="stick"></div></div>
+<button id="btnUse">Use</button>
+<button id="btnRun">RUN</button>
+<button id="btnJournal" aria-label="Journal">☰</button>
+
+<div id="fade"></div>
+<div id="whiteout"></div>
+
+<!-- notes -->
+<div id="noteView" class="overlay">
+    <div class="card">
+        <h2 id="noteTitle"></h2>
+        <canvas id="noteArt" width="440" height="427"></canvas>
+        <div id="noteBody"></div>
+        <div class="hintline">E / CLICK TO PUT IT DOWN</div>
+    </div>
+</div>
+<div id="journal" class="overlay">
+    <div class="card">
+        <h2>What I have</h2>
+        <div class="jcols">
+            <div><h3>CARRYING</h3><div id="jInv"></div></div>
+            <div><h3>READ</h3><div id="jNotes"></div></div>
         </div>
-
-        <div id="interactionPrompt">[E] INTERACT</div>
-        <div id="message"></div>
-        <div id="crosshair"></div>
+        <div class="row"><button class="btn quiet closeOverlay">Close</button></div>
     </div>
-
-    <div id="joystick">
-        <div id="stick"></div>
+</div>
+<div id="clockView" class="overlay">
+    <div class="card">
+        <p id="clockIntro"></p>
+        <canvas id="clockCanvas" width="520" height="520"></canvas>
+        <div id="clockRead"></div>
+        <div class="cgrid">
+            <span>HOUR HAND</span><div><button class="cbtn" id="clockHD">‹</button><button class="cbtn" id="clockHU">›</button></div>
+            <span>MINUTE HAND</span><div><button class="cbtn" id="clockM5D">«</button><button class="cbtn" id="clockMD">‹</button><button class="cbtn" id="clockMU">›</button><button class="cbtn" id="clockM5U">»</button></div>
+        </div>
+        <div class="row"><button class="btn" id="clockSet">Leave the hands here</button><button class="btn quiet" id="clockLeave">Step away</button></div>
+        <div class="ckeys">← → HOUR · ↑ ↓ MINUTE · ENTER SET · ESC LEAVE</div>
     </div>
-
-    <button id="interact">EXAMINE</button>
-
-    <div id="startScreen" class="screen">
-        <h1>THE LAST NIGHT</h1>
-        <p>THE ESTATE HAS EXPANDED. YOU HAVE ONLY ONE LIFE.<br>SEARCH THE GRAND GALLERIES, RITUAL CHAMBERS, AND ANCIENT ARCHIVES.<br>SOLVE THE MYSTERY OF THE CLOCK AND SURVIVE RAVI'S CURSE.</p>
-        <button class="btn" onclick="startGame()">ENTER</button>
-    </div>
-
-    <div id="gameOverScreen" class="screen" style="display:none">
-        <h1>“Jaldi The Late”</h1>
-        <p>You were caught in the dark. There are no second chances.</p>
-        <button class="btn deathBtn" onclick="restartGame()">TRY AGAIN</button>
-    </div>
-
-    <div id="endScreen" class="screen" style="display:none">
-        <h1>“RAVI KA BADLA”</h1>
-        <p>You burst through the iron gate into the freezing mist.<br>The heavy lock shatters behind you, but a quiet silhouette lingers in the doorway.<br><br>The mansion remains... and the reckoning has only begun.</p>
-        <button class="btn deathBtn" onclick="restartGame()">PLAY AGAIN</button>
+</div>
+<div id="pause" class="overlay">
+    <div class="card">
+        <h2>Paused</h2>
+        <div class="keys">
+            <div><b>W A S D</b> move</div>
+            <div><b>Mouse</b> look (click to capture)</div>
+            <div><b>Shift</b> run</div>
+            <div><b>E</b> interact / hold</div>
+            <div><b>Tab</b> journal</div>
+            <div><b>F</b> torch on / off</div>
+        </div>
+        <label>Mouse sensitivity <input id="sens" type="range" min="0.4" max="2" step="0.05" value="1"></label>
+        <div class="row">
+            <button class="btn" id="btnResume">Resume</button>
+            <button class="btn quiet" id="btnPJournal">Journal</button>
+            <a class="btn quiet" href="index.html">Leave</a>
+        </div>
     </div>
 </div>
 
-<!-- ================= AUDIO ENGINE ELEMENTS WITH PRELOAD ================= -->
-<audio id="ambient" loop preload="auto" src="ambient.mp3"></audio>
-<audio id="footstep" preload="auto" src="footstep.mp3"></audio>
-<audio id="unlock" preload="auto" src="unlock.mp3"></audio>
-
-<audio id="chilla1" preload="auto" src="chilla1.mp3"></audio>
-<audio id="chilla2" preload="auto" src="chilla2.mp3"></audio>
-<audio id="chilla3" preload="auto" src="chilla3.mp3"></audio>
-
-<audio id="bhag1" preload="auto" src="bhag1.mp3"></audio>
-<audio id="bhag2" preload="auto" src="bhag2.mp3"></audio>
-<audio id="bhag3" preload="auto" src="bhag3.mp3"></audio>
-
-<audio id="bhoot1" preload="auto" src="bhoot1.mp3"></audio>
-<audio id="bhoot2" preload="auto" src="bhoot2.mp3"></audio>
-<audio id="bhoot3" preload="auto" src="bhoot3.mp3"></audio>
-
-<audio id="billu1" preload="auto" src="billu1.mp3"></audio>
-<audio id="billu2" preload="auto" src="billu2.mp3"></audio>
-
-<script>
-/* ================= SYSTEM ARCHITECTURE & CANVAS ================= */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d", { alpha: false });
-
-let W = 0;
-let H = 0;
-const RAYS = 380;
-const zBuffer = new Float32Array(RAYS);
-
-let cachedCeilGrad = null;
-let cachedFloorGrad = null;
-let cachedRunnerGrad = null;
-
-function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-
-    cachedCeilGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
-    cachedCeilGrad.addColorStop(0, "#120c09");
-    cachedCeilGrad.addColorStop(1, "#050302");
-
-    cachedFloorGrad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    cachedFloorGrad.addColorStop(0, "#180d09");
-    cachedFloorGrad.addColorStop(1, "#020101");
-
-    cachedRunnerGrad = ctx.createRadialGradient(W / 2, H * 0.78, 20, W / 2, H * 0.78, W * 0.48);
-    cachedRunnerGrad.addColorStop(0, "rgba(75, 8, 8, 0.26)");
-    cachedRunnerGrad.addColorStop(1, "transparent");
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* ================= 25x25 EXPANDED HAUNTED MANSION MAP (+50% SIZE) ================= */
-const map = [
-    "#########################", // 0  North Outer Wall
-    "#.......#.......#.......#", // 1  North Antechambers
-    "#.......#.......#.......#", // 2  Player Spawn at (12.5, 2.0)
-    "#.......#.......#.......#", // 3
-    "###...#####...#####...###", // 4  Wide Archways
-    "#.......................#", // 5  North Grand Promenade
-    "#.......................#", // 6
-    "###...#####...#####...###", // 7  Grand Wing Archways
-    "#.......#.......#.......#", // 8  West Grand Gallery (Cols 1-7) | Library (Cols 9-15) | East Grand Gallery (Cols 17-23)
-    "#.......#.......#.......#", // 9  Spacious 7x3 Rooms - Perfectly Centered Mannequins
-    "#.......#.......#.......#", // 10
-    "###...#####...#####...###", // 11
-    "#.......................#", // 12 Grand Central Rotunda (Crossroads)
-    "#.......................#", // 13
-    "###...#####...#####...###", // 14
-    "#.......#.......#.......#", // 15 West Crypt (Cols 1-7) | Ritual Sanctuary (Cols 9-15) | East Key Vault (Cols 17-23)
-    "#.......#.......#.......#", // 16
-    "#.......#.......#.......#", // 17
-    "###...#####...#####...###", // 18
-    "#.......................#", // 19 South Grand Promenade
-    "#.......................#", // 20
-    "###...#####...#####...###", // 21
-    "#.......#.......#.......#", // 22 Clock Sanctuary (Cols 1-7) | Ancient Shrine (Cols 9-15) | Outer Iron Gate (Cols 17-23)
-    "#.......#.......#.......#", // 23
-    "#########################"  // 24 South Outer Wall
-];
-
-const MAP_W = map[0].length;
-const MAP_H = map.length;
-
-function isWall(x, y) {
-    const mx = Math.floor(x);
-    const my = Math.floor(y);
-    if (my < 0 || my >= MAP_H || mx < 0 || mx >= MAP_W) return true;
-    return map[my][mx] === "#";
-}
-
-function wallNoise(x, y) {
-    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    return n - Math.floor(n);
-}
-
-/* ================= AUTOMATIC TRANSPARENCY PROCESSOR ================= */
-function makeTransparentFromBorders(imageSource, brightnessThreshold = 160) {
-    const offCanvas = document.createElement("canvas");
-    const w = imageSource.naturalWidth || imageSource.width;
-    const h = imageSource.naturalHeight || imageSource.height;
-    offCanvas.width = w;
-    offCanvas.height = h;
-
-    const offCtx = offCanvas.getContext("2d", { willReadFrequently: true });
-    offCtx.drawImage(imageSource, 0, 0);
-
-    try {
-        const imgData = offCtx.getImageData(0, 0, w, h);
-        const data = imgData.data;
-        const visited = new Uint8Array(w * h);
-        const queue = [];
-
-        function isCheckeredOrBg(idx) {
-            const r = data[idx];
-            const g = data[idx + 1];
-            const b = data[idx + 2];
-            const a = data[idx + 3];
-            if (a < 10) return true;
-
-            const diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-            return (diff < 28 && luminance > brightnessThreshold) || luminance > 242;
-        }
-
-        for (let x = 0; x < w; x++) {
-            queue.push(x, 0);
-            queue.push(x, h - 1);
-        }
-        for (let y = 0; y < h; y++) {
-            queue.push(0, y);
-            queue.push(w - 1, y);
-        }
-
-        while (queue.length > 0) {
-            const cy = queue.pop();
-            const cx = queue.pop();
-            const pIdx = cy * w + cx;
-
-            if (visited[pIdx]) continue;
-            visited[pIdx] = 1;
-
-            const dataIdx = pIdx * 4;
-            if (isCheckeredOrBg(dataIdx)) {
-                data[dataIdx + 3] = 0;
-
-                if (cx > 0 && !visited[pIdx - 1]) queue.push(cx - 1, cy);
-                if (cx < w - 1 && !visited[pIdx + 1]) queue.push(cx + 1, cy);
-                if (cy > 0 && !visited[pIdx - w]) queue.push(cx, cy - 1);
-                if (cy < h - 1 && !visited[pIdx + w]) queue.push(cx, cy + 1);
-            }
-        }
-
-        offCtx.putImageData(imgData, 0, 0);
-    } catch (err) {
-        console.warn("Background auto-strip bypassed:", err);
-    }
-
-    return offCanvas;
-}
-
-/* ================= EXPANDED PROCEDURAL SPRITE RENDER CACHE ================= */
-function createOffscreen(width, height) {
-    const c = document.createElement("canvas");
-    c.width = width;
-    c.height = height;
-    return c;
-}
-
-const spriteCanvases = {
-    clock: createOffscreen(128, 256),
-    table: createOffscreen(256, 160),
-    note: createOffscreen(96, 96),
-    painting: createOffscreen(128, 160),
-    door: createOffscreen(160, 256),
-    key: createOffscreen(96, 96),
-    mannequinFallback: createOffscreen(128, 256),
-    mistyFallback: createOffscreen(128, 160),
-    altar: createOffscreen(192, 160),
-    cage: createOffscreen(128, 256),
-    bookshelf: createOffscreen(160, 240),
-    mirror: createOffscreen(128, 200),
-    chest: createOffscreen(160, 128),
-    phonograph: createOffscreen(128, 160)
-};
-
-function renderOffscreenSpriteCaches() {
-    // Grandfather Clock
-    let c = spriteCanvases.clock;
-    let cx = c.getContext("2d");
-    cx.fillStyle = "#22130c";
-    cx.fillRect(16, 20, 96, 216);
-    cx.strokeStyle = "#806040";
-    cx.lineWidth = 6;
-    cx.strokeRect(16, 20, 96, 216);
-    cx.fillStyle = "#eee0be";
-    cx.beginPath();
-    cx.arc(64, 70, 32, 0, Math.PI * 2);
-    cx.fill();
-    cx.strokeStyle = "#1a0f07";
-    cx.lineWidth = 4;
-    cx.beginPath();
-    cx.moveTo(64, 70);
-    cx.lineTo(84, 74);
-    cx.moveTo(64, 70);
-    cx.lineTo(76, 88);
-    cx.stroke();
-
-    // Table with Candle
-    c = spriteCanvases.table;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#341d13";
-    cx.fillRect(20, 60, 216, 24);
-    cx.fillRect(36, 84, 16, 76);
-    cx.fillRect(204, 84, 16, 76);
-    cx.fillStyle = "#e0d3b6";
-    cx.fillRect(124, 28, 10, 32);
-    cx.fillStyle = "#ff9922";
-    cx.beginPath();
-    cx.arc(129, 20, 10, 0, Math.PI * 2);
-    cx.fill();
-
-    // Parchment Note
-    c = spriteCanvases.note;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#d0be96";
-    cx.fillRect(16, 16, 64, 64);
-    cx.fillStyle = "#7a1111";
-    cx.font = "bold 20px Arial";
-    cx.textAlign = "center";
-    cx.fillText("RUN", 48, 54);
-
-    // Occult Painting
-    c = spriteCanvases.painting;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#2c1a0e";
-    cx.fillRect(10, 10, 108, 140);
-    cx.fillStyle = "#0c0a08";
-    cx.fillRect(20, 20, 88, 120);
-    cx.fillStyle = "#241612";
-    cx.beginPath();
-    cx.arc(64, 66, 26, 0, Math.PI * 2);
-    cx.fill();
-    cx.fillStyle = "#8a1c1c";
-    cx.beginPath();
-    cx.arc(56, 64, 3, 0, Math.PI * 2);
-    cx.arc(72, 64, 3, 0, Math.PI * 2);
-    cx.fill();
-
-    // Exit Door
-    c = spriteCanvases.door;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#22120a";
-    cx.fillRect(16, 10, 128, 236);
-    cx.strokeStyle = "#50301c";
-    cx.lineWidth = 8;
-    cx.strokeRect(16, 10, 128, 236);
-    cx.fillStyle = "#8a7058";
-    cx.fillRect(66, 130, 28, 32);
-    cx.fillStyle = "#000";
-    cx.beginPath();
-    cx.arc(80, 144, 5, 0, Math.PI * 2);
-    cx.fill();
-
-    // Key
-    c = spriteCanvases.key;
-    cx = c.getContext("2d");
-    cx.strokeStyle = "#ffd700";
-    cx.lineWidth = 6;
-    cx.beginPath();
-    cx.arc(32, 48, 16, 0, Math.PI * 2);
-    cx.stroke();
-    cx.beginPath();
-    cx.moveTo(48, 48);
-    cx.lineTo(82, 48);
-    cx.moveTo(70, 48);
-    cx.lineTo(70, 62);
-    cx.moveTo(80, 48);
-    cx.lineTo(80, 58);
-    cx.stroke();
-
-    // Mannequin Fallback
-    c = spriteCanvases.mannequinFallback;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#1c1109";
-    cx.fillRect(40, 220, 48, 12);
-    cx.fillRect(60, 120, 8, 100);
-    cx.fillStyle = "#9c8f7d";
-    cx.fillRect(44, 90, 40, 60);
-    cx.fillStyle = "#ded6c8";
-    cx.beginPath();
-    cx.ellipse(64, 60, 18, 24, 0, 0, Math.PI * 2);
-    cx.fill();
-    cx.fillStyle = "#111";
-    cx.beginPath();
-    cx.arc(58, 58, 3, 0, Math.PI * 2);
-    cx.arc(70, 58, 3, 0, Math.PI * 2);
-    cx.fill();
-
-    // Misty Fallback
-    c = spriteCanvases.mistyFallback;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#3b2a14";
-    cx.fillRect(10, 10, 108, 140);
-    cx.fillStyle = "#a8843c";
-    cx.strokeRect(12, 12, 104, 136);
-    cx.fillStyle = "#0d0908";
-    cx.fillRect(18, 18, 92, 124);
-    cx.fillStyle = "#701a1a";
-    cx.font = "italic 13px serif";
-    cx.textAlign = "center";
-    cx.fillText("MISTY", 64, 82);
-
-    // Ritual Altar (New)
-    c = spriteCanvases.altar;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#1c1616";
-    cx.fillRect(24, 70, 144, 80);
-    cx.fillStyle = "#4a0e0e";
-    cx.fillRect(32, 70, 128, 20);
-    cx.fillStyle = "#0a0a0a";
-    cx.fillRect(16, 50, 160, 22);
-    cx.fillStyle = "#8a1111";
-    cx.beginPath();
-    cx.arc(96, 61, 6, 0, Math.PI * 2);
-    cx.fill();
-    cx.fillStyle = "#e0cfb0";
-    cx.fillRect(45, 30, 8, 20);
-    cx.fillRect(139, 30, 8, 20);
-    cx.fillStyle = "#ff6600";
-    cx.beginPath();
-    cx.arc(49, 24, 5, 0, Math.PI * 2);
-    cx.arc(143, 24, 5, 0, Math.PI * 2);
-    cx.fill();
-
-    // Torture Gibbet Cage (New)
-    c = spriteCanvases.cage;
-    cx = c.getContext("2d");
-    cx.strokeStyle = "#383232";
-    cx.lineWidth = 4;
-    cx.beginPath();
-    cx.moveTo(64, 0);
-    cx.lineTo(64, 40);
-    cx.stroke();
-    cx.fillStyle = "#1b1818";
-    cx.fillRect(36, 40, 56, 12);
-    cx.fillRect(36, 180, 56, 14);
-    cx.strokeRect(36, 40, 56, 150);
-    for (let i = 46; i <= 82; i += 12) {
-        cx.beginPath();
-        cx.moveTo(i, 40);
-        cx.lineTo(i, 185);
-        cx.stroke();
-    }
-
-    // Ancient Bookshelf (New)
-    c = spriteCanvases.bookshelf;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#2c1a0e";
-    cx.fillRect(16, 16, 128, 210);
-    cx.fillStyle = "#160d07";
-    cx.fillRect(24, 26, 112, 45);
-    cx.fillRect(24, 82, 112, 45);
-    cx.fillRect(24, 138, 112, 55);
-    const bColors = ["#8b2500", "#1c3b2b", "#8b7500", "#4a1525", "#3a3a3a"];
-    for (let row = 0; row < 3; row++) {
-        let y = 30 + row * 56;
-        for (let bx = 28; bx < 130; bx += 10) {
-            cx.fillStyle = bColors[Math.floor(Math.random() * bColors.length)];
-            cx.fillRect(bx, y, 8, 38);
-        }
-    }
-
-    // Cursed Mirror (New)
-    c = spriteCanvases.mirror;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#6d5228";
-    cx.beginPath();
-    cx.ellipse(64, 100, 48, 75, 0, 0, Math.PI * 2);
-    cx.fill();
-    cx.fillStyle = "#1a252c";
-    cx.beginPath();
-    cx.ellipse(64, 100, 42, 68, 0, 0, Math.PI * 2);
-    cx.fill();
-    cx.strokeStyle = "rgba(220, 240, 255, 0.65)";
-    cx.lineWidth = 2;
-    cx.beginPath();
-    cx.moveTo(64, 40);
-    cx.lineTo(58, 85);
-    cx.lineTo(76, 115);
-    cx.lineTo(44, 145);
-    cx.stroke();
-
-    // Heavy Brass Chest (New)
-    c = spriteCanvases.chest;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#3d2211";
-    cx.fillRect(24, 40, 112, 70);
-    cx.strokeStyle = "#8f7035";
-    cx.lineWidth = 6;
-    cx.strokeRect(24, 40, 112, 70);
-    cx.fillStyle = "#caa049";
-    cx.fillRect(72, 68, 16, 20);
-
-    // Vintage Gramophone (New)
-    c = spriteCanvases.phonograph;
-    cx = c.getContext("2d");
-    cx.fillStyle = "#341d13";
-    cx.fillRect(32, 90, 64, 40);
-    cx.fillStyle = "#caa049";
-    cx.beginPath();
-    cx.moveTo(64, 90);
-    cx.lineTo(40, 30);
-    cx.lineTo(95, 20);
-    cx.lineTo(70, 90);
-    cx.fill();
-}
-renderOffscreenSpriteCaches();
-
-/* ================= ASSET LOADERS WITH TRANSPARENCY PIPELINE ================= */
-let ghostCanvas = null;
-let ghostImgLoaded = false;
-const rawGhost = new Image();
-rawGhost.crossOrigin = "anonymous";
-rawGhost.src = "ghost.png";
-rawGhost.onload = () => {
-    ghostCanvas = makeTransparentFromBorders(rawGhost, 150);
-    ghostImgLoaded = true;
-};
-
-const mistyPics = [];
-for (let i = 1; i <= 5; i++) {
-    const item = { img: new Image(), loaded: false };
-    item.img.crossOrigin = "anonymous";
-    item.img.src = `misty${i}.jpg`;
-    item.img.onload = () => { item.loaded = true; };
-    item.img.onerror = () => {
-        if (!item.img.src.endsWith(".png")) {
-            item.img.src = `misty${i}.png`;
-        }
-    };
-    mistyPics.push(item);
-}
-
-const dugguPics = [];
-for (let i = 1; i <= 10; i++) {
-    const item = { img: new Image(), loaded: false };
-    item.img.crossOrigin = "anonymous";
-    item.img.src = `duggu${i}.png`;
-    item.img.onload = () => { item.loaded = true; };
-    item.img.onerror = () => {
-        if (!item.img.src.endsWith(".jpg")) {
-            item.img.src = `duggu${i}.jpg`;
-        }
-    };
-    dugguPics.push(item);
-}
-
-const putlaPics = [];
-for (let i = 1; i <= 2; i++) {
-    const item = { canvas: null, loaded: false };
-    const rawPutla = new Image();
-    rawPutla.crossOrigin = "anonymous";
-    rawPutla.src = `putla${i}.png`;
-    rawPutla.onload = () => {
-        item.canvas = makeTransparentFromBorders(rawPutla, 160);
-        item.loaded = true;
-    };
-    rawPutla.onerror = () => {
-        if (!rawPutla.src.endsWith(".jpg")) {
-            rawPutla.src = `putla${i}.jpg`;
-        }
-    };
-    putlaPics.push(item);
-}
-
-/* ================= WALL-MOUNTED POSTERS (EXPANDED FOR 25x25) ================= */
-const wallPosters = {
-    "4,0,S": {
-        id: "painting",
-        getDrawable: () => spriteCanvases.painting
-    },
-    "12,0,S": {
-        id: "misty1",
-        getDrawable: () => {
-            const p = mistyPics[0];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    "0,6,E": {
-        id: "misty2",
-        getDrawable: () => {
-            const p = mistyPics[1];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    "24,6,W": {
-        id: "misty3",
-        getDrawable: () => {
-            const p = mistyPics[2];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    "0,13,E": {
-        id: "misty4",
-        getDrawable: () => {
-            const p = mistyPics[3];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    "24,13,W": {
-        id: "misty5",
-        getDrawable: () => {
-            const p = mistyPics[4];
-            return (p && p.loaded && p.img.complete && p.img.naturalWidth > 0) ? p.img : spriteCanvases.mistyFallback;
-        }
-    },
-    "12,24,N": {
-        id: "exitSeal",
-        getDrawable: () => spriteCanvases.painting
-    },
-    // --- 10 Duggu Posters ---
-    "8,0,S": {
-        id: "duggu1",
-        getDrawable: () => (dugguPics[0] && dugguPics[0].loaded && dugguPics[0].img.naturalWidth > 0) ? dugguPics[0].img : spriteCanvases.painting
-    },
-    "16,0,S": {
-        id: "duggu2",
-        getDrawable: () => (dugguPics[1] && dugguPics[1].loaded && dugguPics[1].img.naturalWidth > 0) ? dugguPics[1].img : spriteCanvases.painting
-    },
-    "0,3,E": {
-        id: "duggu3",
-        getDrawable: () => (dugguPics[2] && dugguPics[2].loaded && dugguPics[2].img.naturalWidth > 0) ? dugguPics[2].img : spriteCanvases.painting
-    },
-    "24,3,W": {
-        id: "duggu4",
-        getDrawable: () => (dugguPics[3] && dugguPics[3].loaded && dugguPics[3].img.naturalWidth > 0) ? dugguPics[3].img : spriteCanvases.painting
-    },
-    "0,10,E": {
-        id: "duggu5",
-        getDrawable: () => (dugguPics[4] && dugguPics[4].loaded && dugguPics[4].img.naturalWidth > 0) ? dugguPics[4].img : spriteCanvases.painting
-    },
-    "24,10,W": {
-        id: "duggu6",
-        getDrawable: () => (dugguPics[5] && dugguPics[5].loaded && dugguPics[5].img.naturalWidth > 0) ? dugguPics[5].img : spriteCanvases.painting
-    },
-    "0,17,E": {
-        id: "duggu7",
-        getDrawable: () => (dugguPics[6] && dugguPics[6].loaded && dugguPics[6].img.naturalWidth > 0) ? dugguPics[6].img : spriteCanvases.painting
-    },
-    "24,17,W": {
-        id: "duggu8",
-        getDrawable: () => (dugguPics[7] && dugguPics[7].loaded && dugguPics[7].img.naturalWidth > 0) ? dugguPics[7].img : spriteCanvases.painting
-    },
-    "8,24,N": {
-        id: "duggu9",
-        getDrawable: () => (dugguPics[8] && dugguPics[8].loaded && dugguPics[8].img.naturalWidth > 0) ? dugguPics[8].img : spriteCanvases.painting
-    },
-    "16,24,N": {
-        id: "duggu10",
-        getDrawable: () => (dugguPics[9] && dugguPics[9].loaded && dugguPics[9].img.naturalWidth > 0) ? dugguPics[9].img : spriteCanvases.painting
-    }
-};
-
-/* ================= GAME STATE ================= */
-let gameState = {
-    started: false,
-    paintingExamined: false,
-    noteRead: false,
-    clockExamined: false,
-    keyRevealed: false,
-    keyAcquired: false,
-    doorUnlocked: false,
-    escaped: false,
-    gameOver: false,
-    survivalTimer: 0
-};
-
-/* ================= PLAYER OBJECT ================= */
-const FOV = Math.PI / 3;
-const player = {
-    x: 12.5,
-    y: 2.0,
-    angle: Math.PI / 2,
-    speed: 2.6,
-    radius: 0.22,
-    headBob: 0
-};
-
-const keys = {};
-document.addEventListener("keydown", e => {
-    keys[e.key.toLowerCase()] = true;
-    if (e.key.toLowerCase() === "e") handleInteract();
-});
-document.addEventListener("keyup", e => {
-    keys[e.key.toLowerCase()] = false;
-});
-
-/* ================= BFS PATHFINDING FOR GHOST (25x25 GRID) ================= */
-function getBFSPath(startX, startY, targetX, targetY) {
-    const sx = Math.floor(startX);
-    const sy = Math.floor(startY);
-    const tx = Math.floor(targetX);
-    const ty = Math.floor(targetY);
-
-    if (sx === tx && sy === ty) return [];
-
-    const queue = [[sx, sy]];
-    const visited = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(false));
-    const parent = {};
-
-    visited[sy][sx] = true;
-    let found = false;
-    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-
-    while (queue.length > 0) {
-        const [cx, cy] = queue.shift();
-        if (cx === tx && cy === ty) {
-            found = true;
-            break;
-        }
-        for (let i = 0; i < 4; i++) {
-            const nx = cx + dirs[i][0];
-            const ny = cy + dirs[i][1];
-            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
-                if (!visited[ny][nx] && map[ny][nx] !== "#") {
-                    visited[ny][nx] = true;
-                    parent[`${nx},${ny}`] = [cx, cy];
-                    queue.push([nx, ny]);
-                }
-            }
-        }
-    }
-
-    if (!found) return [];
-
-    const path = [];
-    let curr = [tx, ty];
-    while (curr) {
-        if (curr[0] === sx && curr[1] === sy) break;
-        path.unshift({ x: curr[0] + 0.5, y: curr[1] + 0.5 });
-        curr = parent[`${curr[0]},${curr[1]}`];
-    }
-    return path;
-}
-
-/* ================= AGGRESSIVE GHOST ENEMY ================= */
-const ghostEnemy = {
-    x: 12.5,
-    y: 12.5,
-    active: false,
-    speed: 2.1,
-    state: "idle",
-    path: [],
-    pathTimer: 0,
-    seenAlert: false,
-    bobAngle: 0
-};
-
-/* ================= RANDOM KEY SPAWN LOCATIONS ================= */
-const keySpawnLocations = [
-    { x: 20.5, y: 16.5 }, // East Key Vault
-    { x: 4.5, y: 16.5 },  // West Crypt
-    { x: 12.5, y: 16.2 }, // Ritual Sanctuary
-    { x: 4.5, y: 22.5 },  // Clock Sanctuary
-    { x: 20.5, y: 9.5 }   // East Grand Gallery
-];
-
-function randomizeKeySpawn() {
-    const keyObj = worldObjects.find(o => o.id === "key");
-    if (keyObj) {
-        const spot = keySpawnLocations[Math.floor(Math.random() * keySpawnLocations.length)];
-        keyObj.x = spot.x;
-        keyObj.y = spot.y;
-    }
-}
-
-/* ================= EXPANDED WORLD OBJECTS & LORE ELEMENTS ================= */
-const worldObjects = [
-    // --- North Wing ---
-    {
-        id: "phonograph",
-        x: 4.5,
-        y: 2.5,
-        type: "phonograph",
-        w: 0.75,
-        h: 1.0,
-        actionText: "[E] EXAMINE PHONOGRAPH",
-        mobileText: "GRAMOPHONE",
-        examineMsg: "A vintage brass gramophone. The needle scratches silently across a nameless vinyl."
-    },
-    {
-        id: "painting",
-        x: 4.0,
-        y: 1.2,
-        type: "painting",
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] EXAMINE OCCULT PORTRAIT",
-        mobileText: "EXAMINE",
-        examineMsg: "The eyes track your footsteps across the room. A cold presence wakes in the estate..."
-    },
-    {
-        id: "table",
-        x: 20.5,
-        y: 2.5,
-        type: "table",
-        w: 1.5,
-        h: 1.1,
-        actionText: "[E] INSPECT DINING TABLE",
-        mobileText: "TABLE",
-        examineMsg: "Rotten banquet remnants under dying candlelight. Silverware is bent in twisted angles."
-    },
-
-    // --- Mid Galleries (Spacious 7x3 Halls) ---
-    {
-        id: "mannequin1",
-        x: 4.5,
-        y: 9.5,
-        type: "mannequin",
-        picIndex: 0,
-        w: 0.88,
-        h: 1.8,
-        actionText: "[E] EXAMINE WEST MANNEQUIN",
-        mobileText: "EXAMINE",
-        examineMsg: "West Grand Gallery: Standing solitary in the center of the hall. Its porcelain head twitches."
-    },
-    {
-        id: "mirror",
-        x: 2.5,
-        y: 9.5,
-        type: "mirror",
-        w: 0.75,
-        h: 1.3,
-        actionText: "[E] GAZE INTO MIRROR",
-        mobileText: "MIRROR",
-        examineMsg: "A cracked gothic mirror. Your reflection lags half a second behind your movements."
-    },
-    {
-        id: "bookshelf",
-        x: 12.5,
-        y: 9.0,
-        type: "bookshelf",
-        w: 1.1,
-        h: 1.6,
-        actionText: "[E] SEARCH ARCHIVES",
-        mobileText: "BOOKS",
-        examineMsg: "Ancient genealogies of the estate. A torn entry reads: 'The clock guards what was stolen.'"
-    },
-    {
-        id: "note",
-        x: 12.5,
-        y: 9.9,
-        type: "note",
-        w: 0.6,
-        h: 0.6,
-        actionText: "[E] READ PARCHMENT",
-        mobileText: "READ NOTE",
-        examineMsg: "A bloody scribbled note: 'THE KEY IS WHERE THE CLOCK STOPPED. 3:17.'"
-    },
-    {
-        id: "mannequin2",
-        x: 20.5,
-        y: 9.5,
-        type: "mannequin",
-        picIndex: 1,
-        w: 0.88,
-        h: 1.8,
-        actionText: "[E] EXAMINE EAST MANNEQUIN",
-        mobileText: "EXAMINE",
-        examineMsg: "East Grand Gallery: Faceless and imposing in the wide hall. Freezing air blows from its hands."
-    },
-    {
-        id: "chest",
-        x: 22.5,
-        y: 9.5,
-        type: "chest",
-        w: 0.95,
-        h: 0.8,
-        actionText: "[E] OPEN BRASS CHEST",
-        mobileText: "CHEST",
-        examineMsg: "Bound in black iron. Inside lies a burnt portrait with Ravi's eyes gouged out."
-    },
-
-    // --- Lower Chambers ---
-    {
-        id: "cage",
-        x: 4.5,
-        y: 16.5,
-        type: "cage",
-        w: 0.9,
-        h: 1.8,
-        actionText: "[E] INSPECT GIBBET CAGE",
-        mobileText: "CAGE",
-        examineMsg: "A torture gibbet suspended above the flagstones. Scratch marks cover the inside bars."
-    },
-    {
-        id: "altar",
-        x: 12.5,
-        y: 16.2,
-        type: "altar",
-        w: 1.3,
-        h: 1.1,
-        actionText: "[E] EXAMINE RITUAL ALTAR",
-        mobileText: "ALTAR",
-        examineMsg: "Black candles flicker on an obsidian slab. The name 'Ravi Ka Badla' is carved into stone."
-    },
-    {
-        id: "key",
-        x: 20.5,
-        y: 16.5,
-        type: "key",
-        w: 0.7,
-        h: 0.7,
-        actionText: "[E] TAKE EXIT KEY",
-        mobileText: "TAKE KEY",
-        examineMsg: "A heavy, rusted iron key. Cold as death."
-    },
-
-    // --- South Sanctuaries & Exit Gate ---
-    {
-        id: "clock",
-        x: 4.5,
-        y: 22.5,
-        type: "clock",
-        w: 0.85,
-        h: 1.8,
-        actionText: "[E] EXAMINE GRANDFATHER CLOCK",
-        mobileText: "CLOCK",
-        examineMsg: "A towering pendulum clock. Its heavy brass hands are frozen at 3:17."
-    },
-    {
-        id: "door",
-        x: 20.5,
-        y: 23.2,
-        type: "door",
-        w: 1.25,
-        h: 2.1,
-        actionText: "[E] OPEN EXIT GATE",
-        mobileText: "EXIT GATE",
-        examineMsg: "The heavy iron gate leading into the mist. Secured by thick chains and a padlock."
-    },
-
-    // --- Wall Misty Portraits ---
-    {
-        id: "misty1",
-        x: 12.5,
-        y: 1.35,
-        type: "mistyPortrait",
-        picIndex: 0,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty I: The painted gaze watches every step through the northern corridor."
-    },
-    {
-        id: "misty2",
-        x: 1.35,
-        y: 6.5,
-        type: "mistyPortrait",
-        picIndex: 1,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty II: Dried crimson streaks drip beneath the vintage glass."
-    },
-    {
-        id: "misty3",
-        x: 23.65,
-        y: 6.5,
-        type: "mistyPortrait",
-        picIndex: 2,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty III: An ornate frame in the shadows. You hear faint whispering."
-    },
-    {
-        id: "misty4",
-        x: 1.35,
-        y: 13.5,
-        type: "mistyPortrait",
-        picIndex: 3,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty IV: Cold air radiates from the wooden mount."
-    },
-    {
-        id: "misty5",
-        x: 23.65,
-        y: 13.5,
-        type: "mistyPortrait",
-        picIndex: 4,
-        w: 0.6,
-        h: 0.8,
-        actionText: "[E] VIEW PORTRAIT",
-        mobileText: "VIEW",
-        examineMsg: "Portrait of Misty V: Written beneath the frame: 'Ravi Ka Badla'..."
-    }
-];
-
-/* ================= NORMALIZED AUDIO ENGINE (<= 6.0 SECONDS MAX) ================= */
-const activeAudioTimers = {};
-const allSfxIds = [
-    "footstep", "unlock",
-    "chilla1", "chilla2", "chilla3",
-    "bhag1", "bhag2", "bhag3",
-    "bhoot1", "bhoot2", "bhoot3",
-    "billu1", "billu2"
-];
-
-allSfxIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener("timeupdate", () => {
-            if (el.currentTime >= 6.0) {
-                el.pause();
-                try { el.currentTime = 0; } catch (e) {}
-            }
-        });
-    }
-});
-
-function stopSound(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (activeAudioTimers[id]) {
-        clearTimeout(activeAudioTimers[id]);
-        delete activeAudioTimers[id];
-    }
-    el.pause();
-    try { el.currentTime = 0; } catch (e) {}
-}
-
-function playSound(id, volume = 1.0, maxDuration = 6.0) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    if (activeAudioTimers[id]) {
-        clearTimeout(activeAudioTimers[id]);
-        delete activeAudioTimers[id];
-    }
-
-    try {
-        el.pause();
-        el.currentTime = 0;
-    } catch (e) {}
-
-    el.volume = Math.max(0, Math.min(1, volume));
-    const playPromise = el.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(() => {});
-    }
-
-    if (maxDuration > 0) {
-        activeAudioTimers[id] = setTimeout(() => {
-            try {
-                el.pause();
-                el.currentTime = 0;
-            } catch (e) {}
-            delete activeAudioTimers[id];
-        }, maxDuration * 1000);
-    }
-}
-
-function playRandomFrom(prefix, count, volume = 1.0) {
-    const n = Math.floor(Math.random() * count) + 1;
-    playSound(prefix + n, volume, 6.0);
-}
-
-let distantScreamTimer = 7.0;
-let chaseSoundTimer = 1.5;
-let proximitySoundTimer = 0;
-let lastProximityObjId = null;
-
-function playDistantGhostScream() {
-    playRandomFrom("chilla", 3, 0.85);
-}
-
-function playGhostChaseSound() {
-    playRandomFrom("bhag", 3, 0.9);
-}
-
-function checkProximityAudio() {
-    if (proximitySoundTimer > 0) return;
-
-    let nearest = null;
-    let minD = Infinity;
-
-    for (let i = 0; i < worldObjects.length; i++) {
-        const obj = worldObjects[i];
-        if (!["mistyPortrait", "mannequin", "altar", "mirror", "cage"].includes(obj.type)) continue;
-
-        const d = Math.hypot(player.x - obj.x, player.y - obj.y);
-        if (d < minD) {
-            minD = d;
-            nearest = obj;
-        }
-    }
-
-    if (nearest && minD <= 2.4) {
-        if (nearest.id === lastProximityObjId && proximitySoundTimer > 0) return;
-
-        if (nearest.type === "mistyPortrait") {
-            if (["misty1", "misty3", "misty5"].includes(nearest.id)) {
-                playRandomFrom("bhoot", 3, 0.82);
-            } else {
-                playRandomFrom("billu", 2, 0.82);
-            }
-        } else if (nearest.type === "mannequin") {
-            playRandomFrom("chilla", 3, 0.85);
-            triggerGlitch();
-        } else if (nearest.type === "altar") {
-            playRandomFrom("bhoot", 3, 0.78);
-        } else if (nearest.type === "mirror" || nearest.type === "cage") {
-            playRandomFrom("billu", 2, 0.75);
-        }
-
-        lastProximityObjId = nearest.id;
-        proximitySoundTimer = 4.5;
-    }
-}
-
-let footstepTimer = 0;
-function triggerFootstep(dt) {
-    footstepTimer += dt;
-    if (footstepTimer > 0.38) {
-        footstepTimer = 0;
-        playSound("footstep", 0.25, 0.4);
-    }
-}
-
-/* ================= DDA RAYCASTER (TUNED FOR 25x25) ================= */
-function drawWorld() {
-    ctx.fillStyle = cachedCeilGrad;
-    ctx.fillRect(0, 0, W, H * 0.5);
-
-    ctx.fillStyle = cachedFloorGrad;
-    ctx.fillRect(0, H * 0.5, W, H * 0.5);
-
-    ctx.fillStyle = cachedRunnerGrad;
-    ctx.fillRect(0, H * 0.5, W, H * 0.5);
-
-    const dirX = Math.cos(player.angle);
-    const dirY = Math.sin(player.angle);
-    const planeX = -dirY * Math.tan(FOV / 2);
-    const planeY = dirX * Math.tan(FOV / 2);
-
-    const stripW = W / RAYS;
-    const bobOffset = Math.sin(player.headBob) * 6;
-
-    for (let i = 0; i < RAYS; i++) {
-        const cameraX = (2 * i / RAYS) - 1;
-        const rayDirX = dirX + planeX * cameraX;
-        const rayDirY = dirY + planeY * cameraX;
-
-        let mapX = Math.floor(player.x);
-        let mapY = Math.floor(player.y);
-
-        const deltaDistX = Math.abs(1 / (rayDirX === 0 ? 1e-6 : rayDirX));
-        const deltaDistY = Math.abs(1 / (rayDirY === 0 ? 1e-6 : rayDirY));
-
-        let stepX, stepY;
-        let sideDistX, sideDistY;
-
-        if (rayDirX < 0) {
-            stepX = -1;
-            sideDistX = (player.x - mapX) * deltaDistX;
-        } else {
-            stepX = 1;
-            sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
-        }
-
-        if (rayDirY < 0) {
-            stepY = -1;
-            sideDistY = (player.y - mapY) * deltaDistY;
-        } else {
-            stepY = 1;
-            sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
-        }
-
-        let hit = false;
-        let side = 0;
-        let safeSteps = 80;
-
-        while (!hit && safeSteps-- > 0) {
-            if (sideDistX < sideDistY) {
-                sideDistX += deltaDistX;
-                mapX += stepX;
-                side = 0;
-            } else {
-                sideDistY += deltaDistY;
-                mapY += stepY;
-                side = 1;
-            }
-            if (isWall(mapX, mapY)) hit = true;
-        }
-
-        let perpWallDist;
-        if (side === 0) {
-            perpWallDist = (mapX - player.x + (1 - stepX) / 2) / (rayDirX === 0 ? 1e-6 : rayDirX);
-        } else {
-            perpWallDist = (mapY - player.y + (1 - stepY) / 2) / (rayDirY === 0 ? 1e-6 : rayDirY);
-        }
-
-        perpWallDist = Math.max(0.08, perpWallDist);
-        zBuffer[i] = perpWallDist;
-
-        let wallX;
-        if (side === 0) {
-            wallX = player.y + perpWallDist * rayDirY;
-        } else {
-            wallX = player.x + perpWallDist * rayDirX;
-        }
-        wallX -= Math.floor(wallX);
-
-        const wallH = Math.min(H * 2.5, H / (perpWallDist * 0.72));
-        const top = (H - wallH) / 2 + bobOffset;
-
-        let light = Math.max(0.05, 1 - (perpWallDist / 20));
-        if (side === 1) light *= 0.72;
-
-        const r = Math.floor(45 + light * 60);
-        const g = Math.floor(22 + light * 28);
-        const b = Math.floor(18 + light * 24);
-
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(i * stripW, top, stripW + 1, wallH);
-
-        const isStripe = Math.floor(wallX * 12) % 2 === 0;
-        if (isStripe) {
-            ctx.fillStyle = `rgba(0,0,0,${0.20 * light})`;
-            ctx.fillRect(i * stripW, top, stripW + 1, wallH);
-        }
-
-        const baseH = wallH * 0.16;
-        ctx.fillStyle = `rgba(18, 9, 5, ${Math.min(1, light * 1.3)})`;
-        ctx.fillRect(i * stripW, top + wallH - baseH, stripW + 1, baseH);
-
-        const crownH = wallH * 0.08;
-        ctx.fillStyle = `rgba(12, 6, 4, ${Math.min(1, light * 1.3)})`;
-        ctx.fillRect(i * stripW, top, stripW + 1, crownH);
-
-        const n = wallNoise(mapX, mapY);
-        if (n > 0.42) {
-            const bloodTop = top + wallH * 0.28;
-            const bloodH = wallH * (0.35 + (n - 0.42) * 0.4);
-            const streakCenter = (n * 7) % 1;
-
-            if (Math.abs(wallX - streakCenter) < 0.18) {
-                const bloodAlpha = (0.35 + (n * 0.35)) * light;
-                ctx.fillStyle = `rgba(110, 8, 8, ${bloodAlpha})`;
-                ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH);
-
-                if (Math.abs(wallX - streakCenter) < 0.05) {
-                    ctx.fillStyle = `rgba(40, 0, 0, ${bloodAlpha * 1.2})`;
-                    ctx.fillRect(i * stripW, bloodTop, stripW + 1, bloodH * 0.85);
-                }
-            }
-        }
-
-        // ================= WALL-MOUNTED POSTER DECALS =================
-        let face = "";
-        let u = 0;
-        if (side === 0) {
-            if (stepX === 1) {
-                face = "W";
-                u = wallX;
-            } else {
-                face = "E";
-                u = 1.0 - wallX;
-            }
-        } else {
-            if (stepY === 1) {
-                face = "N";
-                u = 1.0 - wallX;
-            } else {
-                face = "S";
-                u = wallX;
-            }
-        }
-
-        const posterKey = `${mapX},${mapY},${face}`;
-        const poster = wallPosters[posterKey];
-
-        if (poster) {
-            const pMinU = 0.28;
-            const pMaxU = 0.72;
-
-            if (u >= pMinU && u <= pMaxU) {
-                const posterTop = top + wallH * 0.25;
-                const posterH = wallH * 0.44;
-
-                const borderThicknessU = 0.024;
-                const borderThicknessV = 0.038;
-
-                const fR = Math.floor(65 * light);
-                const fG = Math.floor(42 * light);
-                const fB = Math.floor(24 * light);
-                ctx.fillStyle = `rgb(${fR},${fG},${fB})`;
-                ctx.fillRect(i * stripW, posterTop, stripW + 1, posterH);
-
-                ctx.fillStyle = `rgba(190, 150, 75, ${0.45 * light})`;
-                ctx.fillRect(i * stripW, posterTop, stripW + 1, 2);
-                ctx.fillRect(i * stripW, posterTop + posterH - 2, stripW + 1, 2);
-
-                if (u >= pMinU + borderThicknessU && u <= pMaxU - borderThicknessU) {
-                    const innerTop = posterTop + posterH * borderThicknessV;
-                    const innerH = posterH * (1 - borderThicknessV * 2);
-
-                    const normU = (u - (pMinU + borderThicknessU)) / (pMaxU - pMinU - borderThicknessU * 2);
-                    const clampedU = Math.max(0, Math.min(0.999, normU));
-
-                    const src = poster.getDrawable();
-                    if (src) {
-                        const sw = src.naturalWidth || src.width || 100;
-                        const sh = src.naturalHeight || src.height || 100;
-                        const sx = Math.floor(clampedU * sw);
-
-                        ctx.drawImage(
-                            src,
-                            sx, 0, 1, sh,
-                            i * stripW, innerTop, stripW + 1, innerH
-                        );
-
-                        if (light < 0.98) {
-                            ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0, 1 - light)})`;
-                            ctx.fillRect(i * stripW, innerTop, stripW + 1, innerH);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/* ================= 3D SPRITE PROJECTION & FLOOR-ANCHORING ================= */
-function drawAllSprites() {
-    const dirX = Math.cos(player.angle);
-    const dirY = Math.sin(player.angle);
-    const planeX = -dirY * Math.tan(FOV / 2);
-    const planeY = dirX * Math.tan(FOV / 2);
-
-    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
-    const renderList = [];
-
-    for (let i = 0; i < worldObjects.length; i++) {
-        const obj = worldObjects[i];
-        if (obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
-        if (obj.type === "mistyPortrait" || obj.type === "painting") continue;
-
-        const spriteX = obj.x - player.x;
-        const spriteY = obj.y - player.y;
-
-        const transformX = invDet * (dirY * spriteX - dirX * spriteY);
-        const transformY = invDet * (-planeY * spriteX + planeX * spriteY);
-
-        if (transformY > 0.1) {
-            renderList.push({
-                type: "object",
-                data: obj,
-                dist: Math.hypot(spriteX, spriteY),
-                transformX,
-                transformY
-            });
-        }
-    }
-
-    if (ghostEnemy.active) {
-        const spriteX = ghostEnemy.x - player.x;
-        const spriteY = ghostEnemy.y - player.y;
-
-        const transformX = invDet * (dirY * spriteX - dirX * spriteY);
-        const transformY = invDet * (-planeY * spriteX + planeX * spriteY);
-
-        if (transformY > 0.1) {
-            renderList.push({
-                type: "ghost",
-                data: ghostEnemy,
-                dist: Math.hypot(spriteX, spriteY),
-                transformX,
-                transformY
-            });
-        }
-    }
-
-    renderList.sort((a, b) => b.dist - a.dist);
-
-    const bobOffset = Math.sin(player.headBob) * 6;
-
-    for (let s = 0; s < renderList.length; s++) {
-        const item = renderList[s];
-        const tx = item.transformX;
-        const ty = item.transformY;
-
-        const spriteScreenX = Math.floor((W / 2) * (1 + tx / ty));
-        let spriteH = Math.abs(Math.floor(H / ty));
-        let spriteW = Math.abs(Math.floor(H / ty));
-
-        let srcDrawable = null;
-        let drawStartY = 0;
-
-        const floorY = H * 0.5 + Math.floor(H / (ty * 1.44)) + bobOffset;
-
-        if (item.type === "ghost") {
-            if (item.data.state === "attacking") spriteH *= 1.6;
-            spriteW = Math.floor(spriteH * 0.65);
-            srcDrawable = ghostImgLoaded ? ghostCanvas : null;
-            drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
-        } else if (item.data.type === "mannequin") {
-            spriteW = Math.floor(spriteW * item.data.w);
-            spriteH = Math.floor(spriteH * item.data.h);
-            const p = putlaPics[item.data.picIndex];
-            srcDrawable = (p && p.loaded) ? p.canvas : spriteCanvases.mannequinFallback;
-            drawStartY = floorY - spriteH;
-        } else {
-            spriteW = Math.floor(spriteW * item.data.w);
-            spriteH = Math.floor(spriteH * item.data.h);
-
-            if (["door", "clock", "table", "altar", "bookshelf", "mirror", "chest", "phonograph"].includes(item.data.type)) {
-                drawStartY = floorY - spriteH;
-            } else {
-                drawStartY = Math.floor(-spriteH / 2 + H / 2 + bobOffset);
-            }
-
-            if (spriteCanvases[item.data.type]) {
-                srcDrawable = spriteCanvases[item.data.type];
-            }
-        }
-
-        const drawStartX = Math.floor(-spriteW / 2 + spriteScreenX);
-        const drawEndX = drawStartX + spriteW;
-
-        const imgW = srcDrawable ? (srcDrawable.naturalWidth || srcDrawable.width) : 100;
-        const imgH = srcDrawable ? (srcDrawable.naturalHeight || srcDrawable.height) : 100;
-
-        if (item.type === "ghost") {
-            const angleDiff = Math.abs(Math.atan2(item.data.y - player.y, item.data.x - player.x) - player.angle);
-            if (angleDiff < FOV * 0.35 && !item.data.seenAlert) {
-                item.data.seenAlert = true;
-                if (item.data.state === "chasing" || item.data.state === "attacking") playGhostChaseSound();
-                else playDistantGhostScream();
-                triggerGlitch();
-            }
-        }
-
-        const alpha = Math.min(1.0, Math.max(0.3, 1.2 - (item.dist / 18)));
-        ctx.save();
-        ctx.globalAlpha = alpha;
-
-        for (let stripe = drawStartX; stripe < drawEndX; stripe++) {
-            if (stripe < 0 || stripe >= W) continue;
-
-            const rayIdx = Math.floor((stripe / W) * RAYS);
-            if (rayIdx >= 0 && rayIdx < RAYS) {
-                if (ty > zBuffer[rayIdx] + 0.05 && item.type !== "ghost") continue;
-                if (ty > zBuffer[rayIdx] + 0.35 && item.type === "ghost" && item.data.state !== "attacking") continue;
-
-                const texX = Math.floor(((stripe - drawStartX) / spriteW) * imgW);
-
-                if (srcDrawable) {
-                    ctx.drawImage(
-                        srcDrawable,
-                        texX, 0, 1, imgH,
-                        stripe, drawStartY, 1, spriteH
-                    );
-                } else {
-                    ctx.fillStyle = "rgba(240, 240, 255, 0.75)";
-                    ctx.fillRect(stripe, drawStartY, 1, spriteH);
-                }
-            }
-        }
-        ctx.restore();
-    }
-}
-
-/* ================= FLASHLIGHT EFFECT ================= */
-function drawFlashlight() {
-    const distToGhost = ghostEnemy.active ? Math.hypot(ghostEnemy.x - player.x, ghostEnemy.y - player.y) : 99;
-    const fear = Math.max(0, 1 - distToGhost / 6);
-
-    const grad = ctx.createRadialGradient(
-        W / 2, H * 0.52, 20,
-        W / 2, H * 0.52, Math.min(W, H) * 0.68
-    );
-
-    if (fear > 0.35) {
-        const flick = Math.random() * 0.08;
-        grad.addColorStop(0, `rgba(255,160,160,${0.28 - flick})`);
-        grad.addColorStop(0.35, `rgba(220,120,120,${0.14 - flick})`);
-        grad.addColorStop(0.7, "rgba(80,0,0,.2)");
-        grad.addColorStop(1, "rgba(0,0,0,.68)");
-    } else {
-        grad.addColorStop(0, "rgba(255,235,200,.22)");
-        grad.addColorStop(0.25, "rgba(255,220,180,.13)");
-        grad.addColorStop(0.55, "rgba(255,200,150,.04)");
-        grad.addColorStop(1, "rgba(0,0,0,.42)");
-    }
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-}
-
-/* ================= GHOST ARTIFICIAL INTELLIGENCE ================= */
-function updateGhostAI(dt) {
-    if (!ghostEnemy.active || gameState.gameOver || gameState.escaped) return;
-
-    ghostEnemy.bobAngle += dt * 4.0;
-    const distToPlayer = Math.hypot(player.x - ghostEnemy.x, player.y - ghostEnemy.y);
-
-    const staticEl = document.getElementById("static");
-    if (distToPlayer < 8) {
-        staticEl.style.opacity = (0.04 + (8 - distToPlayer) * 0.035).toString();
-    } else {
-        staticEl.style.opacity = "0.04";
-    }
-
-    if ((ghostEnemy.state === "watching" || ghostEnemy.state === "hunting") && distToPlayer > 7.0 && distantScreamTimer <= 0) {
-        playDistantGhostScream();
-        distantScreamTimer = 8.0 + Math.random() * 5.0;
-    }
-
-    if (ghostEnemy.state === "watching") {
-        if (distToPlayer < 5.0 || ghostEnemy.seenAlert) {
-            ghostEnemy.state = "chasing";
-            playGhostChaseSound();
-            chaseSoundTimer = 2.8;
-            showMessage("IT SPOTTED YOU! RUN!");
-        }
-    } else if (ghostEnemy.state === "chasing" || ghostEnemy.state === "hunting") {
-        if (ghostEnemy.state === "chasing" && chaseSoundTimer <= 0) {
-            playGhostChaseSound();
-            chaseSoundTimer = 2.8 + Math.random() * 1.6;
-        }
-
-        ghostEnemy.pathTimer += dt;
-        if (ghostEnemy.pathTimer > 0.28) {
-            ghostEnemy.pathTimer = 0;
-            ghostEnemy.path = getBFSPath(ghostEnemy.x, ghostEnemy.y, player.x, player.y);
-        }
-
-        if (ghostEnemy.path.length > 0) {
-            moveGhostAlongPath(dt, ghostEnemy.speed);
-        }
-
-        if (distToPlayer < 0.95) {
-            executeGhostAttack();
-        }
-    } else if (ghostEnemy.state === "attacking") {
-        const dx = player.x - ghostEnemy.x;
-        const dy = player.y - ghostEnemy.y;
-        ghostEnemy.x += dx * 8 * dt;
-        ghostEnemy.y += dy * 8 * dt;
-    }
-}
-
-function moveGhostAlongPath(dt, speed) {
-    const nextNode = ghostEnemy.path[0];
-    if (!nextNode) return;
-
-    const dx = nextNode.x - ghostEnemy.x;
-    const dy = nextNode.y - ghostEnemy.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist < 0.16) {
-        ghostEnemy.path.shift();
-    } else {
-        const step = speed * dt;
-        ghostEnemy.x += (dx / dist) * Math.min(step, dist);
-        ghostEnemy.y += (dy / dist) * Math.min(step, dist);
-    }
-}
-
-function executeGhostAttack() {
-    if (gameState.gameOver) return;
-    ghostEnemy.state = "attacking";
-
-    playGhostChaseSound();
-
-    document.getElementById("game").animate([
-        { transform: "translate(0,0) scale(1)" },
-        { transform: "translate(-18px, 12px) scale(1.05)" },
-        { transform: "translate(16px, -14px) scale(1.08)" },
-        { transform: "translate(-20px, 8px) scale(1.04)" },
-        { transform: "translate(0,0) scale(1)" }
-    ], { duration: 450 });
-
-    const redFlash = document.getElementById("redFlash");
-    redFlash.style.opacity = "0.9";
-
-    setTimeout(() => {
-        triggerGameOver();
-    }, 450);
-}
-
-function triggerGameOver() {
-    gameState.gameOver = true;
-    ghostEnemy.active = false;
-
-    const ambient = document.getElementById("ambient");
-    if (ambient) ambient.pause();
-
-    const redFlash = document.getElementById("redFlash");
-    redFlash.style.opacity = "0";
-
-    document.getElementById("gameOverScreen").style.display = "flex";
-}
-
-function triggerEscape() {
-    gameState.escaped = true;
-    ghostEnemy.active = false;
-
-    playSound("unlock", 1.0, 4.0);
-    const ambient = document.getElementById("ambient");
-    if (ambient) ambient.pause();
-
-    const flash = document.getElementById("flash");
-    flash.style.opacity = "0.85";
-    setTimeout(() => { flash.style.opacity = "0"; }, 600);
-
-    setTimeout(() => {
-        document.getElementById("endScreen").style.display = "flex";
-    }, 700);
-}
-
-function triggerGlitch() {
-    const redFlash = document.getElementById("redFlash");
-    redFlash.style.opacity = "0.45";
-    setTimeout(() => { redFlash.style.opacity = "0"; }, 140);
-
-    const scareText = document.getElementById("scareText");
-    const phrases = ["DON'T LOOK", "BEHIND YOU", "RAVI KA BADLA", "RUN", "IT'S HERE", "NOWHERE TO HIDE"];
-    scareText.innerText = phrases[Math.floor(Math.random() * phrases.length)];
-    scareText.style.opacity = "1";
-    setTimeout(() => { scareText.style.opacity = "0"; }, 650);
-}
-
-/* ================= HUD & NOTIFICATIONS ================= */
-let messageTimer = null;
-function showMessage(text) {
-    const el = document.getElementById("message");
-    el.innerText = text;
-    el.style.opacity = "1";
-    clearTimeout(messageTimer);
-    messageTimer = setTimeout(() => {
-        el.style.opacity = "0";
-    }, 3800);
-}
-
-function updateObjective(text) {
-    document.getElementById("objective").innerText = text;
-}
-
-/* ================= MOVEMENT & CORNER SLIDING ================= */
-let moveX = 0;
-let moveY = 0;
-
-function updateMovement(dt) {
-    let forward = 0;
-    let strafe = 0;
-    let turn = 0;
-
-    if (keys["w"] || keys["arrowup"]) forward += 1;
-    if (keys["s"] || keys["arrowdown"]) forward -= 1;
-    if (keys["a"]) strafe -= 1;
-    if (keys["d"]) strafe += 1;
-    if (keys["arrowleft"]) turn -= 1;
-    if (keys["arrowright"]) turn += 1;
-
-    forward += moveY;
-    strafe += moveX;
-
-    player.angle += turn * dt * 2.2;
-    const curSpeed = player.speed * dt;
-
-    const moveVecX = (Math.cos(player.angle) * forward + Math.cos(player.angle + Math.PI / 2) * strafe) * curSpeed;
-    const moveVecY = (Math.sin(player.angle) * forward + Math.sin(player.angle + Math.PI / 2) * strafe) * curSpeed;
-
-    const nextX = player.x + moveVecX;
-    const nextY = player.y + moveVecY;
-    const r = player.radius;
-
-    if (!isWall(nextX + Math.sign(moveVecX) * r, player.y - r) &&
-        !isWall(nextX + Math.sign(moveVecX) * r, player.y + r)) {
-        player.x = nextX;
-    }
-    if (!isWall(player.x - r, nextY + Math.sign(moveVecY) * r) &&
-        !isWall(player.x + r, nextY + Math.sign(moveVecY) * r)) {
-        player.y = nextY;
-    }
-
-    if (Math.abs(forward) + Math.abs(strafe) > 0.15) {
-        player.headBob += dt * 10;
-        triggerFootstep(dt);
-    } else {
-        player.headBob = 0;
-    }
-}
-
-/* ================= MOBILE CONTROLS & TOUCH ENGINE ================= */
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
-let joystickActive = false;
-
-function joystickMove(e) {
-    const rect = joystick.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    let dx = e.clientX - cx;
-    let dy = e.clientY - cy;
-    const max = 38;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist > max) {
-        dx = (dx / dist) * max;
-        dy = (dy / dist) * max;
-    }
-
-    stick.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-    moveX = dx / max;
-    moveY = -dy / max;
-}
-
-joystick.addEventListener("pointerdown", e => {
-    joystickActive = true;
-    joystick.setPointerCapture(e.pointerId);
-    joystickMove(e);
-});
-joystick.addEventListener("pointermove", e => {
-    if (joystickActive) joystickMove(e);
-});
-joystick.addEventListener("pointerup", () => {
-    joystickActive = false;
-    moveX = 0;
-    moveY = 0;
-    stick.style.transform = "translate(-50%,-50%)";
-});
-
-let isPointerLooking = false;
-let lastTouchX = 0;
-
-canvas.addEventListener("pointerdown", e => {
-    isPointerLooking = true;
-    lastTouchX = e.clientX;
-});
-canvas.addEventListener("pointermove", e => {
-    if (!isPointerLooking) return;
-    const dx = e.clientX - lastTouchX;
-    player.angle += dx * 0.0052;
-    lastTouchX = e.clientX;
-});
-canvas.addEventListener("pointerup", () => { isPointerLooking = false; });
-
-/* ================= INTERACTION ENGINE ================= */
-function getNearestInteractable() {
-    let closest = null;
-    let minD = 999;
-
-    for (let i = 0; i < worldObjects.length; i++) {
-        const obj = worldObjects[i];
-        if (obj.id === "key" && (!gameState.keyRevealed || gameState.keyAcquired)) continue;
-
-        const d = Math.hypot(obj.x - player.x, obj.y - player.y);
-        if (d < minD) {
-            minD = d;
-            closest = obj;
-        }
-    }
-
-    if (minD < 1.55) return closest;
-    return null;
-}
-
-function handleInteract() {
-    if (!gameState.started || gameState.gameOver || gameState.escaped) return;
-
-    const obj = getNearestInteractable();
-    if (!obj) return;
-
-    if (obj.id === "painting") {
-        gameState.paintingExamined = true;
-        showMessage(obj.examineMsg);
-        if (!ghostEnemy.active && !gameState.keyAcquired) {
-            ghostEnemy.x = 12.5;
-            ghostEnemy.y = 12.5;
-            ghostEnemy.active = true;
-            ghostEnemy.state = "watching";
-            ghostEnemy.seenAlert = false;
-        }
-    } else if (obj.id === "note") {
-        gameState.noteRead = true;
-        showMessage(obj.examineMsg);
-        updateObjective("Search the ancient clock frozen at 3:17 in the southwest sanctuary.");
-    } else if (obj.id === "clock") {
-        gameState.clockExamined = true;
-        if (!gameState.keyRevealed) {
-            gameState.keyRevealed = true;
-            showMessage("The heavy pendulum shudders. A secret vault unlocked in the East Hall!");
-            playSound("unlock", 0.85, 4.0);
-            updateObjective("Retrieve the Exit Key from the East Vault.");
-
-            ghostEnemy.x = 12.5;
-            ghostEnemy.y = 12.5;
-            ghostEnemy.active = true;
-            ghostEnemy.state = "hunting";
-            ghostEnemy.speed = 1.9;
-        } else {
-            showMessage(obj.examineMsg);
-        }
-    } else if (obj.id === "key") {
-        if (!gameState.keyAcquired) {
-            gameState.keyAcquired = true;
-            playSound("unlock", 1.0, 4.0);
-            showMessage("EXIT KEY ACQUIRED! A blood-curdling screech roars throughout the estate!");
-            updateObjective("RUSH TO THE OUTER IRON GATE BEFORE RAVI CATCHES YOU!");
-            triggerGlitch();
-
-            ghostEnemy.x = 12.5;
-            ghostEnemy.y = 12.5;
-            ghostEnemy.active = true;
-            ghostEnemy.state = "chasing";
-            ghostEnemy.speed = 2.3;
-            playGhostChaseSound();
-        }
-    } else if (obj.id === "door") {
-        if (!gameState.keyAcquired) {
-            showMessage("Locked with heavy iron chains and an occult seal. Locate the Exit Key first.");
-            playDistantGhostScream();
-        } else if (!gameState.doorUnlocked) {
-            gameState.doorUnlocked = true;
-            showMessage("THE IRON GATE UNLOCKED! ESCAPE!");
-            playSound("unlock", 1.0, 4.0);
-            setTimeout(triggerEscape, 500);
-        } else {
-            triggerEscape();
-        }
-    } else {
-        showMessage(obj.examineMsg);
-        if (obj.type === "mannequin" || obj.type === "altar" || obj.type === "mirror") {
-            triggerGlitch();
-            playRandomFrom("chilla", 3, 0.85);
-        }
-    }
-}
-
-const interactBtn = document.getElementById("interact");
-interactBtn.addEventListener("click", handleInteract);
-
-/* ================= 60 FPS MAIN LOOP ================= */
-let lastTime = performance.now();
-
-function gameLoop(now) {
-    const dt = Math.min(0.06, (now - lastTime) / 1000);
-    lastTime = now;
-
-    if (gameState.started && !gameState.gameOver && !gameState.escaped) {
-        gameState.survivalTimer += dt;
-
-        if (distantScreamTimer > 0) distantScreamTimer -= dt;
-        if (chaseSoundTimer > 0) chaseSoundTimer -= dt;
-        if (proximitySoundTimer > 0) proximitySoundTimer -= dt;
-
-        if (gameState.survivalTimer > 50 && !ghostEnemy.active) {
-            ghostEnemy.x = 12.5;
-            ghostEnemy.y = 12.5;
-            ghostEnemy.active = true;
-            ghostEnemy.state = "hunting";
-            ghostEnemy.speed = 1.8;
-            showMessage("A cold presence begins stalking the halls...");
-        }
-
-        updateMovement(dt);
-        checkProximityAudio();
-        updateGhostAI(dt);
-
-        drawWorld();
-        drawAllSprites();
-        drawFlashlight();
-
-        const nearObj = getNearestInteractable();
-        const prompt = document.getElementById("interactionPrompt");
-
-        if (nearObj) {
-            let actionText = nearObj.actionText;
-            let mobileText = nearObj.mobileText;
-
-            if (nearObj.id === "door" && gameState.doorUnlocked) {
-                actionText = "[E] ESCAPE ESTATE";
-                mobileText = "ESCAPE";
-            }
-
-            prompt.innerText = actionText;
-            prompt.style.opacity = "1";
-
-            interactBtn.innerText = mobileText;
-            interactBtn.style.display = "block";
-        } else {
-            prompt.style.opacity = "0";
-            interactBtn.style.display = "none";
-        }
-    }
-
-    requestAnimationFrame(gameLoop);
-}
-requestAnimationFrame(gameLoop);
-
-/* ================= LIFECYCLE CONTROLS ================= */
-function startGame() {
-    gameState.started = true;
-    randomizeKeySpawn();
-    distantScreamTimer = 7.0;
-    chaseSoundTimer = 1.5;
-    proximitySoundTimer = 0;
-    lastProximityObjId = null;
-    document.getElementById("startScreen").style.display = "none";
-
-    const ambient = document.getElementById("ambient");
-    if (ambient) {
-        ambient.volume = 0.35;
-        ambient.play().catch(() => {});
-    }
-
-    updateObjective("Explore the estate. Search the archives and halls for clues.");
-    showMessage("Only one life. Beware the shadows.");
-}
-
-function restartGame() {
-    gameState = {
-        started: true,
-        paintingExamined: false,
-        noteRead: false,
-        clockExamined: false,
-        keyRevealed: false,
-        keyAcquired: false,
-        doorUnlocked: false,
-        escaped: false,
-        gameOver: false,
-        survivalTimer: 0
-    };
-
-    randomizeKeySpawn();
-    allSfxIds.forEach(id => stopSound(id));
-
-    player.x = 12.5;
-    player.y = 2.0;
-    player.angle = Math.PI / 2;
-    player.headBob = 0;
-
-    ghostEnemy.x = 12.5;
-    ghostEnemy.y = 12.5;
-    ghostEnemy.active = false;
-    ghostEnemy.state = "idle";
-    ghostEnemy.speed = 2.1;
-    ghostEnemy.path = [];
-    ghostEnemy.seenAlert = false;
-
-    distantScreamTimer = 7.0;
-    chaseSoundTimer = 1.5;
-    proximitySoundTimer = 0;
-    lastProximityObjId = null;
-
-    document.getElementById("gameOverScreen").style.display = "none";
-    document.getElementById("endScreen").style.display = "none";
-
-    const ambient = document.getElementById("ambient");
-    if (ambient) {
-        ambient.currentTime = 0;
-        ambient.play().catch(() => {});
-    }
-
-    updateObjective("Explore the estate. Search the archives and halls for clues.");
-    showMessage("You awake back at the northern entrance... Do not hesitate.");
-}
-</script>
+<!-- screens -->
+<div id="loading" class="screen show">Opening the house…</div>
+<div id="titleScreen" class="screen">
+    <a class="back" href="index.html">‹ Arcade</a>
+    <h1>THE LAST NIGHT</h1>
+    <div class="sub">Ravi Ka Badla</div>
+    <div class="row">
+        <button class="btn" id="btnBegin">Begin</button>
+        <button class="btn" id="btnContinue" style="display:none">Continue</button>
+    </div>
+    <div class="tip">Headphones. Lights off.<br>WASD · Mouse · Shift run · E interact · Tab journal</div>
+</div>
+<div id="story" class="screen">
+    <video id="storyVideo" playsinline></video>
+    <img id="storyImage" alt="">
+    <div id="storyLoading" style="display:none">…</div>
+    <button class="btn quiet" id="storySkip">Skip ›</button>
+    <div id="storyHint"></div>
+</div>
+<div id="deathScreen" class="screen">
+    <h1>THE HOUSE KEEPS ITS GUESTS</h1>
+    <p>You never left.</p>
+    <div class="row">
+        <button class="btn" id="btnRetry">Wake up</button>
+        <a class="btn quiet" href="index.html">Leave</a>
+    </div>
+</div>
+<div id="endScreen" class="screen">
+    <div class="story">
+        <p>The door opened onto a grey dawn.</p>
+        <p>You walked until the rain stopped and the house was gone behind the trees.</p>
+        <p>At the bus stand, an old man asked you the time.</p>
+        <p>Your watch had stopped.</p>
+        <p class="last">3:17</p>
+    </div>
+    <h1>THE LAST NIGHT</h1>
+    <div class="row">
+        <button class="btn" id="btnAgain">Play again</button>
+        <a class="btn quiet" href="index.html">Back to the arcade</a>
+    </div>
+</div>
+
+<script src="lastnight/art.js"></script>
+<script src="lastnight/audio.js"></script>
+<script src="lastnight/world.js"></script>
+<script src="lastnight/render.js"></script>
+<script src="lastnight/game.js"></script>
+<script src="lastnight/content.js"></script>
 </body>
 </html>
