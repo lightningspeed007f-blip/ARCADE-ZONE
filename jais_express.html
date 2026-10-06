@@ -488,7 +488,7 @@ const HIT_MIN = 0.02, HIT_MAX = 0.18;
 
 function project(nx, z) {
   const r = 1 - z;
-  const s = Math.max(0.22, Math.pow(r, 1.35)) * K;
+  const s = Math.max(0.3, Math.pow(r, 1.15)) * K;
   const y = HZ + (H - HZ) * Math.pow(r, 1.6);
   const rw = (52 + (330 - 52) * r) * K;
   const x = W / 2 + nx * rw * 0.44 + curve * (1 - r) * 40 * K;
@@ -598,6 +598,13 @@ function addPickup() {
   else pickups.push({ lane: l, nx: LANES[l], z: 1, type: "nitro" });
 }
 
+/* ---------- how fast things come towards you ----------
+   APPROACH_TIME = seconds an obstacle takes from the horizon to your auto at the start.
+   Higher = more time to react. It gets shorter as you speed up. */
+const APPROACH_TIME = 1.9;
+function zRate() { return (0.9 / (APPROACH_TIME * 1000)) * Math.sqrt(Math.max(2.4, spd) / 3.2); }
+function zPerMeter() { return zRate() / (Math.max(2.4, spd) * 0.009); }
+
 /* ---------- scoring events ---------- */
 function bump() { chain++; combo = Math.min(5, 1 + Math.floor(chain / 5)); comboT = 3500; }
 function crash() {
@@ -625,8 +632,8 @@ function smash() {
    ===================================================================== */
 function update(dt) {
   runT += dt;
-  const maxSpd = Math.min(15, 12 + lap * 0.75);
-  const base = Math.min(maxSpd, 3.2 + dist / 300);
+  const maxSpd = Math.min(13, 10.5 + lap * 0.75);
+  const base = Math.min(maxSpd, 3.2 + dist / 420);
   slow = Math.max(0, slow - dt * 0.0012);
   if (nitroT > 0) nitroT = Math.max(0, nitroT - dt);
   spd = Math.max(2.4, base - slow) * (nitroT > 0 ? 1.45 : 1);
@@ -641,10 +648,10 @@ function update(dt) {
 
   // spawn
   const f = dt / 16.7;
-  if (Math.random() < (0.03 + (spd - 3.2) * 0.002) * f) addObstacle();
+  if (Math.random() < (0.024 + (spd - 3.2) * 0.0018) * f) addObstacle();
   if (Math.random() < 0.028 * f) addPickup();
 
-  const adv = spd * dt * 0.00052;
+  const adv = zRate() * dt;
 
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const o = obstacles[i], pz = o.z;
@@ -679,7 +686,7 @@ function update(dt) {
 
   // overhead banner for the NEXT station arrives as you enter it
   const nextS = Math.floor(dist / STATION_LEN) + 1;
-  if (!bannerDone[nextS] && dist >= nextS * STATION_LEN - 17) {
+  if (!bannerDone[nextS] && dist >= nextS * STATION_LEN - 0.92 / zPerMeter()) {
     bannerDone[nextS] = true;
     banners.push({ z: 1, name: ROUTES[nextS % ROUTES.length], img: stationImg(nextS) });
   }
@@ -908,8 +915,9 @@ function drawBanner(b) {
 function drawGhost() {
   if (!ghost || (state !== "play" && state !== "pause")) return;
   const g = ghostAt(runT), diff = g.d - dist;
-  if (diff <= 0.5 || diff > 16) return;
-  const z = 0.08 + diff * 0.0578, p = project(LANES[g.lane], z);
+  const z = 0.08 + diff * zPerMeter();
+  if (diff <= 0.5 || z >= 1) return;
+  const p = project(LANES[g.lane], z);
   drawAuto(p.x, p.y, p.s, "#00c8e0", "#7ff6ff", 0.42, "0,240,255");
 }
 
