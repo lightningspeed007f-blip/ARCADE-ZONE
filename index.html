@@ -20,19 +20,23 @@ html, body {
   user-select: none; -webkit-user-select: none;
 }
 
-/* ===================== BACKGROUND ===================== */
-/* Video fills the whole screen (vertical) */
+/* ===================== BACKGROUND VIDEO ===================== */
+/* "fit" mode (default): whole video visible, sharp, no zoom */
 #bgVideo {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 0; pointer-events: none;
+  object-fit: contain; z-index: 0; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
 }
+/* "fill" mode: video covers the full screen (zoomed) */
+body.fill #bgVideo { object-fit: cover; -webkit-mask-image: none; mask-image: none; }
+
 #bgShade {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 2; pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(5,6,10,0.75) 0%, rgba(5,6,10,0.15) 25%, rgba(5,6,10,0.15) 65%, rgba(5,6,10,0.85) 100%);
+  z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(5,6,10,0.6) 0%, rgba(5,6,10,0.05) 30%, rgba(5,6,10,0.05) 70%, rgba(5,6,10,0.7) 100%);
 }
-#sparks { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+#sparks { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 #videoMsg {
   position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
   z-index: 40; display: none;
@@ -45,11 +49,11 @@ html, body {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   z-index: 30;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: radial-gradient(circle at center, rgba(20,10,40,0.75), rgba(3,3,8,0.97) 75%);
+  background: radial-gradient(circle at center, rgba(20,10,40,0.8), rgba(3,3,8,0.97) 75%);
   cursor: pointer;
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition: opacity 0.5s ease;
 }
-#splash.gone { opacity: 0; transform: scale(1.15); pointer-events: none; }
+#splash.gone { opacity: 0; pointer-events: none; }
 .logo-ring {
   width: 150px; height: 150px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -58,24 +62,13 @@ html, body {
   box-shadow: 0 0 40px rgba(0,240,255,0.35), inset 0 0 30px rgba(255,45,138,0.3);
   animation: ringPulse 2s ease-in-out infinite;
 }
-@keyframes ringPulse {
-  0%,100% { box-shadow: 0 0 30px rgba(0,240,255,0.3), inset 0 0 25px rgba(255,45,138,0.25); transform: scale(1); }
-  50%     { box-shadow: 0 0 60px rgba(255,45,138,0.5), inset 0 0 35px rgba(0,240,255,0.35); transform: scale(1.05); }
-}
+@keyframes ringPulse { 50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(255,45,138,0.5), inset 0 0 35px rgba(0,240,255,0.35); } }
 .splash-title {
   margin-top: 26px;
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 40px; letter-spacing: 8px;
-  background: linear-gradient(90deg, #00f0ff, #ff2d8a, #00f0ff);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-  animation: shimmer 3s linear infinite;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 38px; letter-spacing: 7px;
+  color: #00f0ff; text-shadow: 0 0 18px rgba(0,240,255,0.6), 0 0 36px rgba(255,45,138,0.4);
 }
-@keyframes shimmer { to { background-position: -200% 0; } }
-.splash-tap {
-  margin-top: 18px; font-size: 17px; letter-spacing: 3px; color: #c9d2ea;
-  animation: blink 1.6s ease-in-out infinite;
-}
+.splash-tap { margin-top: 18px; font-size: 17px; letter-spacing: 3px; color: #c9d2ea; animation: blink 1.6s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: 0.3; } }
 
 /* ===================== MAIN LAYOUT ===================== */
@@ -91,15 +84,11 @@ body.leaving .app { opacity: 0; }
 header { text-align: center; flex-shrink: 0; padding: 0 54px; }
 header h1 {
   font-family: 'Orbitron', sans-serif; font-weight: 900;
-  font-size: 25px; letter-spacing: 4px; white-space: nowrap;
-  background: linear-gradient(90deg, #00f0ff, #ff2d8a, #00f0ff);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-  animation: shimmer 4s linear infinite;
-  filter: drop-shadow(0 0 14px rgba(0,240,255,0.35));
+  font-size: 26px; letter-spacing: 4px; white-space: nowrap;
+  color: #00f0ff;
+  text-shadow: 0 0 14px rgba(0,240,255,0.55), 0 0 30px rgba(255,45,138,0.35);
 }
-header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
+header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 
 .sound-btn {
   position: fixed; top: 16px; right: 14px; z-index: 20;
@@ -108,85 +97,50 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
   border: 1px solid rgba(255,255,255,0.18);
   color: #fff; font-size: 18px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
 
-/* ===================== 3D CYLINDER ===================== */
+/* ===================== CYLINDER (works on every browser) ===================== */
 .stage {
   flex: 1 1 auto; width: 100%;
   position: relative;
-  display: flex; align-items: center; justify-content: center;
-  -webkit-perspective: 1000px; perspective: 1000px;
   touch-action: none; cursor: grab;
+  overflow: hidden;
 }
-.stage::after { /* glowing floor */
-  content: ""; position: absolute; left: 50%; bottom: 6%;
-  width: 90%; max-width: 520px; height: 46px; transform: translateX(-50%);
-  background: radial-gradient(ellipse, rgba(0,240,255,0.3), rgba(0,0,0,0) 70%);
-  pointer-events: none;
-}
-.ring {
-  position: relative;
-  -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.ring.dragging { transition: none; }
-.ring.launch { transition: transform 0.45s cubic-bezier(0.5, 0, 0.75, 0); }
-
 .card {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  border-radius: 22px; border: 2px solid rgba(255,255,255,0.2);
+  position: absolute; left: 50%; top: 50%;
+  border-radius: 22px; border: 2px solid rgba(255,255,255,0.25);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 14px 10px;
-  -webkit-backface-visibility: hidden; backface-visibility: hidden;
-  transition: opacity 0.4s, box-shadow 0.4s;
-  opacity: 0.4;
+  will-change: transform, opacity;
 }
-.card.active { opacity: 1; }
 .card .icon { font-size: calc(var(--cw) * 0.38); line-height: 1.1; }
 .card.active .icon { animation: bob 2.2s ease-in-out infinite alternate; }
 @keyframes bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-8px) rotate(3deg); } }
-.card .name {
-  font-family: 'Orbitron', sans-serif; font-weight: 700;
-  font-size: calc(var(--cw) * 0.09); line-height: 1.25; margin-top: 10px;
-}
-.card .tag {
-  margin-top: 8px; font-size: calc(var(--cw) * 0.072); font-weight: 700;
-  padding: 2px 12px; border-radius: 30px; border: 1px solid;
-}
+.card .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: calc(var(--cw) * 0.09); line-height: 1.25; margin-top: 10px; }
+.card .tag { margin-top: 8px; font-size: calc(var(--cw) * 0.072); font-weight: 700; padding: 2px 12px; border-radius: 30px; border: 1px solid; }
 .card .tap {
   position: absolute; bottom: 12px; left: 0; width: 100%;
-  font-size: calc(var(--cw) * 0.062); letter-spacing: 1px; color: rgba(255,255,255,0.75);
-  opacity: 0; transition: opacity 0.4s;
+  font-size: calc(var(--cw) * 0.062); letter-spacing: 1px; color: rgba(255,255,255,0.8);
+  display: none;
 }
-.card.active .tap { opacity: 1; animation: blink 1.6s ease-in-out infinite; }
+.card.active .tap { display: block; animation: blink 1.6s ease-in-out infinite; }
 
 /* ===================== BOTTOM INFO ===================== */
 .bottom { flex-shrink: 0; width: 100%; text-align: center; padding: 0 16px; }
 .dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 10px; }
-.dots span {
-  width: 7px; height: 7px; border-radius: 10px;
-  background: rgba(255,255,255,0.3); transition: width 0.3s, background 0.3s;
-}
+.dots span { width: 7px; height: 7px; border-radius: 10px; background: rgba(255,255,255,0.3); transition: width 0.3s, background 0.3s; }
 .dots span.on { width: 24px; }
-.bottom h2 { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; transition: color 0.3s; }
-.bottom .desc {
-  color: #d0d7ea; font-size: 15.5px; line-height: 1.35;
-  max-width: 400px; margin: 4px auto 0; min-height: 42px;
-}
+.bottom h2 { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; }
+.bottom .desc { color: #d6dcec; font-size: 15.5px; line-height: 1.35; max-width: 400px; margin: 4px auto 0; min-height: 42px; }
 
-/* ===================== MOVING TICKER ===================== */
+/* ===================== MOVING TICKER (right ➜ left) ===================== */
 .ticker {
   flex-shrink: 0; width: 100%; overflow: hidden;
   margin-top: 12px; padding: 9px 0 14px;
   border-top: 1px solid rgba(255,215,0,0.18);
-  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.45));
+  background: rgba(0,0,0,0.35);
 }
-.ticker-track {
-  display: flex; width: -webkit-max-content; width: max-content;
-  white-space: nowrap;
-  animation: tickerRL 18s linear infinite;   /* moves right ➜ left */
-}
+.ticker-track { display: flex; width: -webkit-max-content; width: max-content; white-space: nowrap; animation: tickerRL 18s linear infinite; }
 .ticker-item {
   font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif;
   font-size: 14px; font-weight: 700; letter-spacing: 1.5px;
@@ -194,14 +148,6 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
   text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.55);
 }
 @keyframes tickerRL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
-@media (min-height: 760px) {
-  header h1 { font-size: 27px; }
-  .splash-title { font-size: 46px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .card.active .icon { animation: none; }
-}
 </style>
 </head>
 <body>
@@ -230,9 +176,7 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
     <p>Swipe to choose, tap to play</p>
   </header>
 
-  <div class="stage" id="stage">
-    <div class="ring" id="ring"></div>
-  </div>
+  <div class="stage" id="stage"></div>
 
   <div class="bottom">
     <div class="dots" id="dots"></div>
@@ -251,13 +195,11 @@ header p { color: #b4bdd6; font-size: 15px; letter-spacing: 1px; }
 </div>
 
 <script>
-/* Safe storage: some phone browsers and in-app browsers block it */
-function getStore(type, key) { try { return window[type].getItem(key); } catch (e) { return null; } }
-function setStore(type, key, val) { try { window[type].setItem(key, val); } catch (e) {} }
+/* ===================== SETTINGS ===================== */
+var VIDEO_MODE = "fit";            // "fit" = whole video, sharp   |   "fill" = covers full screen (zoomed)
+var MUSIC_FILE = "hub_music.mp3";  // upload your hub music with exactly this name
 
-/* ======================================================
-   GAME LIST — add a new game by adding one line here
-   ====================================================== */
+/* GAME LIST — add a new game by adding one line here */
 var GAMES = [
   { href: "horror.html",       icon: "👻", name: "The Last Night", tag: "Horror", color: "#b46bff",
     desc: "Survive the haunted estate and find the secret key." },
@@ -271,48 +213,44 @@ var GAMES = [
     desc: "धर्म प्रश्नोत्तरी — 150 questions with 3 lifelines." }
 ];
 
-/* Hub music file — upload it to the repo with exactly this name */
-var MUSIC_FILE = "hub_music.mp3";
+if (VIDEO_MODE === "fill") document.body.className += " fill";
 
-var N = GAMES.length, STEP = 360 / N;
-var stage = document.getElementById("stage");
-var ring = document.getElementById("ring");
-var dotsBox = document.getElementById("dots");
-var radius = 0;
-var index = Number(getStore("localStorage", "gz_last") || 0) || 0;   // reopen on the last game played
-var launching = false;
-var lastInteract = Date.now();
-
+/* Safe storage: some phone browsers block it */
+function getStore(t, k) { try { return window[t].getItem(k); } catch (e) { return null; } }
+function setStore(t, k, v) { try { window[t].setItem(k, v); } catch (e) {} }
 function rgba(hex, a) {
   var n = parseInt(hex.slice(1), 16);
   return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
 }
 
-/* ================= SOUND ================= */
+var N = GAMES.length, STEP = 360 / N;
+var stage = document.getElementById("stage");
+var target = Number(getStore("localStorage", "gz_last") || 0) || 0;  // card that should face front
+var pos = target;                                                    // where the cylinder is right now
+var cardW = 180, cardH = 248, radius = 140;
+var launching = false, launchT = 0;
+var lastInteract = Date.now();
+
+/* ===================== SOUND ===================== */
 var muted = getStore("localStorage", "gz_muted") === "1";
 var music = new Audio(MUSIC_FILE);
-music.loop = true;
-music.volume = 0.5;
+music.loop = true; music.volume = 0.5;
 var actx = null;
-
 function setSoundIcon() { document.getElementById("soundBtn").textContent = muted ? "🔇" : "🔊"; }
 setSoundIcon();
-
 function startMusic() {
   if (muted || launching) return;
   music.volume = 0.5;
-  var p = music.play();
-  if (p && p.catch) p.catch(function () {});
+  var p = music.play(); if (p && p.catch) p.catch(function () {});
 }
 function fadeOutMusic(ms) {
-  var start = music.volume, t0 = Date.now();
-  var timer = setInterval(function () {
+  var v0 = music.volume, t0 = Date.now();
+  var t = setInterval(function () {
     var k = Math.min(1, (Date.now() - t0) / ms);
-    music.volume = Math.max(0, start * (1 - k));
-    if (k >= 1) { clearInterval(timer); music.pause(); }
+    music.volume = Math.max(0, v0 * (1 - k));
+    if (k >= 1) { clearInterval(t); music.pause(); }
   }, 30);
 }
-/* Small synthesized sounds (no files needed) */
 function blip(freq, len, vol, type) {
   if (muted) return;
   try {
@@ -329,7 +267,6 @@ function blip(freq, len, vol, type) {
   } catch (e) {}
 }
 function buzz(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
-
 document.getElementById("soundBtn").addEventListener("click", function (e) {
   e.stopPropagation();
   muted = !muted;
@@ -338,14 +275,247 @@ document.getElementById("soundBtn").addEventListener("click", function (e) {
   if (muted) music.pause(); else startMusic();
 });
 
-/* ================= CARDS ================= */
+/* ===================== CARDS ===================== */
 var cards = [], dots = [];
 GAMES.forEach(function (g, i) {
   var c = document.createElement("div");
   c.className = "card";
   c.setAttribute("data-i", i);
-  c.style.background = "radial-gradient(circle at 50% 30%, " + rgba(g.color, 0.3) + ", rgba(0,0,0,0) 65%), linear-gradient(180deg, rgba(24,26,44,0.95), rgba(10,11,20,0.97))";
+  c.style.background = "radial-gradient(circle at 50% 30%, " + rgba(g.color, 0.32) + ", rgba(0,0,0,0) 65%), linear-gradient(180deg, #181a2c, #0a0b14)";
   c.innerHTML =
     '<div class="icon">' + g.icon + '</div>' +
-    '<div
-    
+    '<div class="name">' + g.name + '</div>' +
+    '<div class="tag" style="color:' + g.color + ';border-color:' + rgba(g.color, 0.6) + '">' + g.tag + '</div>' +
+    '<div class="tap">TAP TO PLAY</div>';
+  stage.appendChild(c);
+  cards.push(c);
+  var d = document.createElement("span");
+  document.getElementById("dots").appendChild(d);
+  dots.push(d);
+});
+
+function layout() {
+  var h = stage.clientHeight || (window.innerHeight * 0.55);
+  cardW = Math.max(110, Math.round(Math.min(window.innerWidth * 0.5, h * 0.66, 240)));
+  cardH = Math.round(cardW * 1.38);
+  radius = cardW * 0.8;
+  cards.forEach(function (c) {
+    c.style.width = cardW + "px";
+    c.style.height = cardH + "px";
+    c.style.marginLeft = (-cardW / 2) + "px";
+    c.style.marginTop = (-cardH / 2) + "px";
+    c.style.setProperty("--cw", cardW + "px");
+  });
+}
+
+function activeIndex() { return ((Math.round(target) % N) + N) % N; }
+
+/* Draw every card at its place on the cylinder */
+function drawCards() {
+  var a = activeIndex();
+  for (var i = 0; i < N; i++) {
+    var rel = i - pos;
+    rel = ((rel % N) + N) % N;
+    if (rel > N / 2) rel -= N;
+    var ang = rel * STEP, th = ang * Math.PI / 180;
+    var x = Math.sin(th) * radius;
+    var depth = Math.cos(th);                         // 1 = front, -1 = back
+    var s = 0.62 + 0.38 * (depth + 1) / 2;
+    if (launching && i === a) s *= 1 + launchT * 0.6;
+    var o = depth >= 0 ? 0.45 + 0.55 * depth * depth : Math.max(0, 0.45 + 1.3 * depth);
+    var c = cards[i];
+    c.style.transform = "translateX(" + x.toFixed(1) + "px) scale(" + s.toFixed(3) + ") perspective(900px) rotateY(" + (ang * 0.55).toFixed(1) + "deg)";
+    c.style.opacity = o.toFixed(3);
+    c.style.zIndex = Math.round((depth + 1) * 50);
+    c.style.visibility = o < 0.02 ? "hidden" : "visible";
+  }
+}
+
+var shownIndex = -1;
+function updateInfo() {
+  var a = activeIndex(), g = GAMES[a];
+  if (shownIndex !== -1 && shownIndex !== a) { blip(520, 0.07, 0.06, "triangle"); buzz(8); }
+  shownIndex = a;
+  cards.forEach(function (c, i) {
+    var on = i === a, col = GAMES[i].color;
+    c.className = on ? "card active" : "card";
+    c.style.borderColor = rgba(col, on ? 1 : 0.4);
+    c.style.boxShadow = on ? "0 0 34px " + rgba(col, 0.55) + ", inset 0 0 22px " + rgba(col, 0.22) : "0 10px 30px rgba(0,0,0,0.6)";
+  });
+  dots.forEach(function (d, i) {
+    d.className = i === a ? "on" : "";
+    d.style.background = i === a ? g.color : "";
+  });
+  var nm = document.getElementById("gameName");
+  nm.textContent = g.name; nm.style.color = g.color;
+  document.getElementById("gameDesc").textContent = g.desc;
+}
+
+function goTo(i) {
+  var diff = i - activeIndex();
+  if (diff > N / 2) diff -= N;
+  if (diff < -N / 2) diff += N;
+  target = Math.round(target) + diff;
+  updateInfo();
+}
+
+function openGame() {
+  if (launching) return;
+  launching = true; launchT = 0;
+  var a = activeIndex();
+  setStore("localStorage", "gz_last", a);
+  blip(300, 0.35, 0.12, "sawtooth");
+  buzz(30);
+  fadeOutMusic(400);                       // hub music stops when a game starts
+  document.body.className += " leaving";
+  setTimeout(function () { location.href = GAMES[a].href; }, 450);
+}
+
+/* ===================== SWIPE / TAP ===================== */
+var pressing = false, dragging = false, startX = 0, startPos = 0, lastX = 0, lastT = 0, vel = 0, pressedCard = null;
+var PX_PER_CARD = 170;   // finger distance to move one card
+
+function down(x, t) {
+  lastInteract = Date.now();
+  pressing = true; dragging = false;
+  startX = lastX = x; startPos = pos; lastT = Date.now(); vel = 0;
+  pressedCard = t && t.closest ? t.closest(".card") : null;
+}
+function moveTo(x) {
+  if (!pressing) return;
+  var now = Date.now();
+  vel = (x - lastX) / Math.max(1, now - lastT);
+  lastX = x; lastT = now;
+  var dx = x - startX;
+  if (!dragging && Math.abs(dx) > 8) dragging = true;
+  if (dragging) pos = startPos - dx / PX_PER_CARD;
+}
+function up() {
+  if (!pressing) return;
+  pressing = false;
+  lastInteract = Date.now();
+  if (dragging) {
+    var flick = Math.max(-0.8, Math.min(0.8, vel * 0.3));
+    target = Math.round(pos - flick);
+    updateInfo();
+  } else if (pressedCard && Date.now() - enteredAt > 500) {
+    var i = Number(pressedCard.getAttribute("data-i"));
+    if (i === activeIndex()) openGame(); else goTo(i);
+  }
+  dragging = false;
+  pressedCard = null;
+}
+stage.addEventListener("touchstart", function (e) { down(e.touches[0].clientX, e.target); }, { passive: true });
+stage.addEventListener("touchmove",  function (e) { moveTo(e.touches[0].clientX); }, { passive: true });
+stage.addEventListener("touchend", up);
+stage.addEventListener("touchcancel", up);
+stage.addEventListener("mousedown", function (e) { down(e.clientX, e.target); });
+window.addEventListener("mousemove", function (e) { moveTo(e.clientX); });
+window.addEventListener("mouseup", up);
+window.addEventListener("keydown", function (e) {
+  if (splashOpen) { enter(); return; }
+  lastInteract = Date.now();
+  if (e.key === "ArrowLeft")  { target = Math.round(target) - 1; updateInfo(); }
+  if (e.key === "ArrowRight") { target = Math.round(target) + 1; updateInfo(); }
+  if (e.key === "Enter") openGame();
+});
+
+/* Show mode: nobody touches for 10 s → cards turn by themselves */
+setInterval(function () {
+  if (!splashOpen && !pressing && !launching && Date.now() - lastInteract > 10000) {
+    target = Math.round(target) + 1;
+    shownIndex = activeIndex();
+    updateInfo();
+  }
+}, 3500);
+
+/* ===================== VIDEO ===================== */
+var video = document.getElementById("bgVideo");
+function startVideo() {
+  video.muted = true;
+  if (video.paused) { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+}
+startVideo();
+video.addEventListener("loadeddata", startVideo);
+document.getElementById("bgSource").addEventListener("error", function () {
+  document.getElementById("videoMsg").style.display = "block";
+});
+
+/* ===================== SPLASH ===================== */
+var splash = document.getElementById("splash");
+var splashOpen = true, enteredAt = 0;
+function enter() {
+  if (!splashOpen) return;
+  splashOpen = false;
+  enteredAt = Date.now();
+  splash.className = "gone";
+  setTimeout(function () { splash.style.display = "none"; }, 550);   // fully removed after fading
+  setStore("sessionStorage", "gz_entered", "1");
+  lastInteract = Date.now();
+  startVideo();
+  startMusic();
+  blip(440, 0.25, 0.1, "triangle");
+  setTimeout(function () { blip(660, 0.3, 0.08, "triangle"); }, 120);
+}
+splash.addEventListener("click", enter);
+splash.addEventListener("touchend", function (e) { e.preventDefault(); enter(); });
+if (getStore("sessionStorage", "gz_entered")) { splashOpen = false; splash.style.display = "none"; }
+
+document.addEventListener("touchstart", function () { startVideo(); if (!splashOpen && music.paused) startMusic(); }, { passive: true });
+document.addEventListener("click", function () { startVideo(); if (!splashOpen && music.paused) startMusic(); });
+window.addEventListener("pageshow", function () {
+  launching = false; launchT = 0;
+  document.body.className = document.body.className.replace(/\s*leaving/g, "");
+  startVideo();
+  if (!splashOpen) startMusic();
+});
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) music.pause();
+  else { startVideo(); if (!splashOpen) startMusic(); }
+});
+
+/* ===================== SPARKS ===================== */
+var cv = document.getElementById("sparks"), cx = cv.getContext("2d"), parts = [];
+function sizeSparks() {
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+for (var k = 0; k < 30; k++) {
+  parts.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+               r: 0.6 + Math.random() * 1.8, s: 0.15 + Math.random() * 0.45,
+               c: Math.random() < 0.5 ? "0,240,255" : "255,45,138", a: Math.random() * 6.28 });
+}
+function drawSparks() {
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+    p.y -= p.s; p.a += 0.02; p.x += Math.sin(p.a) * 0.3;
+    if (p.y < -10) { p.y = innerHeight + 10; p.x = Math.random() * innerWidth; }
+    cx.beginPath();
+    cx.fillStyle = "rgba(" + p.c + "," + (0.35 + Math.sin(p.a) * 0.25) + ")";
+    cx.arc(p.x, p.y, p.r, 0, 6.2832);
+    cx.fill();
+  }
+}
+
+/* ===================== MAIN LOOP ===================== */
+function loop() {
+  if (!dragging) {
+    pos += (target - pos) * 0.14;                 // smooth glide to the chosen card
+    if (Math.abs(target - pos) < 0.001) pos = target;
+  }
+  if (launching) launchT = Math.min(1, launchT + 0.05);
+  drawCards();
+  if (!document.hidden) drawSparks();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener("resize", function () { layout(); sizeSparks(); });
+layout();
+sizeSparks();
+updateInfo();
+loop();
+</script>
+</body>
+</html>
