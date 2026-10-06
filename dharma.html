@@ -4,289 +4,943 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dharma Quiz - धर्म प्रश्नोत्तरी</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Yatra+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Yatra+One&family=Mukta:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; user-select: none; }
+        :root {
+            --bg: #0c0604; --panel: #1a0c05; --panel2: #2a140a;
+            --gold: #ffcf3f; --gold2: #e3b55c; --saffron: #ff8a1f;
+            --text: #f5e9dc; --muted: #b89a80; --line: #6b3818;
+            --ok: #2fbf4a; --bad: #e0303f; --lock: #ff8a1f;
+        }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; min-height: 100vh; background: var(--bg); }
         body {
-            margin: 0; min-height: 100vh; background: radial-gradient(circle at center, #1b0e07 0%, #080402 100%);
-            color: #f2e6dc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px;
+            color: var(--text); font-family: 'Mukta', 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; padding: 12px 16px 24px;
+            overflow-x: hidden;
         }
 
-        .header {
-            width: 100%; max-width: 520px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        /* ---------- Background: rotating mandala + floating diya sparks ---------- */
+        .bg-glow {
+            position: fixed; inset: 0; z-index: -3;
+            background: radial-gradient(ellipse at 50% 30%, #3a1a08 0%, #160904 45%, #070302 100%);
         }
-        .back-btn {
-            color: #ffcf3f; background: rgba(30, 15, 8, 0.8); border: 1px solid #5a2e14;
-            padding: 8px 14px; border-radius: 10px; text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 11px;
+        .mandala {
+            position: fixed; z-index: -2; width: 140vmax; height: 140vmax; left: 50%; top: 35%;
+            transform: translate(-50%, -50%); opacity: .09; pointer-events: none;
+            background:
+                repeating-conic-gradient(from 0deg, var(--gold) 0deg 2deg, transparent 2deg 15deg),
+                radial-gradient(circle, transparent 20%, var(--gold) 20.3%, transparent 20.8%,
+                    transparent 32%, var(--gold) 32.3%, transparent 32.8%,
+                    transparent 46%, var(--gold) 46.3%, transparent 46.8%);
+            -webkit-mask: radial-gradient(circle, #000 0%, transparent 60%);
+                    mask: radial-gradient(circle, #000 0%, transparent 60%);
+            animation: spin 120s linear infinite;
+        }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+        .spark {
+            position: fixed; bottom: -10px; width: 4px; height: 4px; border-radius: 50%; z-index: -1;
+            background: var(--gold); box-shadow: 0 0 8px 2px var(--saffron); opacity: 0;
+            animation: rise linear infinite; pointer-events: none;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: .8; }
+            100% { transform: translateY(-105vh) translateX(var(--drift)); opacity: 0; }
         }
 
+        /* ---------- Header ---------- */
+        .header { width: 100%; max-width: 560px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+        .back-btn, .icon-btn {
+            color: var(--gold); background: rgba(30, 15, 8, .85); border: 1px solid var(--line);
+            padding: 8px 12px; border-radius: 10px; text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 11px; cursor: pointer;
+        }
+        .icon-btn { font-size: 16px; padding: 5px 10px; font-family: inherit; }
+        .title {
+            font-family: 'Yatra One', serif; margin: 0; font-size: 1.35rem; text-align: center;
+            background: linear-gradient(90deg, #e3b55c, #fff3c4, #ffcf3f, #e3b55c); background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: shine 4s linear infinite;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* ---------- Ladder ---------- */
+        .ladder { width: 100%; max-width: 560px; display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; margin-bottom: 12px; }
+        .rung {
+            height: 26px; border-radius: 6px; background: #1d0e06; border: 1px solid #3d1f0d;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--muted); position: relative;
+            transition: all .3s;
+        }
+        .rung.mile { border-color: var(--gold2); color: var(--gold); }
+        .rung.mile::after { content: '★'; position: absolute; top: -9px; font-size: 9px; color: var(--gold); }
+        .rung.done { background: linear-gradient(180deg, #6b4a10, #3d2a08); color: #fff3c4; border-color: var(--gold2); }
+        .rung.now { background: var(--saffron); color: #1a0c05; border-color: #fff3c4; transform: scale(1.12); box-shadow: 0 0 12px var(--saffron); animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse { 50% { box-shadow: 0 0 22px var(--gold); } }
+
+        /* ---------- Card ---------- */
         .quiz-card {
-            width: 100%; max-width: 520px; background: rgba(22, 12, 6, 0.92);
-            border: 2px solid #8a4822; border-radius: 20px; padding: 20px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.9); position: relative;
+            width: 100%; max-width: 560px; background: rgba(22, 11, 5, .9);
+            border: 1.5px solid var(--line); border-radius: 20px; padding: 16px;
+            box-shadow: 0 15px 40px rgba(0,0,0,.85), inset 0 0 40px rgba(255,138,31,.05); position: relative;
         }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .q-count { font-family: 'Orbitron', sans-serif; color: var(--gold); font-size: 13px; letter-spacing: 1px; }
+        .tier { font-size: 12px; color: var(--muted); }
 
-        .quiz-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-            border-bottom: 1px solid #422210; padding-bottom: 10px;
-        }
-        .q-count { font-family: 'Orbitron', sans-serif; color: #ffcf3f; font-size: 14px; }
-        .timer-badge { font-family: 'Orbitron', sans-serif; color: #ff4757; font-size: 16px; font-weight: 900; }
+        /* Timer ring */
+        .timer { position: relative; width: 54px; height: 54px; }
+        .timer svg { transform: rotate(-90deg); }
+        .timer .track { stroke: #2d180d; }
+        .timer .bar { stroke: var(--gold); transition: stroke-dashoffset 1s linear, stroke .3s; }
+        .timer span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron'; font-size: 15px; color: var(--gold); }
+        .timer.low .bar { stroke: var(--bad); }
+        .timer.low span { color: var(--bad); animation: beat .5s ease-in-out infinite; }
+        .timer.paused { opacity: .5; }
+        @keyframes beat { 50% { transform: scale(1.18); } }
 
         /* Lifelines */
-        .lifelines { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; }
-        .life-btn {
-            background: #2d180d; border: 1.5px solid #8a4822; color: #ffcf3f;
-            padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s;
+        .lifelines { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .life {
+            display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; cursor: pointer;
+            color: var(--muted); font-family: inherit; font-size: 11px; padding: 0; width: 64px; transition: opacity .5s, transform .5s;
         }
-        .life-btn:disabled { opacity: 0.35; cursor: not-allowed; border-color: #333; }
-
-        .question-text {
-            font-family: 'Yatra One', serif; font-size: 1.25rem; color: #fff;
-            margin-bottom: 20px; line-height: 1.5; min-height: 65px;
+        .life .orb {
+            width: 50px; height: 50px; border-radius: 50%; position: relative;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--gold);
+            background: radial-gradient(circle at 35% 30%, #4a2610, #1c0e06); border: 2px solid var(--gold2);
+            box-shadow: 0 0 10px rgba(255,207,63,.25); transition: transform .2s, box-shadow .2s;
         }
-
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .opt-btn {
-            background: #1c0e07; border: 1.5px solid #5a2e14; color: #f5deb3;
-            padding: 12px 16px; border-radius: 12px; text-align: left; font-size: 15px;
-            cursor: pointer; transition: all 0.2s;
+        .life:hover:not(:disabled) .orb { transform: translateY(-3px); box-shadow: 0 0 18px rgba(255,207,63,.6); }
+        .life:disabled { cursor: not-allowed; }
+        .life.used .orb { filter: grayscale(1); opacity: .45; }
+        .life.used .orb::after {
+            content: ''; position: absolute; inset: 6px;
+            background: linear-gradient(45deg, transparent 46%, var(--bad) 46%, var(--bad) 54%, transparent 54%),
+                        linear-gradient(-45deg, transparent 46%, var(--bad) 46%, var(--bad) 54%, transparent 54%);
         }
-        .opt-btn:hover:not(:disabled) { background: #3a1e0f; border-color: #ffcf3f; }
-        .opt-btn.correct { background: #1b4d24 !important; border-color: #8aff3c !important; color: #fff; }
-        .opt-btn.wrong { background: #521313 !important; border-color: #ff4757 !important; color: #fff; }
+        .life.gone { opacity: 0; transform: scale(.3); pointer-events: none; width: 0; margin: 0 -5px; overflow: hidden; }
+        .life-note { text-align: center; font-size: 11px; color: var(--muted); margin: -6px 0 10px; min-height: 14px; }
 
-        /* Audience Poll Bar */
-        .poll-box { margin-top: 15px; background: #120804; padding: 10px; border-radius: 10px; display: none; }
-        .poll-bar { height: 10px; background: #3a1e0f; border-radius: 5px; margin-top: 4px; overflow: hidden; }
-        .poll-fill { height: 100%; background: #ffcf3f; width: 0%; transition: width 0.4s; }
-
-        .overlay {
-            position: absolute; inset: 0; background: rgba(10, 5, 2, 0.95);
-            border-radius: 18px; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; text-align: center; padding: 25px; z-index: 20;
+        /* Question + options (KBC lozenge shape) */
+        .lozenge { clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%); }
+        .q-frame { background: linear-gradient(90deg, var(--gold2), #fff3c4, var(--gold2)); padding: 2px; margin-bottom: 16px; }
+        .q-inner {
+            background: linear-gradient(180deg, #2c1508, #160903); padding: 18px 9%; min-height: 86px;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            font-family: 'Yatra One', serif; font-size: 1.2rem; line-height: 1.5; color: #fff;
         }
-        .overlay.hidden { display: none; }
+        .enter { animation: enter .45s ease-out both; }
+        @keyframes enter { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+        @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+        .opt {
+            background: var(--line); padding: 2px; border: 0; cursor: pointer; font-family: inherit; transition: transform .15s, background .2s;
+        }
+        .opt .in {
+            display: flex; align-items: center; gap: 8px; padding: 11px 9%; min-height: 48px;
+            background: #1a0c05; color: var(--text); font-size: 15px; text-align: left; transition: background .2s;
+        }
+        .opt .key { font-family: 'Orbitron'; color: var(--saffron); font-size: 12px; }
+        .opt:hover:not(:disabled):not(.sel) { background: var(--gold); transform: scale(1.02); }
+        .opt:hover:not(:disabled):not(.sel) .in { background: #2f170a; }
+        .opt:disabled { cursor: default; }
+        .opt.hidden { visibility: hidden; }
+        .opt.sel, .opt.locked { background: #fff3c4; }
+        .opt.sel .in, .opt.locked .in { background: linear-gradient(180deg, #ffa53d, #e06d0a); color: #1a0c05; }
+        .opt.sel .key, .opt.locked .key { color: #1a0c05; }
+        .opt.locked { animation: lockGlow 1s ease-in-out infinite; }
+        @keyframes lockGlow { 50% { filter: drop-shadow(0 0 10px var(--saffron)); } }
+        .opt.correct { background: #c8ffd0; animation: blink .35s step-end 5; }
+        .opt.correct .in { background: linear-gradient(180deg, #3ad25a, #1a8a33); color: #fff; }
+        .opt.correct .key { color: #fff; }
+        .opt.wrong { background: #ffc8cc; animation: shake .45s; }
+        .opt.wrong .in { background: linear-gradient(180deg, #e8434f, #9a1520); color: #fff; }
+        .opt.wrong .key { color: #fff; }
+        @keyframes blink { 50% { filter: brightness(1.6); } }
+        @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+        .opt.stagger { animation: enter .4s ease-out both; }
+
+        .lock-btn {
+            display: block; margin: 14px auto 0; border: 0; border-radius: 30px; padding: 12px 34px; cursor: pointer;
+            background: linear-gradient(180deg, #ffd65c, #e39a10); color: #1a0c05; font-family: 'Mukta'; font-weight: 700; font-size: 16px;
+            box-shadow: 0 6px 18px rgba(255,138,31,.4); visibility: hidden; transform: scale(.8); opacity: 0; transition: all .2s;
+        }
+        .lock-btn.show { visibility: visible; transform: scale(1); opacity: 1; }
+
+        /* ---------- Suspense ---------- */
+        .card-dim { position: absolute; inset: 0; border-radius: 20px; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 2; }
+        .suspense .card-dim { opacity: 1; }
+        .suspense .opt.locked { position: relative; z-index: 3; }
+        .suspense-ui {
+            position: absolute; left: 0; right: 0; top: 10px; z-index: 4; text-align: center; pointer-events: none;
+            opacity: 0; transition: opacity .4s;
+        }
+        .suspense .suspense-ui { opacity: 1; }
+        .suspense-ui .say { font-family: 'Yatra One'; font-size: 1.4rem; color: var(--gold); text-shadow: 0 0 14px var(--saffron); }
+        .heart { font-size: 34px; display: inline-block; animation: heart .75s ease-in-out infinite; }
+        @keyframes heart { 0%,100% { transform: scale(1); } 15% { transform: scale(1.3); } 30% { transform: scale(1); } 45% { transform: scale(1.2); } }
+        .s-bar { width: 70%; height: 6px; margin: 8px auto 0; border-radius: 3px; background: #3a1e0f; overflow: hidden; }
+        .s-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--bad), var(--gold)); transform-origin: left; }
+        .shake-screen { animation: screenShake .12s linear infinite; }
+        @keyframes screenShake { 25% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, 1px); } }
+
+        /* ---------- Overlays / modals ---------- */
+        .screen {
+            position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 24px 16px; background: radial-gradient(circle at 50% 40%, rgba(58,26,8,.97), rgba(5,2,1,.98));
+            transition: opacity .5s;
+        }
+        .screen.hide { opacity: 0; pointer-events: none; }
+        .rays {
+            position: absolute; inset: -50%; pointer-events: none; opacity: .25;
+            background: repeating-conic-gradient(from 0deg, rgba(255,207,63,.5) 0deg 6deg, transparent 6deg 18deg);
+            -webkit-mask: radial-gradient(circle, #000 0%, transparent 55%); mask: radial-gradient(circle, #000 0%, transparent 55%);
+            animation: spinRays 30s linear infinite;
+        }
+        @keyframes spinRays { to { transform: rotate(360deg); } }
+        .om {
+            font-size: 84px; line-height: 1; color: var(--gold); position: relative;
+            text-shadow: 0 0 30px var(--saffron), 0 0 60px rgba(255,138,31,.5); animation: omIn 1.4s cubic-bezier(.2,.9,.3,1.3) both;
+        }
+        @keyframes omIn { from { transform: scale(0) rotate(-180deg); opacity: 0; } }
+        .welcome { font-size: 15px; letter-spacing: 3px; color: var(--muted); margin-top: 14px; animation: enter .6s .7s both; position: relative; }
+        .big-title {
+            font-family: 'Yatra One'; font-size: clamp(2.2rem, 9vw, 3.4rem); margin: 4px 0 8px; position: relative;
+            background: linear-gradient(90deg, #e3b55c, #fff3c4, #ffcf3f, #e3b55c); background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: enter .7s 1s both, shine 4s linear infinite;
+        }
+        .tagline { max-width: 420px; color: var(--text); font-size: 15px; line-height: 1.6; animation: enter .6s 1.3s both; position: relative; }
+        .rules { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13px; color: var(--muted); line-height: 1.8; animation: enter .6s 1.5s both; position: relative; }
         .start-btn {
-            background: #ffcf3f; border: none; border-radius: 12px; padding: 14px 32px;
-            color: #0b0f15; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 15px;
-            cursor: pointer; margin-top: 15px;
+            position: relative; margin-top: 22px; border: 0; border-radius: 40px; padding: 15px 44px; cursor: pointer;
+            background: linear-gradient(180deg, #ffd65c, #e39a10); color: #1a0c05; font-family: 'Mukta'; font-weight: 700; font-size: 18px;
+            box-shadow: 0 0 0 0 rgba(255,207,63,.6); animation: enter .6s 1.7s both, ring 2s 2.3s infinite;
+        }
+        .ghost-btn { position: relative; margin-top: 10px; background: none; border: 1px solid var(--line); color: var(--gold); border-radius: 30px; padding: 10px 26px; font-family: 'Mukta'; font-size: 14px; text-decoration: none; }
+        @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(255,207,63,.6); } 100% { box-shadow: 0 0 0 22px rgba(255,207,63,0); } }
+        .tap-hint { position: relative; margin-top: 12px; font-size: 12px; color: var(--gold); opacity: .8; animation: beat 1.2s infinite; }
+        .tap-hint.hide { display: none; }
+
+        .modal-wrap { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .modal-wrap.hide { display: none; }
+        .modal {
+            width: 100%; max-width: 380px; background: linear-gradient(180deg, #2a140a, #140904); border: 1.5px solid var(--gold2);
+            border-radius: 18px; padding: 20px; text-align: center; animation: enter .3s ease-out both; box-shadow: 0 0 40px rgba(255,138,31,.25);
+        }
+        .modal h3 { font-family: 'Yatra One'; color: var(--gold); margin: 0 0 12px; font-weight: 400; }
+        .modal .ok { margin-top: 16px; border: 0; border-radius: 24px; padding: 10px 30px; background: var(--gold); color: #1a0c05; font-weight: 700; font-family: 'Mukta'; font-size: 15px; cursor: pointer; }
+        .modal .ok:disabled { opacity: .35; }
+        .poll { display: flex; justify-content: center; align-items: flex-end; gap: 14px; height: 170px; margin-top: 8px; }
+        .poll .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 46px; }
+        .poll .pct { font-family: 'Orbitron'; font-size: 12px; color: var(--gold); margin-bottom: 4px; min-height: 14px; }
+        .poll .bar { width: 100%; height: 0%; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--gold), var(--saffron)); transition: height 1.6s cubic-bezier(.2,.8,.2,1); }
+        .poll .lbl { font-family: 'Orbitron'; font-size: 13px; color: var(--text); margin-top: 6px; }
+        .phone { font-size: 48px; display: inline-block; animation: ringPhone .6s ease-in-out infinite; }
+        @keyframes ringPhone { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+        .friend-msg { font-size: 16px; line-height: 1.6; min-height: 52px; margin-top: 10px; }
+        .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
+        @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+        .toast {
+            position: fixed; top: 18%; left: 50%; transform: translate(-50%, -20px) scale(.9); z-index: 45; opacity: 0; pointer-events: none;
+            background: linear-gradient(180deg, #ffd65c, #e39a10); color: #1a0c05; padding: 14px 26px; border-radius: 16px; text-align: center;
+            font-family: 'Yatra One'; font-size: 1.2rem; box-shadow: 0 10px 40px rgba(255,138,31,.5); transition: all .4s cubic-bezier(.2,.9,.3,1.3);
+        }
+        .toast small { display: block; font-family: 'Mukta'; font-size: 13px; }
+        .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+        .result-icon { font-size: 70px; position: relative; animation: omIn 1s both; }
+        .result-title { font-family: 'Yatra One'; font-size: 2rem; color: var(--gold); margin: 6px 0; position: relative; }
+        .result-text { position: relative; font-size: 15px; line-height: 1.7; max-width: 400px; }
+        .result-text b { color: var(--gold); }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; position: relative; }
+        #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
         }
     </style>
 </head>
 <body>
+    <div class="bg-glow"></div>
+    <div class="mandala"></div>
 
     <div class="header">
-        <a href="index.html" class="back-btn">&l166; ARCADE</a>
-        <h2 style="font-family:'Yatra One'; margin:0; color:#ffcf3f;">धर्म प्रश्नोत्तरी</h2>
-        <div style="width:60px;"></div>
+        <a href="index.html" class="back-btn">&larr; ARCADE</a>
+        <h2 class="title">धर्म प्रश्नोत्तरी</h2>
+        <button class="icon-btn" id="muteBtn" title="ध्वनि">🔊</button>
     </div>
 
-    <div class="quiz-card">
-        <div class="quiz-header">
-            <span class="q-count" id="qCount">प्रश्न 1/15</span>
-            <span class="timer-badge" id="timer">⏱️ 60s</span>
+    <div class="ladder" id="ladder"></div>
+
+    <div class="quiz-card" id="card">
+        <div class="card-dim"></div>
+        <div class="suspense-ui">
+            <div class="heart">💓</div>
+            <div class="say">और सही उत्तर है...</div>
+            <div class="s-bar"><i id="sBar"></i></div>
+        </div>
+
+        <div class="top-row">
+            <div>
+                <div class="q-count" id="qCount">प्रश्न 1/15</div>
+                <div class="tier" id="tier">आसान</div>
+            </div>
+            <div class="timer" id="timer">
+                <svg width="54" height="54"><circle class="track" cx="27" cy="27" r="23" fill="none" stroke-width="4"/><circle class="bar" id="timerBar" cx="27" cy="27" r="23" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="0"/></svg>
+                <span id="timerNum">30</span>
+            </div>
         </div>
 
         <div class="lifelines">
-            <button class="life-btn" id="life50" onclick="use5050()">50:50</button>
-            <button class="life-btn" id="lifeFriend" onclick="useCallFriend()">📞 मित्र परामर्श</button>
-            <button class="life-btn" id="lifeAudience" onclick="useAudiencePoll()">📊 जनमत पोल</button>
+            <button class="life" id="life50"><span class="orb">50:50</span>50:50</button>
+            <button class="life" id="lifeFlip"><span class="orb">🔄</span>प्रश्न बदलें</button>
+            <button class="life" id="lifeAud"><span class="orb">📊</span>जनमत</button>
+            <button class="life" id="lifeFriend"><span class="orb">📞</span>मित्र</button>
         </div>
+        <div class="life-note" id="lifeNote"></div>
 
-        <div class="question-text" id="question">प्रश्न यहाँ लोड होगा...</div>
+        <div class="q-frame lozenge"><div class="q-inner lozenge" id="question"></div></div>
 
-        <div class="options-grid" id="options">
-            <button class="opt-btn" onclick="checkAnswer(0)"></button>
-            <button class="opt-btn" onclick="checkAnswer(1)"></button>
-            <button class="opt-btn" onclick="checkAnswer(2)"></button>
-            <button class="opt-btn" onclick="checkAnswer(3)"></button>
-        </div>
-
-        <div class="poll-box" id="pollBox">
-            <small style="color:#ffcf3f;">जनमत सर्वेक्षण परिणाम:</small>
-            <div id="pollResults"></div>
-        </div>
-
-        <div class="overlay" id="overlay">
-            <h1 style="font-family:'Yatra One'; color:#ffcf3f; margin-bottom:10px;">धर्म प्रश्नोत्तरी</h1>
-            <p id="overlayMsg">15 प्रश्नों के उत्तर दें। सनातन संस्कृति, रामायण और महाभारत पर आधारित ज्ञान की परीक्षा।</p>
-            <button class="start-btn" onclick="startQuiz()">प्रारंभ करें</button>
-        </div>
+        <div class="options" id="options"></div>
+        <button class="lock-btn" id="lockBtn">🔒 उत्तर लॉक करें</button>
     </div>
 
+    <!-- Welcome banner -->
+    <div class="screen" id="intro">
+        <div class="rays"></div>
+        <div class="om">ॐ</div>
+        <div class="welcome">आपका स्वागत है</div>
+        <div class="big-title">धर्म प्रश्नोत्तरी</div>
+        <div class="tagline">रामायण, महाभारत और सनातन संस्कृति पर आधारित 15 प्रश्न। सभी का सही उत्तर दें और बनें <b style="color:var(--gold)">धर्म ज्ञानी</b>!</div>
+        <ul class="rules">
+            <li>❌ एक भी गलत उत्तर — खेल समाप्त</li>
+            <li>📊📞 जनमत व मित्र केवल प्रश्न 7 तक, और हर प्रश्न के साथ कम भरोसेमंद</li>
+            <li>💓 प्रश्न 10 से हर उत्तर पर सस्पेंस</li>
+        </ul>
+        <button class="start-btn" id="startBtn">▶ खेल शुरू करें</button>
+        <div class="tap-hint hide" id="tapHint">🔊 संगीत के लिए स्क्रीन पर टैप करें</div>
+    </div>
+
+    <!-- End screen -->
+    <div class="screen hide" id="endScreen">
+        <div class="rays"></div>
+        <div class="result-icon" id="endIcon">🏆</div>
+        <div class="result-title" id="endTitle"></div>
+        <div class="result-text" id="endText"></div>
+        <div class="btn-row">
+            <button class="start-btn" style="animation:none" id="againBtn">↻ फिर से खेलें</button>
+        </div>
+        <a href="index.html" class="ghost-btn">आर्केड पर लौटें</a>
+    </div>
+
+    <!-- Lifeline modal -->
+    <div class="modal-wrap hide" id="modalWrap"><div class="modal" id="modal"></div></div>
+
+    <div class="toast" id="toast"></div>
+    <canvas id="confetti"></canvas>
+
     <script>
-        // Comprehensive 150 Question Pool
-        const allQuestions = [
-            // Easy
-            { q: "श्रीराम जी के पिता का क्या नाम था?", opts: ["दशरथ", "जनक", "कंस", "पांडु"], a: 0, lvl: 1 },
-            { q: "महाभारत के रचयिता कौन हैं?", opts: ["महर्षि वाल्मीकि", "महर्षि वेदव्यास", "तुलसीदास", "कालिदास"], a: 1, lvl: 1 },
-            { q: "भगवान कृष्ण का जन्म कहाँ हुआ था?", opts: ["अयोध्या", "मथुरा", "काशी", "हरिद्वार"], a: 1, lvl: 1 },
-            { q: "रामायण किस भाषा में मूल रूप से लिखी गई थी?", opts: ["हिंदी", "संस्कृत", "पाली", "प्राकृत"], a: 1, lvl: 1 },
-            { q: "सूर्य पुत्र किसे कहा जाता है?", opts: ["अर्जुन", "कर्ण", "भीम", "नकुल"], a: 1, lvl: 1 },
-            { q: "हनुमान जी के माता का क्या नाम था?", opts: ["अंजना", "कैकई", "सुमित्रा", "कुंती"], a: 0, lvl: 1 },
-            { q: "शिव जी के धनुष का क्या नाम था?", opts: ["गांडीव", "पिनाक", "सारंग", "विजय"], a: 1, lvl: 1 },
-            { q: "गंगा पुत्र किसे कहा जाता है?", opts: ["भीष्म", "द्रोण", "कृप", "कर्ण"], a: 0, lvl: 1 },
-            { q: "रावण कहाँ का राजा था?", opts: ["किष्किंधा", "लंका", "मिथिला", "अयोध्या"], a: 1, lvl: 1 },
-            { q: "अर्जुन के धनुष का नाम क्या था?", opts: ["पिनाक", "गांडीव", "कौमोदकी", "सुदर्शन"], a: 1, lvl: 1 },
-            
-            // Medium
-            { q: "भगवद्गीता में कुल कितने अध्याय हैं?", opts: ["12", "15", "18", "21"], a: 2, lvl: 2 },
-            { q: "श्रीराम के गुरु कौन थे जिन्होंने उन्हें अस्त्र-शस्त्र की शिक्षा दी?", opts: ["वशिष्ठ", "विश्वामित्र", "परशुराम", "सांदीपनि"], a: 1, lvl: 2 },
-            { q: "लक्ष्मण जी की पत्नी का नाम क्या था?", opts: ["उर्मिला", "मांडवी", "श्रुतकीर्ति", "सीता"], a: 0, lvl: 2 },
-            { q: "कौरवों के गुरु कौन थे?", opts: ["द्रोणाचार्य", "कृपाचार्य", "परशुराम", "व्यास"], a: 0, lvl: 2 },
-            { q: "गायत्री मंत्र किस वेद से लिया गया है?", opts: ["ऋग्वेद", "सामवेद", "यजुर्वेद", "अथर्ववेद"], a: 0, lvl: 2 },
-            { q: "हनुमान जी ने अशोक वाटिका में सीता जी को श्रीराम की कौन सी वस्तु दी थी?", opts: ["मुद्रिका (अंगूठी)", "चूड़ामणि", "धनुष", "वस्त्र"], a: 0, lvl: 2 },
-            { q: "चार धामों में से पूर्व में स्थित धाम कौन सा है?", opts: ["द्वारका", "बद्रीनाथ", "जगन्नाथ पुरी", "रामेश्वरम"], a: 2, lvl: 2 },
-            { q: "सुग्रीव के भाई का क्या नाम था?", opts: ["अंगद", "बाली", "नल", "नील"], a: 1, lvl: 2 },
+    /* =====================================================================
+       QUESTION BANK — first option is always the correct one (shuffled at runtime).
+       l = level 1 (easy) … 5 (hardest). Each game uses 3 questions per level.
+       ===================================================================== */
+    const BANK = [
+        // ----- Level 1 -----
+        { l: 1, q: "श्रीराम जी के पिता का क्या नाम था?", o: ["दशरथ", "जनक", "पांडु", "शांतनु"] },
+        { l: 1, q: "महाभारत की रचना किसने की?", o: ["महर्षि वेदव्यास", "महर्षि वाल्मीकि", "तुलसीदास", "कालिदास"] },
+        { l: 1, q: "भगवान श्रीकृष्ण का जन्म कहाँ हुआ था?", o: ["मथुरा", "अयोध्या", "काशी", "द्वारका"] },
+        { l: 1, q: "रावण कहाँ का राजा था?", o: ["लंका", "किष्किंधा", "मिथिला", "अयोध्या"] },
+        { l: 1, q: "हनुमान जी की माता का क्या नाम था?", o: ["अंजना", "कौशल्या", "सुमित्रा", "कुंती"] },
+        { l: 1, q: "वाल्मीकि रामायण मूल रूप से किस भाषा में लिखी गई थी?", o: ["संस्कृत", "हिंदी", "पाली", "अवधी"] },
+        { l: 1, q: "रामचरितमानस की रचना किसने की?", o: ["तुलसीदास", "सूरदास", "वाल्मीकि", "कबीरदास"] },
+        { l: 1, q: "पांडव कुल कितने भाई थे?", o: ["5", "3", "7", "100"] },
+        { l: 1, q: "भगवान गणेश का वाहन क्या है?", o: ["मूषक (चूहा)", "मोर", "हंस", "नंदी (बैल)"] },
+        { l: 1, q: "भगवान शिव का निवास स्थान कौन सा पर्वत माना जाता है?", o: ["कैलाश", "मंदराचल", "गोवर्धन", "विंध्याचल"] },
+        { l: 1, q: "श्रीकृष्ण कौन सा वाद्य यंत्र बजाते थे?", o: ["बांसुरी", "वीणा", "डमरू", "शंख"] },
+        { l: 1, q: "भगवान विष्णु का वाहन कौन है?", o: ["गरुड़", "नंदी", "मूषक", "सिंह"] },
+        { l: 1, q: "कुरुक्षेत्र युद्ध में श्रीकृष्ण किसके सारथी बने थे?", o: ["अर्जुन", "भीम", "युधिष्ठिर", "कर्ण"] },
+        { l: 1, q: "वनवास में श्रीराम के साथ उनका कौन सा भाई गया था?", o: ["लक्ष्मण", "भरत", "शत्रुघ्न", "विभीषण"] },
+        { l: 1, q: "देवी सरस्वती को किसकी देवी माना जाता है?", o: ["विद्या और ज्ञान", "धन", "शक्ति", "अन्न"] },
+        { l: 1, q: "कौरवों में सबसे बड़ा भाई कौन था?", o: ["दुर्योधन", "दुःशासन", "विकर्ण", "युयुत्सु"] },
+        { l: 1, q: "द्वारका नगरी किसकी राजधानी थी?", o: ["श्रीकृष्ण", "श्रीराम", "रावण", "युधिष्ठिर"] },
+        { l: 1, q: "लंका दहन किसने किया था?", o: ["हनुमान", "अंगद", "सुग्रीव", "जामवंत"] },
+        { l: 1, q: "श्रीकृष्ण ने किस पर्वत को अपनी उंगली पर उठाया था?", o: ["गोवर्धन", "मंदराचल", "कैलाश", "चित्रकूट"] },
 
-            // Hard & Extra Hard Mahabharat / Ramayan
-            { q: "कर्ण के कवच और कुंडल इंद्र देव ने किस छद्म रूप में माँगे थे?", opts: ["ब्राह्मण", "संन्यासी", "वृद्ध", "ऋषि"], a: 0, lvl: 3 },
-            { q: "रामायण में मेघनाद (इंद्रजीत) का वध किसने किया था?", opts: ["श्रीराम", "लक्ष्मण", "हनुमान", "सुग्रीव"], a: 1, lvl: 3 },
-            { q: "महाभारत युद्ध में कौरव सेना के अंतिम सेनापति कौन थे?", opts: ["अश्वत्थामा", "शल्य", "कर्ण", "भीष्म"], a: 0, lvl: 4 },
-            { q: "रावण के नाभि में अमृत होने का भेद श्रीराम को किसने बताया था?", opts: ["विभीषण", "जामवंत", "हनुमान", "अंगद"], a: 0, lvl: 4 }
-        ];
+        // ----- Level 2 -----
+        { l: 2, q: "श्रीमद्भगवद्गीता में कुल कितने अध्याय हैं?", o: ["18", "12", "15", "21"] },
+        { l: 2, q: "श्रीराम को कितने वर्षों का वनवास मिला था?", o: ["14", "12", "10", "7"] },
+        { l: 2, q: "लक्ष्मण जी की पत्नी का क्या नाम था?", o: ["उर्मिला", "मांडवी", "श्रुतकीर्ति", "तारा"] },
+        { l: 2, q: "सुग्रीव के बड़े भाई का क्या नाम था?", o: ["बाली", "अंगद", "नल", "नील"] },
+        { l: 2, q: "श्रीकृष्ण के बड़े भाई कौन थे?", o: ["बलराम", "उद्धव", "सुदामा", "अक्रूर"] },
+        { l: 2, q: "द्रौपदी के पिता का क्या नाम था?", o: ["द्रुपद", "विराट", "धृतराष्ट्र", "शल्य"] },
+        { l: 2, q: "महाभारत का युद्ध कितने दिनों तक चला?", o: ["18", "14", "21", "12"] },
+        { l: 2, q: "गोकुल में श्रीकृष्ण का पालन-पोषण करने वाले पिता कौन थे?", o: ["नंद", "वसुदेव", "उग्रसेन", "अक्रूर"] },
+        { l: 2, q: "कंस, श्रीकृष्ण का क्या लगता था?", o: ["मामा", "चाचा", "नाना", "ताऊ"] },
+        { l: 2, q: "सूर्यपुत्र किसे कहा जाता है?", o: ["कर्ण", "अर्जुन", "भीम", "नकुल"] },
+        { l: 2, q: "गंगापुत्र किसे कहा जाता है?", o: ["भीष्म", "द्रोणाचार्य", "कृपाचार्य", "विदुर"] },
+        { l: 2, q: "एकलव्य ने गुरु द्रोणाचार्य को गुरुदक्षिणा में क्या दिया?", o: ["दाहिने हाथ का अंगूठा", "अपना धनुष", "स्वर्ण मुद्राएँ", "अपना राज्य"] },
+        { l: 2, q: "भक्त प्रह्लाद की रक्षा के लिए भगवान विष्णु ने कौन सा अवतार लिया?", o: ["नरसिंह", "वराह", "वामन", "परशुराम"] },
+        { l: 2, q: "विषपान करने के कारण भगवान शिव किस नाम से जाने गए?", o: ["नीलकंठ", "महाकाल", "त्रिपुरारी", "पशुपति"] },
+        { l: 2, q: "लक्ष्मण जी के मूर्छित होने पर हनुमान जी कौन सी औषधि लाए थे?", o: ["संजीवनी बूटी", "तुलसी", "अश्वगंधा", "सोमरस"] },
+        { l: 2, q: "शबरी ने श्रीराम को प्रेम से क्या खिलाया था?", o: ["जूठे बेर", "आम", "केले", "माखन"] },
+        { l: 2, q: "ताड़का वध के लिए श्रीराम-लक्ष्मण को कौन से ऋषि अपने साथ ले गए थे?", o: ["विश्वामित्र", "वशिष्ठ", "अगस्त्य", "भारद्वाज"] },
+        { l: 2, q: "अर्जुन के धनुष का क्या नाम था?", o: ["गांडीव", "पिनाक", "शार्ङ्ग", "कोदंड"] },
+        { l: 2, q: "गायत्री मंत्र किस वेद से लिया गया है?", o: ["ऋग्वेद", "सामवेद", "यजुर्वेद", "अथर्ववेद"] },
 
-        // Fill pool to 150 programmatic variations for complete coverage
-        while(allQuestions.length < 150) {
-            const base = allQuestions[allQuestions.length % 20];
-            allQuestions.push({
-                q: `${base.q} (संस्कृत धर्म ग्रन्थ प्रश्न ${allQuestions.length + 1})`,
-                opts: base.opts,
-                a: base.a,
-                lvl: Math.min(4, Math.floor(allQuestions.length / 38) + 1)
-            });
+        // ----- Level 3 -----
+        { l: 3, q: "अशोक वाटिका में हनुमान जी ने सीता जी को श्रीराम की कौन सी निशानी दी थी?", o: ["मुद्रिका (अंगूठी)", "चूड़ामणि", "पीताम्बर", "धनुष"] },
+        { l: 3, q: "चार धामों में पूर्व दिशा में स्थित धाम कौन सा है?", o: ["जगन्नाथ पुरी", "द्वारका", "बद्रीनाथ", "रामेश्वरम"] },
+        { l: 3, q: "भगवान शिव के धनुष का क्या नाम है?", o: ["पिनाक", "गांडीव", "विजय", "कोदंड"] },
+        { l: 3, q: "अभिमन्यु किस व्यूह में फँसकर वीरगति को प्राप्त हुए?", o: ["चक्रव्यूह", "गरुड़व्यूह", "क्रौंचव्यूह", "मकरव्यूह"] },
+        { l: 3, q: "अभिमन्यु की माता कौन थीं?", o: ["सुभद्रा", "द्रौपदी", "उत्तरा", "उलूपी"] },
+        { l: 3, q: "रामायण में मेघनाद (इंद्रजीत) का वध किसने किया?", o: ["लक्ष्मण", "श्रीराम", "हनुमान", "अंगद"] },
+        { l: 3, q: "श्रीराम के कुलगुरु कौन थे?", o: ["वशिष्ठ", "विश्वामित्र", "परशुराम", "वाल्मीकि"] },
+        { l: 3, q: "रामसेतु के निर्माण में मुख्य भूमिका किन वानरों की थी?", o: ["नल और नील", "अंगद और सुग्रीव", "जामवंत और हनुमान", "केसरी और गवाक्ष"] },
+        { l: 3, q: "कुंभकर्ण कितने महीने सोता था?", o: ["6", "3", "9", "12"] },
+        { l: 3, q: "शकुनि किस राज्य का राजकुमार था?", o: ["गांधार", "मद्र", "पांचाल", "कैकेय"] },
+        { l: 3, q: "जरासंध का वध किसने किया?", o: ["भीम", "अर्जुन", "श्रीकृष्ण", "बलराम"] },
+        { l: 3, q: "समुद्र मंथन में मथनी के रूप में किस पर्वत का प्रयोग हुआ?", o: ["मंदराचल", "कैलाश", "हिमालय", "सुमेरु"] },
+        { l: 3, q: "समुद्र मंथन में रस्सी के रूप में किस नाग का प्रयोग हुआ?", o: ["वासुकि", "शेषनाग", "तक्षक", "कालिया"] },
+        { l: 3, q: "भगवान विष्णु के दशावतारों में पहला अवतार कौन सा है?", o: ["मत्स्य", "कूर्म", "वराह", "वामन"] },
+        { l: 3, q: "राजा दशरथ को पुत्र-वियोग का श्राप किसने दिया था?", o: ["श्रवण कुमार के माता-पिता", "ऋषि दुर्वासा", "ऋषि वशिष्ठ", "कैकेयी"] },
+        { l: 3, q: "श्रीकृष्ण के शंख का क्या नाम था?", o: ["पाञ्चजन्य", "देवदत्त", "पौण्ड्र", "अनंतविजय"] },
+        { l: 3, q: "श्रीकृष्ण और बलराम के गुरु कौन थे?", o: ["सांदीपनि", "द्रोणाचार्य", "वशिष्ठ", "परशुराम"] },
+        { l: 3, q: "श्रीराम और सुग्रीव की मित्रता किस पर्वत पर हुई?", o: ["ऋष्यमूक", "चित्रकूट", "प्रवर्षण", "मलय"] },
+        { l: 3, q: "शिशुपाल का वध श्रीकृष्ण ने किस अस्त्र से किया?", o: ["सुदर्शन चक्र", "कौमोदकी गदा", "ब्रह्मास्त्र", "नंदक तलवार"] },
+        { l: 3, q: "पांडवों ने अज्ञातवास किस राजा के यहाँ बिताया?", o: ["राजा विराट", "राजा द्रुपद", "राजा शल्य", "राजा जरासंध"] },
+
+        // ----- Level 4 -----
+        { l: 4, q: "अर्जुन के शंख का क्या नाम था?", o: ["देवदत्त", "पाञ्चजन्य", "पौण्ड्र", "सुघोष"] },
+        { l: 4, q: "भीम के शंख का क्या नाम था?", o: ["पौण्ड्र", "देवदत्त", "मणिपुष्पक", "अनंतविजय"] },
+        { l: 4, q: "युधिष्ठिर के शंख का क्या नाम था?", o: ["अनंतविजय", "सुघोष", "मणिपुष्पक", "पौण्ड्र"] },
+        { l: 4, q: "कर्ण के कवच-कुंडल माँगने इंद्रदेव किस वेश में आए थे?", o: ["ब्राह्मण", "संन्यासी", "राजा", "वृद्ध किसान"] },
+        { l: 4, q: "रावण की नाभि में अमृत होने का रहस्य श्रीराम को किसने बताया?", o: ["विभीषण", "जामवंत", "हनुमान", "अंगद"] },
+        { l: 4, q: "जटायु के बड़े भाई का क्या नाम था?", o: ["संपाती", "अरुण", "गरुड़", "सुपार्श्व"] },
+        { l: 4, q: "घटोत्कच की माता कौन थीं?", o: ["हिडिंबा", "सुभद्रा", "उलूपी", "चित्रांगदा"] },
+        { l: 4, q: "कर्ण ने घटोत्कच का वध किस अस्त्र से किया था?", o: ["वासवी शक्ति", "ब्रह्मास्त्र", "पाशुपतास्त्र", "नारायणास्त्र"] },
+        { l: 4, q: "श्रीकृष्ण की गदा का क्या नाम था?", o: ["कौमोदकी", "नंदक", "शार्ङ्ग", "पाञ्चजन्य"] },
+        { l: 4, q: "श्रीराम के धनुष का क्या नाम था?", o: ["कोदंड", "गांडीव", "पिनाक", "विजय"] },
+        { l: 4, q: "अशोक वाटिका में सीता जी के प्रति दयालु रही राक्षसी कौन थी?", o: ["त्रिजटा", "शूर्पणखा", "सुरसा", "लंकिनी"] },
+        { l: 4, q: "रावण की पत्नी मंदोदरी के पिता कौन थे?", o: ["मयासुर", "सुमाली", "विश्रवा", "माल्यवान"] },
+        { l: 4, q: "हनुमान जी के पुत्र का क्या नाम था?", o: ["मकरध्वज", "अंगद", "तार", "केसरी"] },
+        { l: 4, q: "बर्बरीक किसके पुत्र थे?", o: ["घटोत्कच", "भीम", "अर्जुन", "अभिमन्यु"] },
+        { l: 4, q: "अर्जुन ने पाशुपतास्त्र किससे प्राप्त किया था?", o: ["भगवान शिव", "इंद्रदेव", "द्रोणाचार्य", "श्रीकृष्ण"] },
+        { l: 4, q: "शिखंडी अपने पूर्वजन्म में कौन था?", o: ["अंबा", "अंबिका", "अंबालिका", "सत्यवती"] },
+        { l: 4, q: "भगवद्गीता में कुल कितने श्लोक हैं?", o: ["700", "500", "1000", "108"] },
+        { l: 4, q: "महाभारत में कुल कितने पर्व हैं?", o: ["18", "12", "24", "7"] },
+        { l: 4, q: "समुद्र मंथन से कितने रत्न निकले थे?", o: ["14", "9", "12", "18"] },
+        { l: 4, q: "संजय को युद्ध देखने हेतु दिव्य दृष्टि किसने दी थी?", o: ["महर्षि वेदव्यास", "श्रीकृष्ण", "नारद मुनि", "इंद्रदेव"] },
+        { l: 4, q: "अश्वत्थामा के मस्तक पर जन्म से क्या था?", o: ["मणि", "तिलक", "तीसरा नेत्र", "चंद्रमा"] },
+        { l: 4, q: "रावण के पिता का क्या नाम था?", o: ["विश्रवा", "पुलस्त्य", "सुमाली", "कुबेर"] },
+
+        // ----- Level 5 -----
+        { l: 5, q: "भीष्म पितामह का जन्म नाम क्या था?", o: ["देवव्रत", "शांतनु", "विचित्रवीर्य", "चित्रांगद"] },
+        { l: 5, q: "कर्ण के धनुष का क्या नाम था?", o: ["विजय", "गांडीव", "पिनाक", "शार्ङ्ग"] },
+        { l: 5, q: "अज्ञातवास में अर्जुन ने कौन सा नाम धारण किया था?", o: ["बृहन्नला", "कंक", "बल्लभ", "तंतिपाल"] },
+        { l: 5, q: "अज्ञातवास में युधिष्ठिर ने कौन सा नाम धारण किया था?", o: ["कंक", "बल्लभ", "ग्रंथिक", "बृहन्नला"] },
+        { l: 5, q: "अज्ञातवास में भीम ने कौन सा नाम धारण किया था?", o: ["बल्लभ", "कंक", "तंतिपाल", "ग्रंथिक"] },
+        { l: 5, q: "अज्ञातवास में द्रौपदी ने कौन सा नाम धारण किया था?", o: ["सैरंध्री", "सुदेष्णा", "उत्तरा", "हिडिंबा"] },
+        { l: 5, q: "द्रोणाचार्य की पत्नी का क्या नाम था?", o: ["कृपी", "सुदेष्णा", "गांधारी", "माद्री"] },
+        { l: 5, q: "भरत की पत्नी का क्या नाम था?", o: ["मांडवी", "उर्मिला", "श्रुतकीर्ति", "तारा"] },
+        { l: 5, q: "शत्रुघ्न की पत्नी का क्या नाम था?", o: ["श्रुतकीर्ति", "मांडवी", "उर्मिला", "सुलोचना"] },
+        { l: 5, q: "विभीषण की पत्नी का क्या नाम था?", o: ["सरमा", "सुलोचना", "मंदोदरी", "त्रिजटा"] },
+        { l: 5, q: "रावण के नाना का क्या नाम था?", o: ["सुमाली", "माल्यवान", "मयासुर", "विश्रवा"] },
+        { l: 5, q: "कौरव पक्ष छोड़कर पांडवों की ओर से लड़ने वाला धृतराष्ट्र का पुत्र कौन था?", o: ["युयुत्सु", "विकर्ण", "दुःशासन", "चित्रसेन"] },
+        { l: 5, q: "महाभारत का प्रारंभिक (मूल) नाम क्या था?", o: ["जय", "भारत", "विजय", "कुरुवंश"] },
+        { l: 5, q: "भगवद्गीता महाभारत के किस पर्व का भाग है?", o: ["भीष्म पर्व", "द्रोण पर्व", "शांति पर्व", "उद्योग पर्व"] },
+        { l: 5, q: "मेघनाद की पत्नी का क्या नाम था?", o: ["सुलोचना", "सरमा", "त्रिजटा", "मंदोदरी"] },
+        { l: 5, q: "नकुल के शंख का क्या नाम था?", o: ["सुघोष", "मणिपुष्पक", "देवदत्त", "पौण्ड्र"] },
+        { l: 5, q: "सहदेव के शंख का क्या नाम था?", o: ["मणिपुष्पक", "सुघोष", "अनंतविजय", "पाञ्चजन्य"] },
+        { l: 5, q: "अर्जुन की नागकन्या पत्नी कौन थीं?", o: ["उलूपी", "चित्रांगदा", "हिडिंबा", "सुभद्रा"] }
+    ];
+
+    /* =====================================================================
+       SETTINGS
+       ===================================================================== */
+    const TOTAL = 15;
+    const SUSPENSE_FROM = 10;     // question number from which every answer gets the suspense
+    const SUSPENSE_MS = 8000;     // length of suspense (matches kbc10.mp3)
+    const HELP_LAST_Q = 7;        // audience poll & friend vanish from question 8
+    const TIER_NAMES = ["आसान", "सामान्य", "कठिन", "अति कठिन", "महा कठिन"];
+    // How likely the audience / friend point to the right answer, by question number (1..7)
+    const audienceTrust = n => Math.max(0.4, 0.92 - 0.08 * (n - 1));   // 92% → 44%
+    const friendTrust   = n => Math.max(0.35, 0.85 - 0.08 * (n - 1));  // 85% → 37%
+    const timeFor = n => n <= 5 ? 30 : n <= 10 ? 45 : 60;
+
+    /* =====================================================================
+       AUDIO
+       kbc1 intro · kbc2 at Q5 · kbc3 at Q10 · kbc4 win · kbc5 50:50
+       kbc6 audience · kbc7 friend · kbc8/kbc9 wrong · kbc10 suspense
+       ===================================================================== */
+    const SND = {};
+    for (let i = 1; i <= 10; i++) {
+        const a = new Audio(); a.preload = 'auto'; a.src = 'kbc' + i + '.mp3';
+        SND['kbc' + i] = a;
+    }
+    let current = null, actx = null;
+    let muted = false;
+    try { muted = localStorage.getItem('dharmaMuted') === '1'; } catch (e) {}
+
+    function play(name) {
+        stopAudio();
+        const a = SND[name];
+        if (muted || !a) return Promise.resolve(false);
+        a.currentTime = 0; current = a;
+        const p = a.play();
+        return p ? p.then(() => true).catch(() => false) : Promise.resolve(true);
+    }
+    function stopAudio() { if (current) { current.pause(); current = null; } stopHeartbeat(); }
+    function ensureCtx() {
+        try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {}
+    }
+    function tone(freq, dur, vol, type = 'sine', endFreq) {
+        if (muted || !actx) return;
+        try {
+            const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+            o.type = type; o.frequency.setValueAtTime(freq, t);
+            if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+            g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+        } catch (e) {}
+    }
+    // Fallback suspense sound if kbc10.mp3 is missing: a heartbeat that speeds up
+    let hbTimer = null;
+    function heartbeat(ms) {
+        stopHeartbeat();
+        const end = Date.now() + ms;
+        const beat = () => {
+            const left = end - Date.now();
+            if (left <= 0) return;
+            tone(60, .18, .5, 'sine', 40);
+            setTimeout(() => tone(55, .15, .35, 'sine', 38), 160);
+            hbTimer = setTimeout(beat, 400 + 500 * (left / ms));
+        };
+        beat();
+    }
+    function stopHeartbeat() { clearTimeout(hbTimer); hbTimer = null; }
+    const clickSfx = () => tone(700, .06, .08, 'triangle');
+
+    /* =====================================================================
+       STATE
+       ===================================================================== */
+    const $ = id => document.getElementById(id);
+    const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    let G = null;               // game state
+    let timerId = null;
+
+    function prepare(item) {     // shuffle options, remember where the correct one landed
+        const order = shuffle([0, 1, 2, 3]);
+        return { q: item.q, l: item.l, opts: order.map(i => item.o[i]), a: order.indexOf(0) };
+    }
+
+    function newGame() {
+        const qs = [], spare = {};
+        for (let l = 1; l <= 5; l++) {
+            const pool = shuffle(BANK.filter(b => b.l === l));
+            qs.push(...pool.slice(0, 3).map(prepare));
+            spare[l] = pool.slice(3);
         }
+        G = { qs, spare, idx: 0, sel: -1, locked: false, hidden: [], paused: false, over: false,
+              life: { f50: true, flip: true, aud: true, friend: true } };
+    }
 
-        let selectedQuestions = [];
-        let curIdx = 0;
-        let score = 0;
-        let timeLeft = 60;
-        let timerId = null;
-        let lifelines = { f50: true, friend: true, audience: true };
-
-        function startQuiz() {
-            // Pick 15 shuffled
-            selectedQuestions = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, 15);
-            curIdx = 0; score = 0;
-            lifelines = { f50: true, friend: true, audience: true };
-            
-            document.getElementById('life50').disabled = false;
-            document.getElementById('lifeFriend').disabled = false;
-            document.getElementById('lifeAudience').disabled = false;
-            document.getElementById('overlay').classList.add('hidden');
-            loadQuestion();
+    /* =====================================================================
+       RENDER
+       ===================================================================== */
+    const KEYS = ['A', 'B', 'C', 'D'];
+    function buildLadder() {
+        const lad = $('ladder'); lad.innerHTML = '';
+        for (let i = 1; i <= TOTAL; i++) {
+            const r = document.createElement('div');
+            r.className = 'rung' + (i % 5 === 0 ? ' mile' : '');
+            r.textContent = i; lad.appendChild(r);
         }
+    }
+    function updateLadder() {
+        [...$('ladder').children].forEach((r, i) => {
+            r.classList.toggle('done', i < G.idx);
+            r.classList.toggle('now', i === G.idx && !G.over);
+        });
+    }
 
-        function loadQuestion() {
-            clearInterval(timerId);
-            document.getElementById('pollBox').style.display = 'none';
-            const qData = selectedQuestions[curIdx];
-            
-            document.getElementById('qCount').textContent = `प्रश्न ${curIdx + 1}/15`;
-            document.getElementById('question').textContent = qData.q;
+    function renderQuestion(animate = true) {
+        const q = G.qs[G.idx], n = G.idx + 1;
+        $('qCount').textContent = `प्रश्न ${n}/${TOTAL}`;
+        $('tier').textContent = TIER_NAMES[q.l - 1];
+        const qe = $('question');
+        qe.textContent = q.q;
+        if (animate) { qe.parentElement.classList.remove('enter'); void qe.offsetWidth; qe.parentElement.classList.add('enter'); }
 
-            const optsArr = document.querySelectorAll('.opt-btn');
-            optsArr.forEach((btn, i) => {
-                btn.textContent = qData.opts[i];
-                btn.className = 'opt-btn';
-                btn.disabled = false;
-                btn.style.display = 'block';
-            });
+        const box = $('options'); box.innerHTML = '';
+        q.opts.forEach((t, i) => {
+            const b = document.createElement('button');
+            b.className = 'opt lozenge' + (animate ? ' stagger' : '');
+            if (animate) b.style.animationDelay = (0.15 + i * 0.12) + 's';
+            b.innerHTML = `<span class="in lozenge"><span class="key">${KEYS[i]}:</span><span></span></span>`;
+            b.querySelector('.in span:last-child').textContent = t;
+            b.onclick = () => select(i);
+            box.appendChild(b);
+        });
+        G.sel = -1; G.hidden = [];
+        $('lockBtn').classList.remove('show');
+    }
 
-            timeLeft = 60;
-            updateTimerDisplay();
-            timerId = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
-                if (timeLeft <= 0) { checkAnswer(-1); }
-            }, 1000);
-        }
+    function renderLifelines() {
+        const late = G.idx + 1 > HELP_LAST_Q;
+        const set = (id, key, vanish) => {
+            const b = $(id);
+            b.classList.toggle('used', !G.life[key]);
+            b.classList.toggle('gone', !!vanish);
+            b.disabled = !G.life[key] || G.locked || !!vanish;
+        };
+        set('life50', 'f50');
+        set('lifeFlip', 'flip', false);
+        $('lifeFlip').disabled = $('lifeFlip').disabled || !G.spare[G.qs[G.idx].l].length;
+        set('lifeAud', 'aud', late);
+        set('lifeFriend', 'friend', late);
+        $('lifeNote').textContent = late ? 'प्रश्न 8 से जनमत और मित्र उपलब्ध नहीं हैं' : '';
+    }
 
-        function updateTimerDisplay() {
-            document.getElementById('timer').textContent = `⏱️ ${timeLeft}s`;
-        }
+    /* =====================================================================
+       TIMER
+       ===================================================================== */
+    const CIRC = 2 * Math.PI * 23;
+    function startTimer(sec) {
+        clearInterval(timerId);
+        G.timeLeft = sec; G.timeMax = sec; drawTimer();
+        timerId = setInterval(() => {
+            if (G.paused) return;
+            G.timeLeft--; drawTimer();
+            if (G.timeLeft <= 5 && G.timeLeft > 0) tone(880, .05, .06, 'square');
+            if (G.timeLeft <= 0) { clearInterval(timerId); timeUp(); }
+        }, 1000);
+    }
+    function drawTimer() {
+        $('timerNum').textContent = G.timeLeft;
+        $('timerBar').style.strokeDashoffset = CIRC * (1 - G.timeLeft / G.timeMax);
+        $('timer').classList.toggle('low', G.timeLeft <= 10);
+        $('timer').classList.toggle('paused', G.paused);
+    }
+    function pause(on) { G.paused = on; drawTimer(); }
 
-        function checkAnswer(chosen) {
-            clearInterval(timerId);
-            const qData = selectedQuestions[curIdx];
-            const optsArr = document.querySelectorAll('.opt-btn');
+    /* =====================================================================
+       FLOW
+       ===================================================================== */
+    let firstStart = true;
+    function startGame() {
+        ensureCtx();
+        // If autoplay was blocked and the intro music never started, start it with the game
+        if (firstStart && (!current || current.paused)) play('kbc1');
+        firstStart = false;
+        newGame();
+        $('intro').classList.add('hide');
+        $('endScreen').classList.add('hide');
+        loadQuestion();
+    }
 
-            optsArr.forEach(b => b.disabled = true);
+    function loadQuestion() {
+        const n = G.idx + 1;
+        G.locked = false;
+        renderQuestion(true);
+        renderLifelines();
+        updateLadder();
+        if (n === 5) { play('kbc2'); toast('🌟 प्रश्न 5', 'पहला पड़ाव — अब असली परीक्षा शुरू!'); }
+        if (n === 10) { play('kbc3'); toast('🔥 प्रश्न 10', 'अब हर उत्तर पर होगा सस्पेंस!'); }
+        if (n === HELP_LAST_Q + 1) toast('⚠️ जनमत और मित्र समाप्त', 'अब केवल आपका ज्ञान!');
+        startTimer(timeFor(n));
+    }
 
-            if (chosen === qData.a) {
-                if (chosen >= 0) optsArr[chosen].classList.add('correct');
-                score++;
-            } else {
-                if (chosen >= 0) optsArr[chosen].classList.add('wrong');
-                optsArr[qData.a].classList.add('correct');
-            }
+    function select(i) {
+        if (G.locked || G.over || G.hidden.includes(i)) return;
+        clickSfx();
+        G.sel = i;
+        [...$('options').children].forEach((b, j) => b.classList.toggle('sel', j === i));
+        $('lockBtn').classList.add('show');
+    }
 
+    function lockAnswer() {
+        if (G.sel < 0 || G.locked) return;
+        G.locked = true;
+        clearInterval(timerId);
+        $('lockBtn').classList.remove('show');
+        const btns = [...$('options').children];
+        btns.forEach(b => b.disabled = true);
+        btns[G.sel].classList.remove('sel');
+        btns[G.sel].classList.add('locked');
+        renderLifelines();
+        tone(300, .25, .15, 'sawtooth', 600);
+
+        if (G.idx + 1 >= SUSPENSE_FROM) runSuspense(reveal);
+        else setTimeout(reveal, 1600);
+    }
+
+    function runSuspense(done) {
+        const card = $('card'), bar = $('sBar');
+        card.classList.add('suspense');
+        bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
+        void bar.offsetWidth;
+        bar.style.transition = `transform ${SUSPENSE_MS}ms linear`; bar.style.transform = 'scaleX(0)';
+        play('kbc10').then(ok => { if (!ok && !muted) heartbeat(SUSPENSE_MS); });
+        setTimeout(() => card.classList.add('shake-screen'), SUSPENSE_MS - 1500);
+        setTimeout(() => {
+            card.classList.remove('suspense', 'shake-screen');
+            stopAudio();
+            done();
+        }, SUSPENSE_MS);
+    }
+
+    function reveal() {
+        const q = G.qs[G.idx], btns = [...$('options').children];
+        btns[G.sel].classList.remove('locked');
+        if (G.sel === q.a) {
+            btns[q.a].classList.add('correct');
+            tone(660, .12, .15, 'triangle'); setTimeout(() => tone(990, .25, .15, 'triangle'), 120);
             setTimeout(() => {
-                curIdx++;
-                if (curIdx < 15) { loadQuestion(); }
-                else { showResults(); }
-            }, 1500);
+                G.idx++;
+                if (G.idx >= TOTAL) win(); else loadQuestion();
+            }, 2000);
+        } else {
+            btns[G.sel].classList.add('wrong');
+            setTimeout(() => btns[q.a].classList.add('correct'), 500);
+            lose(false);
         }
+    }
 
-        /* Lifelines */
-        function use5050() {
-            if (!lifelines.f50) return;
-            lifelines.f50 = false;
-            document.getElementById('life50').disabled = true;
+    function timeUp() {
+        if (G.locked || G.over) return;
+        G.locked = true;
+        const q = G.qs[G.idx], btns = [...$('options').children];
+        btns.forEach(b => b.disabled = true);
+        btns[q.a].classList.add('correct');
+        $('lockBtn').classList.remove('show');
+        lose(true);
+    }
 
-            const qData = selectedQuestions[curIdx];
-            const optsArr = document.querySelectorAll('.opt-btn');
-            let removed = 0;
+    function lose(timeout) {
+        G.over = true;
+        play(Math.random() < 0.5 ? 'kbc8' : 'kbc9');
+        try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+        const q = G.qs[G.idx], n = G.idx + 1, right = G.idx;
+        const mile = right >= 10 ? 'दूसरा पड़ाव (10) पार किया' : right >= 5 ? 'पहला पड़ाव (5) पार किया' : 'कोई पड़ाव पार नहीं हुआ';
+        setTimeout(() => {
+            showEnd('😔', timeout ? 'समय समाप्त!' : 'गलत उत्तर!',
+                `आप प्रश्न <b>${n}</b> तक पहुँचे — <b>${right}/${TOTAL}</b> सही उत्तर<br>${mile}<br><br>सही उत्तर था: <b>${escapeHtml(q.opts[q.a])}</b>`);
+        }, 2800);
+    }
 
-            for (let i = 0; i < 4; i++) {
-                if (i !== qData.a && removed < 2) {
-                    optsArr[i].style.display = 'none';
-                    removed++;
-                }
-            }
-        }
+    function win() {
+        G.over = true;
+        updateLadder();
+        play('kbc4');
+        showEnd('🏆', 'आप धर्म ज्ञानी हैं!', `अद्भुत! आपने सभी <b>15</b> प्रश्नों के सही उत्तर दिए।<br>धर्म और संस्कृति पर आपकी पकड़ असाधारण है। 🙏`);
+        confetti();
+    }
 
-        function useCallFriend() {
-            if (!lifelines.friend) return;
-            lifelines.friend = false;
-            document.getElementById('lifeFriend').disabled = true;
+    function showEnd(icon, title, html) {
+        clearInterval(timerId);
+        $('endIcon').textContent = icon;
+        $('endTitle').textContent = title;
+        $('endText').innerHTML = html;
+        $('endScreen').classList.remove('hide');
+    }
 
-            timeLeft += 60; // Extends timer to 120s
-            updateTimerDisplay();
-            alert("📞 मित्र का सुझाव: 'मुझे लगता है कि इसका उत्तर " + selectedQuestions[curIdx].opts[selectedQuestions[curIdx].a] + " होना चाहिए!'");
-        }
+    /* =====================================================================
+       LIFELINES
+       ===================================================================== */
+    const visibleOpts = () => [0, 1, 2, 3].filter(i => !G.hidden.includes(i));
 
-        function useAudiencePoll() {
-            if (!lifelines.audience) return;
-            lifelines.audience = false;
-            document.getElementById('lifeAudience').disabled = true;
+    function use5050() {
+        if (!G.life.f50 || G.locked) return;
+        G.life.f50 = false;
+        play('kbc5');
+        const q = G.qs[G.idx];
+        const remove = shuffle([0, 1, 2, 3].filter(i => i !== q.a)).slice(0, 2);
+        G.hidden = remove;
+        const btns = [...$('options').children];
+        remove.forEach(i => { btns[i].classList.add('hidden'); btns[i].classList.remove('sel'); });
+        if (remove.includes(G.sel)) { G.sel = -1; $('lockBtn').classList.remove('show'); }
+        renderLifelines();
+    }
 
-            const qData = selectedQuestions[curIdx];
-            const box = document.getElementById('pollBox');
-            const res = document.getElementById('pollResults');
-            box.style.display = 'block';
+    function useFlip() {
+        const lvl = G.qs[G.idx].l;
+        if (!G.life.flip || G.locked || !G.spare[lvl].length) return;
+        G.life.flip = false;
+        tone(400, .3, .12, 'sine', 900);
+        G.qs[G.idx] = prepare(G.spare[lvl].shift());
+        renderQuestion(true);
+        renderLifelines();
+        startTimer(timeFor(G.idx + 1));
+    }
 
-            // Decreasing probability with question level
-            const correctProb = Math.max(35, 90 - (curIdx * 4));
-            let html = "";
+    function useAudience() {
+        const n = G.idx + 1;
+        if (!G.life.aud || G.locked || n > HELP_LAST_Q) return;
+        G.life.aud = false;
+        renderLifelines();
+        pause(true);
+        play('kbc6');
+        const q = G.qs[G.idx], vis = visibleOpts();
+        const leader = Math.random() < audienceTrust(n) ? q.a : pick(vis.filter(i => i !== q.a));
+        const shares = {};
+        const lead = vis.length === 2 ? 55 + Math.floor(Math.random() * 25) : 45 + Math.floor(Math.random() * 20);
+        shares[leader] = lead;
+        const others = vis.filter(i => i !== leader);
+        const w = others.map(() => Math.random() + 0.3), ws = w.reduce((s, x) => s + x, 0);
+        let used = lead;
+        others.forEach((i, k) => { shares[i] = Math.floor((100 - lead) * w[k] / ws); used += shares[i]; });
+        shares[leader] += 100 - used;
 
-            qData.opts.forEach((opt, i) => {
-                const pct = (i === qData.a) ? correctProb : Math.floor((100 - correctProb) / 3);
-                html += `<div style="margin-top:4px; font-size:12px;">${opt}: ${pct}%</div>
-                         <div class="poll-bar"><div class="poll-fill" style="width:${pct}%"></div></div>`;
+        openModal(`<h3>📊 जनमत सर्वेक्षण</h3>
+            <div style="font-size:13px;color:var(--muted)" id="pollStatus" class="dots">दर्शक मतदान कर रहे हैं</div>
+            <div class="poll">${[0,1,2,3].map(i => `<div class="col" style="${G.hidden.includes(i) ? 'opacity:.2' : ''}">
+                <div class="pct" id="pct${i}"></div><div class="bar" id="bar${i}"></div><div class="lbl">${KEYS[i]}</div></div>`).join('')}</div>
+            <button class="ok" id="modalOk" disabled>ठीक है</button>`);
+        setTimeout(() => {
+            $('pollStatus').classList.remove('dots');
+            $('pollStatus').textContent = 'दर्शकों का मत:';
+            vis.forEach(i => { $('bar' + i).style.height = shares[i] + '%'; countUp($('pct' + i), shares[i]); });
+            $('modalOk').disabled = false;
+        }, 2200);
+    }
+
+    function useFriend() {
+        const n = G.idx + 1;
+        if (!G.life.friend || G.locked || n > HELP_LAST_Q) return;
+        G.life.friend = false;
+        renderLifelines();
+        pause(true);
+        play('kbc7');
+        const q = G.qs[G.idx], vis = visibleOpts();
+        const ans = Math.random() < friendTrust(n) ? q.a : pick(vis.filter(i => i !== q.a));
+        const other = pick(vis.filter(i => i !== ans));
+        const say = (i) => `<b style="color:var(--gold)">${KEYS[i]}: ${escapeHtml(q.opts[i])}</b>`;
+        const lines = [
+            `"मुझे पूरा यकीन है, उत्तर ${say(ans)} है।"`,
+            `"मेरे हिसाब से ${say(ans)} सही है... लगभग पक्का।"`,
+            `"हम्म... कठिन है। मैं ${say(ans)} कहूँगा, पर ${say(other)} भी हो सकता है।"`,
+            `"पक्का नहीं पता, लेकिन मेरा मन ${say(ans)} कह रहा है।"`
+        ];
+        openModal(`<h3>📞 मित्र परामर्श</h3>
+            <div class="phone" id="phoneIcon">📱</div>
+            <div class="friend-msg" id="friendMsg"><span class="dots">मित्र को फ़ोन लग रहा है</span></div>
+            <button class="ok" id="modalOk" disabled>फ़ोन रखें</button>`);
+        setTimeout(() => { $('friendMsg').innerHTML = '<span class="dots">मित्र सोच रहा है</span>'; }, 1500);
+        setTimeout(() => {
+            $('phoneIcon').style.animation = 'none';
+            $('friendMsg').innerHTML = pick(lines);
+            $('modalOk').disabled = false;
+        }, 3500);
+    }
+
+    function openModal(html) {
+        $('modal').innerHTML = html;
+        $('modalWrap').classList.remove('hide');
+        $('modalOk').onclick = closeModal;
+    }
+    function closeModal() {
+        $('modalWrap').classList.add('hide');
+        pause(false);
+    }
+
+    /* =====================================================================
+       EFFECTS
+       ===================================================================== */
+    let toastTimer = null;
+    function toast(title, sub) {
+        const t = $('toast');
+        t.innerHTML = `${title}<small>${sub}</small>`;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+    function countUp(el, to) {
+        const t0 = performance.now();
+        const step = (t) => { const p = Math.min(1, (t - t0) / 1600); el.textContent = Math.round(to * p) + '%'; if (p < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+    }
+    function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    function confetti() {
+        const cv = $('confetti'), cx = cv.getContext('2d');
+        cv.width = innerWidth; cv.height = innerHeight;
+        const colors = ['#ffcf3f', '#ff8a1f', '#fff3c4', '#e0303f', '#2fbf4a'];
+        const parts = Array.from({ length: 160 }, () => ({
+            x: Math.random() * cv.width, y: -20 - Math.random() * cv.height,
+            vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, r: 4 + Math.random() * 5,
+            a: Math.random() * 6, va: (Math.random() - .5) * .3, c: pick(colors)
+        }));
+        const t0 = performance.now();
+        (function frame(t) {
+            cx.clearRect(0, 0, cv.width, cv.height);
+            parts.forEach(p => {
+                p.x += p.vx; p.y += p.vy; p.a += p.va;
+                cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.fillStyle = p.c; cx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); cx.restore();
             });
+            if (t - t0 < 7000) requestAnimationFrame(frame); else cx.clearRect(0, 0, cv.width, cv.height);
+        })(t0);
+    }
 
-            res.innerHTML = html;
+    function makeSparks() {
+        for (let i = 0; i < 18; i++) {
+            const s = document.createElement('div');
+            s.className = 'spark';
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.setProperty('--drift', (Math.random() * 80 - 40) + 'px');
+            s.style.animationDuration = (8 + Math.random() * 10) + 's';
+            s.style.animationDelay = (Math.random() * 10) + 's';
+            document.body.appendChild(s);
         }
+    }
 
-        function showResults() {
-            document.getElementById('overlayMsg').innerHTML = `प्रश्नोत्तरी समाप्त!<br>आपका स्कोर: <b>${score}/15</b><br>` + 
-                (score >= 12 ? "उत्कृष्ट ज्ञान! धर्म और संस्कृति पर आपकी पकड़ अद्भुत है।" : "अच्छा प्रयास! धर्म और पौराणिक ग्रंथों का अध्ययन जारी रखें।");
-            document.getElementById('overlay').classList.remove('hidden');
-        }
+    /* =====================================================================
+       WIRING
+       ===================================================================== */
+    function setMute(m) {
+        muted = m;
+        $('muteBtn').textContent = m ? '🔇' : '🔊';
+        try { localStorage.setItem('dharmaMuted', m ? '1' : '0'); } catch (e) {}
+        if (m) stopAudio();
+    }
+
+    $('startBtn').onclick = startGame;
+    $('againBtn').onclick = startGame;
+    $('lockBtn').onclick = lockAnswer;
+    $('life50').onclick = use5050;
+    $('lifeFlip').onclick = useFlip;
+    $('lifeAud').onclick = useAudience;
+    $('lifeFriend').onclick = useFriend;
+    $('muteBtn').onclick = () => setMute(!muted);
+
+    document.addEventListener('keydown', e => {
+        if (!G || G.over || !$('modalWrap').classList.contains('hide')) return;
+        const k = e.key.toUpperCase();
+        const i = ['A', 'B', 'C', 'D'].indexOf(k) >= 0 ? ['A', 'B', 'C', 'D'].indexOf(k) : ['1', '2', '3', '4'].indexOf(k);
+        if (i >= 0) select(i);
+        if (e.key === 'Enter') lockAnswer();
+    });
+
+    // Welcome banner: play kbc1 right away; if the browser blocks autoplay, play on first tap
+    buildLadder();
+    makeSparks();
+    setMute(muted);
+    play('kbc1').then(ok => {
+        if (ok || muted) return;
+        $('tapHint').classList.remove('hide');
+        const unlock = (e) => {
+            $('tapHint').classList.add('hide');
+            ensureCtx();
+            if (e.target.closest('#startBtn')) return;   // start button handles itself
+            play('kbc1');
+        };
+        $('intro').addEventListener('pointerdown', unlock, { once: true });
+    });
     </script>
 </body>
 </html>

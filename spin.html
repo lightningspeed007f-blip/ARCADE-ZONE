@@ -579,14 +579,14 @@ const CONFIG = {
  
 /* Prize chances (weights add up to 100 = percent) */
 const SEGMENTS = [
-  { type:'teddy',   label:'TEDDY',     emoji:'🧸',   color:'#e6394a', weight:1,  sound:'teddy.mp3.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:18, sound:'sorry1.mp3.mp3' },
-  { type:'toffee1', label:'1 TOFFEE',  emoji:'🍬',   color:'#f2a541', weight:14, sound:'toffee1.mp3.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#232a33', weight:18, sound:'sorry2.mp3.mp3' },
+  { type:'teddy',   label:'TEDDY',     emoji:'🧸',   color:'#e6394a', weight:1,  sound:'teddy.mp3' },
+  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:18, sound:'sorry1.mp3' },
+  { type:'toffee1', label:'1 TOFFEE',  emoji:'🍬',   color:'#f2a541', weight:14, sound:'toffee1.mp3' },
+  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#232a33', weight:18, sound:'sorry2.mp3' },
   { type:'poster',  label:'POSTER',    emoji:'🖼️',   color:'#6c4dff', weight:8,  sound:'poster.mp3' },
-  { type:'toffee2', label:'2 TOFFEES', emoji:'🍬🍬', color:'#ff8c1a', weight:8,  sound:'toffee2.mp3.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:19, sound:'sorry3.mp3.mp3' },
-  { type:'toffee1', label:'1 TOFFEE',  emoji:'🍬',   color:'#f2a541', weight:14, sound:'toffee3.mp3.mp3' }
+  { type:'toffee2', label:'2 TOFFEES', emoji:'🍬🍬', color:'#ff8c1a', weight:8,  sound:'toffee2.mp3' },
+  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:19, sound:'sorry3.mp3' },
+  { type:'toffee1', label:'1 TOFFEE',  emoji:'🍬',   color:'#f2a541', weight:14, sound:'toffee3.mp3' }
 ];
  
 const PRIZE_NAMES = { teddy:'Teddy Bear', poster:'Poster', toffee2:'2 Toffees', toffee1:'1 Toffee', sorry:'No prize' };
@@ -637,7 +637,7 @@ const saveOrg = () => store(O_KEY, org);
  
 /* ---------- audio ---------- */
 let isMuted = false, actx = null;
-const welcomeAudio = new Audio('welcome.mp3.mp3');
+const welcomeAudio = new Audio('welcome.mp3');
 const spinAudio = new Audio('spinning.mp3');
 spinAudio.loop = true;
 SEGMENTS.forEach(s => { s.audio = new Audio(s.sound); });
