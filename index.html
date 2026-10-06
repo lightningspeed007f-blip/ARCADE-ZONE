@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#05060a">
 <title>Game Zone</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305060a'/%3E%3Cpath d='M20 22h24c8 0 12 6 13 14l1 8c1 6-6 9-10 4l-5-6H21l-5 6c-4 5-11 2-10-4l1-8c1-8 5-14 13-14z' fill='none' stroke='%2300f0ff' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -49,7 +49,7 @@ body.fill #bgVideo { object-fit: cover; -webkit-mask-image: none; mask-image: no
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   z-index: 30;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: radial-gradient(circle at center, rgba(20,10,40,0.8), rgba(3,3,8,0.97) 75%);
+  background: radial-gradient(circle at center, #140a28 0%, #030308 75%);
   cursor: pointer;
   transition: opacity 0.5s ease;
 }
@@ -57,11 +57,12 @@ body.fill #bgVideo { object-fit: cover; -webkit-mask-image: none; mask-image: no
 .logo-ring {
   width: 150px; height: 150px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 64px;
+  color: #00f0ff;
   border: 2px solid rgba(0,240,255,0.6);
   box-shadow: 0 0 40px rgba(0,240,255,0.35), inset 0 0 30px rgba(255,45,138,0.3);
   animation: ringPulse 2s ease-in-out infinite;
 }
+.logo-ring svg { width: 78px; height: 78px; filter: drop-shadow(0 0 8px currentColor); }
 @keyframes ringPulse { 50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(255,45,138,0.5), inset 0 0 35px rgba(0,240,255,0.35); } }
 .splash-title {
   margin-top: 26px;
@@ -95,9 +96,10 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   width: 42px; height: 42px; border-radius: 50%;
   background: rgba(15,17,30,0.75);
   border: 1px solid rgba(255,255,255,0.18);
-  color: #fff; font-size: 18px; cursor: pointer;
+  color: #fff; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
+.sound-btn svg { width: 20px; height: 20px; }
 
 /* ===================== CYLINDER (works on every browser) ===================== */
 .stage {
@@ -113,7 +115,20 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   text-align: center; padding: 14px 10px;
   will-change: transform, opacity;
 }
-.card .icon { font-size: calc(var(--cw) * 0.38); line-height: 1.1; }
+.card .icon { width: calc(var(--cw) * 0.46); height: calc(var(--cw) * 0.46); }
+.card .icon svg {
+  width: 100%; height: 100%; display: block; overflow: visible;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+/* Poster cards: your artwork fills the whole card */
+.card.has-art { padding: 0; background: #0a0b14 !important; }
+.card .art {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center bottom;
+  border-radius: 20px; display: block;
+  -webkit-user-drag: none; pointer-events: none;
+}
+.card.has-art .icon, .card.has-art .name, .card.has-art .tag, .card.has-art .tap { display: none; }
 .card.active .icon { animation: bob 2.2s ease-in-out infinite alternate; }
 @keyframes bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-8px) rotate(3deg); } }
 .card .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: calc(var(--cw) * 0.09); line-height: 1.25; margin-top: 10px; }
@@ -162,12 +177,12 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 
 <!-- ========== SPLASH ========== -->
 <div id="splash" onclick="this.className='gone'" ontouchend="this.className='gone'; event.preventDefault();">
-  <div class="logo-ring">🎮</div>
+  <div class="logo-ring" id="logoIcon"></div>
   <div class="splash-title">GAME ZONE</div>
   <div class="splash-tap">TAP TO ENTER</div>
 </div>
 
-<button class="sound-btn" id="soundBtn" aria-label="Sound on or off">🔊</button>
+<button class="sound-btn" id="soundBtn" aria-label="Sound on or off"></button>
 
 <!-- ========== MAIN ========== -->
 <div class="app">
@@ -186,10 +201,10 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 
   <div class="ticker">
     <div class="ticker-track">
-      <span class="ticker-item">✨ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
-      <span class="ticker-item">✨ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
-      <span class="ticker-item">✨ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
-      <span class="ticker-item">✨ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+      <span class="ticker-item">✦ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✦</span>
+      <span class="ticker-item">✦ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✦</span>
+      <span class="ticker-item">✦ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✦</span>
+      <span class="ticker-item">✦ Made With Love by Maa Kamakhya Group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✦</span>
     </div>
   </div>
 </div>
@@ -199,20 +214,71 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 var VIDEO_MODE = "fit";            // "fit" = whole video, sharp   |   "fill" = covers full screen (zoomed)
 var MUSIC_FILE = "hub_music.mp3";  // upload your hub music with exactly this name
 
-/* GAME LIST — add a new game by adding one line here */
+/* ===================== ICONS (neon line-art, no emojis) ===================== */
+function svg(inner) {
+  return '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+}
+var ICONS = {
+  /* haunted house under a crescent moon */
+  horror: svg(
+    '<path d="M47 8a8 8 0 1 0 9 11 7 7 0 0 1-9-11z"/>' +
+    '<path d="M6 56h52"/>' +
+    '<path d="M12 56V32L26 19l14 13v24"/>' +
+    '<path d="M26 19V11l4 3"/>' +
+    '<path d="M21 56v-8a5 5 0 0 1 10 0v8"/>' +
+    '<rect x="17" y="34" width="5" height="5"/><rect x="30" y="34" width="5" height="5"/>' +
+    '<path d="M44 40l4-3 4 3M48 37v19"/>'),
+  /* auto-rickshaw with speed lines */
+  auto: svg(
+    '<path d="M12 42V22q0-8 9-8h17q8 0 12 11l3 17"/>' +
+    '<path d="M24 42V24h15l5 11"/>' +
+    '<path d="M12 22h-2M24 30h-4"/>' +
+    '<circle cx="18" cy="47" r="6"/><circle cx="51" cy="48" r="5"/>' +
+    '<path d="M24 46h22M53 42h4v3"/>' +
+    '<path d="M1 24h6M0 30h5M2 36h5"/>'),
+  /* prize wheel with pointer */
+  wheel: svg(
+    '<circle cx="32" cy="35" r="21"/><circle cx="32" cy="35" r="4"/>' +
+    '<path d="M32 14v17M32 39v17M11 35h17M36 35h17M17.2 20.2l12 12M34.8 37.8l12 12M46.8 20.2l-12 12M29.2 37.8l-12 12"/>' +
+    '<path d="M27 4h10l-5 8z" fill="currentColor"/>'),
+  /* minimal panda face */
+  panda: svg(
+    '<circle cx="16" cy="18" r="7" fill="currentColor" fill-opacity="0.35"/><circle cx="48" cy="18" r="7" fill="currentColor" fill-opacity="0.35"/>' +
+    '<circle cx="32" cy="36" r="20"/>' +
+    '<ellipse cx="24" cy="35" rx="4" ry="5" transform="rotate(-20 24 35)" fill="currentColor"/>' +
+    '<ellipse cx="40" cy="35" rx="4" ry="5" transform="rotate(20 40 35)" fill="currentColor"/>' +
+    '<circle cx="24.5" cy="34.5" r="1.4" fill="#0a0b14" stroke="none"/><circle cx="39.5" cy="34.5" r="1.4" fill="#0a0b14" stroke="none"/>' +
+    '<path d="M29.5 43h5l-2.5 2.5z" fill="currentColor"/><path d="M32 45.5v2M28.5 49q3.5 2 7 0"/>'),
+  /* drawn bow with arrow */
+  bow: svg(
+    '<path d="M22 6Q50 32 22 58"/>' +
+    '<path d="M22 6L12 32 22 58"/>' +
+    '<path d="M12 32h48"/><path d="M52 26l8 6-8 6"/>' +
+    '<path d="M8 28l4 4-4 4M4 28l4 4-4 4"/>'),
+  /* gamepad (welcome screen) */
+  pad: svg(
+    '<path d="M20 22h24c8 0 12 6 13 14l1 8c1 6-6 9-10 4l-5-6H21l-5 6c-4 5-11 2-10-4l1-8c1-8 5-14 13-14z"/>' +
+    '<path d="M20 29v9M15.5 33.5h9"/><circle cx="42" cy="30" r="2" fill="currentColor"/><circle cx="47" cy="36" r="2" fill="currentColor"/>'),
+  soundOn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/></svg>',
+  soundOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l6 6M22 9l-6 6"/></svg>'
+};
+
+/* GAME LIST — add a new game by adding one line here.
+   img = card artwork in the repo (if it fails to load, the neon icon shows instead) */
 var GAMES = [
-  { href: "horror.html",       icon: "👻", name: "The Last Night", tag: "Horror", color: "#b46bff",
+  { href: "horror.html",       img: "card_horror.jpg", icon: ICONS.horror, name: "The Last Night", tag: "Horror", color: "#ff3b5c",
     desc: "Survive the haunted estate and find the secret key." },
-  { href: "jais_express.html", icon: "🛺", name: "Jais Express",   tag: "Racing", color: "#ffcf3f",
+  { href: "jais_express.html", img: "card_jais.jpg",   icon: ICONS.auto,   name: "Jais Express",   tag: "Racing", color: "#ff9a1f",
     desc: "Drive your auto through Jais. Dodge traffic, grab coins." },
-  { href: "spin.html",         icon: "🎯", name: "Spin The Wheel", tag: "Luck",   color: "#00f0ff",
+  { href: "spin.html",         img: "card_spin.jpg",   icon: ICONS.wheel,  name: "Spin The Wheel", tag: "Luck",   color: "#ffcf3f",
     desc: "Spin and try your luck to win teddy bears and toffees." },
-  { href: "panda.html",        icon: "🐼", name: "Tap The Panda",  tag: "Reflex", color: "#8aff3c",
+  { href: "panda.html",        img: "card_panda.jpg",  icon: ICONS.panda,  name: "Tap The Panda",  tag: "Reflex", color: "#c77dff",
     desc: "Tap the panda fast. It speeds up as you score." },
-  { href: "dharma.html",       icon: "🏹", name: "Dharma Quiz",    tag: "Quiz",   color: "#ff7a1a",
+  { href: "dharma.html",       img: "card_dharma.jpg", icon: ICONS.bow,    name: "Dharma Quiz",    tag: "Quiz",   color: "#e3b55c",
     desc: "धर्म प्रश्नोत्तरी — 150 questions with 3 lifelines." }
 ];
 
+document.getElementById("logoIcon").innerHTML = ICONS.pad;
 if (VIDEO_MODE === "fill") document.body.className += " fill";
 
 /* Safe storage: some phone browsers block it */
@@ -236,7 +302,7 @@ var muted = getStore("localStorage", "gz_muted") === "1";
 var music = new Audio(MUSIC_FILE);
 music.loop = true; music.volume = 0.5;
 var actx = null;
-function setSoundIcon() { document.getElementById("soundBtn").textContent = muted ? "🔇" : "🔊"; }
+function setSoundIcon() { document.getElementById("soundBtn").innerHTML = muted ? ICONS.soundOff : ICONS.soundOn; }
 setSoundIcon();
 function startMusic() {
   if (muted || launching) return;
@@ -283,10 +349,20 @@ GAMES.forEach(function (g, i) {
   c.setAttribute("data-i", i);
   c.style.background = "radial-gradient(circle at 50% 30%, " + rgba(g.color, 0.32) + ", rgba(0,0,0,0) 65%), linear-gradient(180deg, #181a2c, #0a0b14)";
   c.innerHTML =
-    '<div class="icon">' + g.icon + '</div>' +
+    '<div class="icon" style="color:' + g.color + '">' + g.icon + '</div>' +
     '<div class="name">' + g.name + '</div>' +
     '<div class="tag" style="color:' + g.color + ';border-color:' + rgba(g.color, 0.6) + '">' + g.tag + '</div>' +
     '<div class="tap">TAP TO PLAY</div>';
+  if (g.img) {
+    var im = new Image();
+    im.className = "art";
+    im.alt = g.name;
+    im.draggable = false;
+    im.onerror = function () { c.className = c.className.replace(" has-art", ""); im.parentNode && im.parentNode.removeChild(im); c.hasArt = false; };
+    im.src = g.img;
+    c.appendChild(im);
+    c.hasArt = true;
+  }
   stage.appendChild(c);
   cards.push(c);
   var d = document.createElement("span");
@@ -296,8 +372,8 @@ GAMES.forEach(function (g, i) {
 
 function layout() {
   var h = stage.clientHeight || (window.innerHeight * 0.55);
-  cardW = Math.max(110, Math.round(Math.min(window.innerWidth * 0.5, h * 0.66, 240)));
-  cardH = Math.round(cardW * 1.38);
+  cardW = Math.max(110, Math.round(Math.min(window.innerWidth * 0.56, h * 0.62, 260)));
+  cardH = Math.round(cardW * 1.48);
   radius = cardW * 0.8;
   cards.forEach(function (c) {
     c.style.width = cardW + "px";
@@ -338,7 +414,7 @@ function updateInfo() {
   shownIndex = a;
   cards.forEach(function (c, i) {
     var on = i === a, col = GAMES[i].color;
-    c.className = on ? "card active" : "card";
+    c.className = "card" + (on ? " active" : "") + (c.hasArt ? " has-art" : "");
     c.style.borderColor = rgba(col, on ? 1 : 0.4);
     c.style.boxShadow = on ? "0 0 34px " + rgba(col, 0.55) + ", inset 0 0 22px " + rgba(col, 0.22) : "0 10px 30px rgba(0,0,0,0.6)";
   });
