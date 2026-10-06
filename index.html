@@ -2,308 +2,261 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Arcade Zone — Game Store</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Arcade Zone - Game Store</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --cyan: #00f0ff;
-  --pink: #ff2d8a;
-  --text: #eef4f8;
-  --muted: #9aa6c4;
-  --panel: rgba(12, 14, 24, 0.82);
-  /* Card size adapts to both screen width and height */
-  --card-w: clamp(140px, min(42vw, 25dvh), 215px);
-  --card-h: calc(var(--card-w) * 1.36);
-}
-
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 html, body {
-  height: 100%;
+  width: 100%; height: 100%;
   background: #05060a;
-  color: var(--text);
+  color: #eef4f8;
   font-family: 'Rajdhani', 'Segoe UI', sans-serif;
   overflow: hidden;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none;
 }
 
-/* ---------- Background video ---------- */
-#bg {
-  position: fixed; inset: 0; z-index: 0; overflow: hidden;
-  /* Shown if the video can't load */
-  background:
-    radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.18), transparent 45%),
-    radial-gradient(circle at 80% 70%, rgba(255, 45, 138, 0.18), transparent 45%),
-    #05060a;
-}
-#bg video {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: brightness(0.7) saturate(1.15);
-}
-#bg::after {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, rgba(5, 6, 10, 0) 0%, rgba(5, 6, 10, 0.7) 85%);
-}
-
-/* ---------- Layout ---------- */
-.app {
-  position: relative; z-index: 1;
-  height: 100dvh;
-  display: flex; flex-direction: column; align-items: center;
-  padding: calc(16px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-body.leaving .app { opacity: 0; transform: scale(1.04); }
-
-header { text-align: center; }
-header h1 {
-  font-family: 'Orbitron', sans-serif; font-weight: 900;
-  font-size: clamp(1.6rem, 7vw, 2.6rem);
-  letter-spacing: 0.12em;
-  background: linear-gradient(90deg, var(--cyan), var(--pink));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.35));
-}
-header p { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
-
-/* ---------- 3D cylinder ---------- */
-.stage {
-  flex: 1; min-height: 0; width: 100%;
-  display: flex; align-items: center; justify-content: center;
-  perspective: 1000px;
-  touch-action: pan-y;
-  cursor: grab;
-  position: relative;
-}
-.stage.grabbing { cursor: grabbing; }
-.stage::after { /* glowing floor under the ring */
-  content: ""; position: absolute; left: 50%; bottom: 8%;
-  width: min(80vw, 520px); height: 40px; transform: translateX(-50%);
-  background: radial-gradient(ellipse, rgba(0, 240, 255, 0.28), transparent 70%);
+/* ===== Background video (same setup as spin.html) ===== */
+#bgVideo {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
   pointer-events: none;
 }
+#bgShade {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(5,6,10,0.25) 0%, rgba(5,6,10,0.8) 90%);
+}
+#videoMsg {
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: none;
+  background: rgba(255,60,80,0.9); color: #fff;
+  font-size: 13px; padding: 6px 12px; border-radius: 8px;
+}
 
+/* ===== Page layout ===== */
+.app {
+  position: fixed; top: 0; left: 0; width: 100%;
+  height: 100%;
+  z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 18px 16px 18px;
+  transition: opacity 0.3s ease;
+}
+body.leaving .app { opacity: 0; }
+
+header { text-align: center; flex-shrink: 0; }
+header h1 {
+  font-family: 'Orbitron', sans-serif; font-weight: 900;
+  font-size: 30px; letter-spacing: 4px;
+  background: linear-gradient(90deg, #00f0ff, #ff2d8a);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+header p { color: #b4bdd6; font-size: 15px; margin-top: 2px; }
+
+/* ===== Swipe area with the 3D cylinder ===== */
+.stage {
+  flex: 1 1 auto;
+  width: 100%;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-perspective: 1000px; perspective: 1000px;
+  touch-action: none;          /* finger swipes go to the carousel */
+  cursor: grab;
+  overflow: visible;
+}
 .ring {
   position: relative;
-  width: var(--card-w); height: var(--card-h);
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+  -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .ring.dragging { transition: none; }
 
 .card {
-  position: absolute; inset: 0;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 65%),
-    linear-gradient(180deg, rgba(22, 24, 40, 0.96), rgba(10, 11, 20, 0.98));
-  border: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  padding: 18px 12px; text-align: center;
-  backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  transition: opacity 0.45s, filter 0.45s, border-color 0.45s, box-shadow 0.45s;
-  opacity: 0.4; filter: brightness(0.6) saturate(0.7);
+  border: 2px solid rgba(255,255,255,0.2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 14px 10px;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  transition: opacity 0.4s, box-shadow 0.4s;
+  opacity: 0.45;
 }
-.card.active {
-  opacity: 1; filter: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 55%, transparent),
-              inset 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
-  cursor: pointer;
-}
-.card .icon {
-  font-size: calc(var(--card-w) * 0.36); line-height: 1;
-  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 70%, transparent));
-}
-.card.active .icon { animation: bob 2.4s ease-in-out infinite alternate; }
-@keyframes bob { to { transform: translateY(-7px) rotate(3deg); } }
+.card.active { opacity: 1; }
+.card .icon { font-size: calc(var(--cw) * 0.36); line-height: 1.1; }
+.card.active .icon { animation: bob 2.2s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-7px); } }
 .card .name {
   font-family: 'Orbitron', sans-serif; font-weight: 700;
-  font-size: calc(var(--card-w) * 0.085); line-height: 1.25;
+  font-size: calc(var(--cw) * 0.088); line-height: 1.25;
+  margin-top: 10px;
 }
 .card .tag {
-  font-size: calc(var(--card-w) * 0.07); font-weight: 600;
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  padding: 2px 10px; border-radius: 99px;
+  margin-top: 8px;
+  font-size: calc(var(--cw) * 0.072); font-weight: 700;
+  padding: 2px 12px; border-radius: 30px; border: 1px solid;
 }
 
-/* ---------- Info panel ---------- */
-.panel {
-  width: 100%; max-width: 460px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 14px 14px 12px;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+/* ===== Bottom: selected game + play ===== */
+.bottom {
+  flex-shrink: 0;
+  width: 100%; max-width: 420px;
   text-align: center;
 }
-.panel h2 {
-  font-family: 'Orbitron', sans-serif; font-size: 1.15rem; font-weight: 700;
-  color: var(--accent, var(--cyan));
-  transition: color 0.4s;
-}
-.panel .desc { color: #c8d0e4; font-size: 0.98rem; line-height: 1.35; margin: 4px 0 12px; min-height: 2.7em; }
-
-.row { display: flex; align-items: center; gap: 10px; }
-.arrow {
-  flex: 0 0 48px; height: 48px; border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: var(--text); font-size: 1.2rem; cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-.arrow:active { transform: scale(0.93); background: rgba(0, 240, 255, 0.18); }
-.play {
-  flex: 1; height: 48px; border: none; border-radius: 14px; cursor: pointer;
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 0.95rem; letter-spacing: 0.08em;
-  color: #fff;
-  background: linear-gradient(90deg, var(--pink), #7f3cff);
-  box-shadow: 0 6px 20px rgba(255, 45, 138, 0.4);
-  transition: transform 0.1s, box-shadow 0.2s;
-}
-.play:active { transform: scale(0.97); }
-
-.dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
-.dot {
-  width: 8px; height: 8px; border-radius: 99px; border: none; cursor: pointer;
-  background: rgba(255, 255, 255, 0.25);
+.dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 12px; }
+.dots span {
+  width: 7px; height: 7px; border-radius: 10px;
+  background: rgba(255,255,255,0.3);
   transition: width 0.3s, background 0.3s;
 }
-.dot.on { width: 24px; background: var(--accent, var(--cyan)); }
-
-button:focus-visible, .card:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-
-footer { margin-top: 8px; font-size: 0.78rem; color: rgba(255, 255, 255, 0.35); text-align: center; }
-
-@media (prefers-reduced-motion: reduce) {
-  .ring { transition-duration: 0.01s; }
-  .card.active .icon { animation: none; }
+.dots span.on { width: 22px; }
+.bottom h2 {
+  font-family: 'Orbitron', sans-serif; font-size: 19px; font-weight: 700;
+  transition: color 0.3s;
 }
+.bottom .desc {
+  color: #d0d7ea; font-size: 15px; line-height: 1.35;
+  margin: 4px 0 14px; min-height: 40px;
+}
+.play {
+  display: block; width: 100%;
+  padding: 15px 10px;
+  border: none; border-radius: 16px; cursor: pointer;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 16px; letter-spacing: 2px;
+  color: #fff;
+  background: linear-gradient(90deg, #ff2d8a, #7f3cff);
+  box-shadow: 0 8px 22px rgba(255,45,138,0.45);
+}
+.play:active { transform: scale(0.97); }
+footer { margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.4); }
+
+@media (min-height: 760px) { header h1 { font-size: 36px; } }
 </style>
 </head>
 <body>
 
-<div id="bg">
-  <!-- BACKGROUND VIDEO: same file the Spin The Wheel game uses -->
-  <video id="bgVideo" autoplay muted loop playsinline preload="auto">
-    <source src="bg.mp4" type="video/mp4">
-  </video>
-</div>
+<!-- Background video: the same bg.mp4 that spin.html plays -->
+<video id="bgVideo" autoplay muted loop playsinline webkit-playsinline>
+  <source id="bgSource" src="bg.mp4" type="video/mp4">
+</video>
+<div id="bgShade"></div>
+<div id="videoMsg">bg.mp4 not found next to index.html</div>
 
 <div class="app">
   <header>
     <h1>ARCADE ZONE</h1>
-    <p>Swipe to browse, tap the front card to play</p>
+    <p>Swipe to choose a game</p>
   </header>
 
-  <div class="stage" id="stage" aria-label="Game selector">
+  <div class="stage" id="stage">
     <div class="ring" id="ring"></div>
   </div>
 
-  <section class="panel" id="panel">
+  <div class="bottom">
+    <div class="dots" id="dots"></div>
     <h2 id="gameName"></h2>
     <p class="desc" id="gameDesc"></p>
-    <div class="row">
-      <button class="arrow" id="prevBtn" aria-label="Previous game">◀</button>
-      <button class="play" id="playBtn">PLAY</button>
-      <button class="arrow" id="nextBtn" aria-label="Next game">▶</button>
-    </div>
-    <div class="dots" id="dots"></div>
-  </section>
-
-  <footer>✨ Maa Kamakhya Group ✨</footer>
+    <button class="play" id="playBtn">PLAY</button>
+    <footer>✨ Maa Kamakhya Group ✨</footer>
+  </div>
 </div>
 
 <script>
-/* =========================================================
-   GAME LIST — to add a game, just add one more line here.
-   The cylinder resizes itself automatically.
-   ========================================================= */
-const GAMES = [
-  { href: "horror.html",       icon: "👻", name: "The Last Night", tag: "Horror",  color: "#a855f7",
+/* ========= GAME LIST: add a new game by adding one line ========= */
+var GAMES = [
+  { href: "horror.html",       icon: "👻", name: "The Last Night", tag: "Horror", color: "#b46bff",
     desc: "Survive the haunted estate and find the secret key." },
-  { href: "jais_express.html", icon: "🛺", name: "Jais Express",   tag: "Racing",  color: "#ffcf3f",
-    desc: "Drive your auto through the stations of Jais. Dodge traffic, grab coins." },
-  { href: "spin.html",         icon: "🎯", name: "Spin The Wheel", tag: "Luck",    color: "#00f0ff",
-    desc: "Spin and try your luck to win teddy bears and prizes." },
-  { href: "panda.html",        icon: "🐼", name: "Tap The Panda",  tag: "Reflex",  color: "#8aff3c",
+  { href: "jais_express.html", icon: "🛺", name: "Jais Express",   tag: "Racing", color: "#ffcf3f",
+    desc: "Drive your auto through Jais. Dodge traffic, grab coins." },
+  { href: "spin.html",         icon: "🎯", name: "Spin The Wheel", tag: "Luck",   color: "#00f0ff",
+    desc: "Spin and try your luck to win teddy bears and toffees." },
+  { href: "panda.html",        icon: "🐼", name: "Tap The Panda",  tag: "Reflex", color: "#8aff3c",
     desc: "Tap the panda fast. It speeds up as you score." },
-  { href: "dharma.html",       icon: "🏹", name: "Dharma Quiz",    tag: "Quiz",    color: "#ff7a1a",
-    desc: "धर्म प्रश्नोत्तरी — 150 mythology questions with 3 lifelines." }
+  { href: "dharma.html",       icon: "🏹", name: "Dharma Quiz",    tag: "Quiz",   color: "#ff7a1a",
+    desc: "धर्म प्रश्नोत्तरी — 150 questions with 3 lifelines." }
 ];
 
-const N = GAMES.length;
-const STEP = 360 / N;
-const ring = document.getElementById("ring");
-const stage = document.getElementById("stage");
-const dotsBox = document.getElementById("dots");
-const root = document.documentElement;
+var N = GAMES.length;
+var STEP = 360 / N;
+var stage = document.getElementById("stage");
+var ring = document.getElementById("ring");
+var dotsBox = document.getElementById("dots");
+var index = 0;
+var radius = 0;
 
-let index = 0;     // which card faces the front (can go below 0 or above N; we wrap it)
-let radius = 0;
-
-/* ---------- Build cards and dots ---------- */
-GAMES.forEach((g, i) => {
-  const card = document.createElement("div");
-  card.className = "card";
-  card.style.setProperty("--accent", g.color);
-  card.dataset.i = i;
-  card.innerHTML = `<div class="icon">${g.icon}</div><div class="name">${g.name}</div><div class="tag">${g.tag}</div>`;
-  ring.appendChild(card);
-
-  const dot = document.createElement("button");
-  dot.className = "dot";
-  dot.setAttribute("aria-label", "Show " + g.name);
-  dot.addEventListener("click", () => goTo(i));
-  dotsBox.appendChild(dot);
-});
-const cards = [...ring.children];
-const dots = [...dotsBox.children];
-
-/* ---------- Geometry: a real cylinder that spins in place ---------- */
-function layout() {
-  const w = cards[0].offsetWidth;
-  // Distance from the centre so the cards just touch, plus a small gap
-  radius = Math.round((w / 2) / Math.tan(Math.PI / N) + w * 0.14);
-  cards.forEach((c, i) => {
-    c.style.transform = `rotateY(${i * STEP}deg) translateZ(${radius}px)`;
-  });
-  render();
+function rgba(hex, a) {
+  var n = parseInt(hex.slice(1), 16);
+  return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
 }
 
-// Pushing the ring back by its radius keeps the front card at normal size
-// and makes the whole cylinder rotate around its own centre.
-function render(dragDeg = 0) {
-  ring.style.transform = `translateZ(${-radius}px) rotateY(${-index * STEP + dragDeg}deg)`;
+/* ----- Build cards ----- */
+var cards = [], dots = [];
+GAMES.forEach(function (g, i) {
+  var c = document.createElement("div");
+  c.className = "card";
+  c.setAttribute("data-i", i);
+  c.style.background = "radial-gradient(circle at 50% 30%, " + rgba(g.color, 0.28) + ", rgba(0,0,0,0) 65%), linear-gradient(180deg, rgba(24,26,44,0.97), rgba(10,11,20,0.98))";
+  c.style.borderColor = rgba(g.color, 0.5);
+  c.innerHTML = '<div class="icon">' + g.icon + '</div><div class="name">' + g.name +
+                '</div><div class="tag" style="color:' + g.color + ';border-color:' + rgba(g.color, 0.6) + '">' + g.tag + '</div>';
+  ring.appendChild(c);
+  cards.push(c);
+
+  var d = document.createElement("span");
+  dotsBox.appendChild(d);
+  dots.push(d);
+});
+
+/* ----- Size the cards from the real screen size (works on every phone) ----- */
+function layout() {
+  var stageH = stage.clientHeight;
+  var w = Math.min(window.innerWidth * 0.48, stageH * 0.62, 230);
+  w = Math.max(110, Math.round(w));
+  var h = Math.round(w * 1.38);
+  ring.style.width = w + "px";
+  ring.style.height = h + "px";
+  ring.style.setProperty("--cw", w + "px");
+  radius = Math.round((w / 2) / Math.tan(Math.PI / N) + w * 0.15);
+  cards.forEach(function (c, i) {
+    c.style.transform = "rotateY(" + (i * STEP) + "deg) translateZ(" + radius + "px)";
+  });
+  render(0);
+}
+
+/* The ring is pushed back by its radius, so it spins on the spot */
+function render(dragDeg) {
+  ring.style.transform = "translateZ(" + (-radius) + "px) rotateY(" + (-index * STEP + dragDeg) + "deg)";
 }
 
 function activeIndex() { return ((index % N) + N) % N; }
 
 function update() {
-  render();
-  const a = activeIndex();
-  const g = GAMES[a];
-  cards.forEach((c, i) => {
-    c.classList.toggle("active", i === a);
-    c.tabIndex = i === a ? 0 : -1;
+  render(0);
+  var a = activeIndex(), g = GAMES[a];
+  cards.forEach(function (c, i) {
+    var on = i === a;
+    c.classList.toggle("active", on);
+    c.style.boxShadow = on ? "0 0 30px " + rgba(GAMES[i].color, 0.55) + ", inset 0 0 20px " + rgba(GAMES[i].color, 0.2) : "none";
+    c.style.borderColor = rgba(GAMES[i].color, on ? 1 : 0.4);
   });
-  dots.forEach((d, i) => d.classList.toggle("on", i === a));
-  root.style.setProperty("--accent", g.color);
-  document.getElementById("gameName").textContent = g.name;
+  dots.forEach(function (d, i) {
+    d.className = i === a ? "on" : "";
+    d.style.background = i === a ? g.color : "";
+  });
+  var nameEl = document.getElementById("gameName");
+  nameEl.textContent = g.name;
+  nameEl.style.color = g.color;
   document.getElementById("gameDesc").textContent = g.desc;
-  document.getElementById("playBtn").textContent = "PLAY " + g.name.toUpperCase();
 }
 
-function go(dir) { index += dir; update(); }
-
 function goTo(i) {
-  // take the shortest way round
-  let diff = i - activeIndex();
+  var diff = i - activeIndex();
   if (diff > N / 2) diff -= N;
   if (diff < -N / 2) diff += N;
   index += diff;
@@ -311,100 +264,85 @@ function goTo(i) {
 }
 
 function openGame() {
-  const g = GAMES[activeIndex()];
   document.body.classList.add("leaving");
-  setTimeout(() => { location.href = g.href; }, 260);
+  var href = GAMES[activeIndex()].href;
+  setTimeout(function () { location.href = href; }, 250);
 }
 
-/* ---------- Drag / swipe / tap ---------- */
-let startX = 0, dragDeg = 0, pressing = false, dragging = false, pressedCard = null;
-const DRAG_SENSITIVITY = 0.35;   // degrees per pixel
-const TAP_LIMIT = 8;             // pixels moved before it counts as a drag
+/* ----- Finger swipe (with flick speed) ----- */
+var SENS = 0.4;          // degrees turned per pixel of finger movement
+var pressing = false, dragging = false, startX = 0, lastX = 0, lastT = 0, vel = 0, dragDeg = 0, pressedCard = null;
 
-stage.addEventListener("pointerdown", e => {
-  pressing = true; dragging = false; dragDeg = 0;
-  startX = e.clientX;
-  pressedCard = e.target.closest(".card");
-  stage.setPointerCapture(e.pointerId);
-  startVideo(); // first touch also unlocks video on strict browsers
-});
-
-stage.addEventListener("pointermove", e => {
+function down(x, target) {
+  pressing = true; dragging = false;
+  startX = lastX = x; lastT = Date.now(); vel = 0; dragDeg = 0;
+  pressedCard = target && target.closest ? target.closest(".card") : null;
+  startVideo();
+}
+function moveTo(x) {
   if (!pressing) return;
-  const dx = e.clientX - startX;
-  if (!dragging && Math.abs(dx) > TAP_LIMIT) {
-    dragging = true;
-    ring.classList.add("dragging");
-    stage.classList.add("grabbing");
-  }
-  if (dragging) {
-    dragDeg = dx * DRAG_SENSITIVITY;
-    render(dragDeg);
-  }
-});
-
-function endPress() {
+  var now = Date.now();
+  vel = (x - lastX) / Math.max(1, now - lastT);
+  lastX = x; lastT = now;
+  var dx = x - startX;
+  if (!dragging && Math.abs(dx) > 8) { dragging = true; ring.classList.add("dragging"); }
+  if (dragging) { dragDeg = dx * SENS; render(dragDeg); }
+}
+function up() {
   if (!pressing) return;
   pressing = false;
   ring.classList.remove("dragging");
-  stage.classList.remove("grabbing");
-
   if (dragging) {
-    // snap to the nearest card
-    index = Math.round(index - dragDeg / STEP);
+    var flick = Math.max(-1.5, Math.min(1.5, vel)) * 180 * SENS;   // fast flick turns further
+    index = Math.round(index - (dragDeg + flick) / STEP);
     update();
   } else if (pressedCard) {
-    const i = Number(pressedCard.dataset.i);
-    if (i === activeIndex()) openGame();   // tap the front card: play
-    else goTo(i);                          // tap a side card: bring it to front
+    var i = Number(pressedCard.getAttribute("data-i"));
+    if (i === activeIndex()) openGame(); else goTo(i);
   }
   pressedCard = null;
 }
-stage.addEventListener("pointerup", endPress);
-stage.addEventListener("pointercancel", endPress);
 
-/* Mouse wheel / trackpad */
-let wheelLock = false;
-stage.addEventListener("wheel", e => {
-  e.preventDefault();
-  if (wheelLock) return;
-  const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-  if (Math.abs(d) < 8) return;
-  go(d > 0 ? 1 : -1);
-  wheelLock = true;
-  setTimeout(() => wheelLock = false, 420);
-}, { passive: false });
-
-/* Buttons and keyboard */
-document.getElementById("prevBtn").addEventListener("click", () => go(-1));
-document.getElementById("nextBtn").addEventListener("click", () => go(1));
-document.getElementById("playBtn").addEventListener("click", openGame);
-window.addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft") go(-1);
-  if (e.key === "ArrowRight") go(1);
-  if (e.key === "Enter" && document.activeElement.tagName !== "BUTTON") openGame();
+/* Touch (phones) */
+stage.addEventListener("touchstart", function (e) { down(e.touches[0].clientX, e.target); }, { passive: true });
+stage.addEventListener("touchmove",  function (e) { moveTo(e.touches[0].clientX); }, { passive: true });
+stage.addEventListener("touchend", up);
+stage.addEventListener("touchcancel", up);
+/* Mouse (computers) */
+stage.addEventListener("mousedown", function (e) { down(e.clientX, e.target); });
+window.addEventListener("mousemove", function (e) { moveTo(e.clientX); });
+window.addEventListener("mouseup", up);
+/* Keyboard */
+window.addEventListener("keydown", function (e) {
+  if (e.key === "ArrowLeft")  { index--; update(); }
+  if (e.key === "ArrowRight") { index++; update(); }
+  if (e.key === "Enter") openGame();
 });
 
-/* ---------- Background video ---------- */
-const video = document.getElementById("bgVideo");
-video.muted = true;               // must be muted for autoplay on phones
+document.getElementById("playBtn").addEventListener("click", openGame);
+
+/* ----- Background video ----- */
+var video = document.getElementById("bgVideo");
+video.muted = true;
+video.setAttribute("muted", "");
 function startVideo() {
   if (!video.paused) return;
-  const p = video.play();
-  if (p) p.catch(() => {});       // blocked? we'll retry on the next touch
+  var p = video.play();
+  if (p && p.catch) p.catch(function () {});
 }
 startVideo();
-video.addEventListener("canplay", startVideo);
-// Some phones (battery saver / data saver) block autoplay: start on any tap
-["pointerdown", "touchstart", "click", "keydown"].forEach(ev =>
-  document.addEventListener(ev, startVideo, { passive: true })
-);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) startVideo(); });
+video.addEventListener("loadeddata", startVideo);
+document.addEventListener("touchstart", startVideo, { passive: true });
+document.addEventListener("click", startVideo);
+document.getElementById("bgSource").addEventListener("error", function () {
+  document.getElementById("videoMsg").style.display = "block";
+});
+window.addEventListener("pageshow", function () {
+  document.body.classList.remove("leaving");
+  startVideo();
+});
 
-/* Coming back with the browser's Back button: undo the fade-out */
-window.addEventListener("pageshow", () => { document.body.classList.remove("leaving"); startVideo(); });
-
-/* ---------- Start ---------- */
+/* ----- Start ----- */
 window.addEventListener("resize", layout);
 layout();
 update();
