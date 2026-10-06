@@ -1,235 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Zone - 3D Game Store</title>
-    <style>
-        * { box-sizing: border-box; user-select: none; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100vh;
-            background: #060609; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden; color: #ffffff;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arcade Zone — Game Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan: #00f0ff;
+  --pink: #ff2d8a;
+  --text: #eef4f8;
+  --muted: #9aa6c4;
+  --panel: rgba(12, 14, 24, 0.82);
+  /* Card size adapts to both screen width and height */
+  --card-w: clamp(140px, min(42vw, 25dvh), 215px);
+  --card-h: calc(var(--card-w) * 1.36);
+}
 
-        /* Background Video Container */
-        #bg-video-wrapper {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            overflow: hidden; z-index: 0;
-        }
-        #bg-video-wrapper video {
-            width: 100%; height: 100%; object-fit: cover;
-            filter: brightness(0.35) contrast(1.2) blur(2px);
-        }
-        .video-overlay {
-            position: absolute; inset: 0;
-            background: radial-gradient(circle at center, rgba(21, 16, 37, 0.4) 0%, rgba(6, 6, 9, 0.85) 100%);
-        }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-        .scene {
-            width: 100%; height: 100vh; perspective: 1400px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            position: relative; z-index: 1;
-        }
-        .header-title {
-            position: absolute; top: 25px; text-align: center; z-index: 10;
-        }
-        .header-title h1 {
-            margin: 0; font-size: 2.5rem; letter-spacing: 4px;
-            background: linear-gradient(45deg, #00ffff, #ff007f);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
-        }
-        .header-title p {
-            margin: 5px 0 0 0; color: #a0a0c0; font-size: 0.85rem; letter-spacing: 2px;
-            text-transform: uppercase;
-        }
+html, body {
+  height: 100%;
+  background: #05060a;
+  color: var(--text);
+  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
-        /* 3D Cylinder Carousel */
-        .carousel-container {
-            width: 260px; height: 370px; position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.15s cubic-bezier(0.1, 0.7, 0.1, 1);
-            cursor: grab;
-        }
-        .carousel-container:active { cursor: grabbing; }
+/* ---------- Background video ---------- */
+#bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  /* Shown if the video can't load */
+  background:
+    radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(255, 45, 138, 0.18), transparent 45%),
+    #05060a;
+}
+#bg video {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: brightness(0.7) saturate(1.15);
+}
+#bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(5, 6, 10, 0) 0%, rgba(5, 6, 10, 0.7) 85%);
+}
 
-        .card {
-            position: absolute; width: 100%; height: 100%; left: 0; top: 0;
-            background: rgba(18, 18, 30, 0.75);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 2px solid rgba(0, 255, 255, 0.4); border-radius: 24px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 127, 0.2);
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            padding: 35px 20px; text-align: center; text-decoration: none; color: white;
-            backface-visibility: hidden; transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
-        }
-        .card:hover {
-            border-color: #ff007f;
-            box-shadow: 0 15px 45px rgba(255, 0, 127, 0.5), inset 0 0 25px rgba(0, 255, 255, 0.4);
-        }
-        .card-icon {
-            font-size: 4.8rem; margin-top: 10px;
-            filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.6));
-            animation: floatIcon 3s ease-in-out infinite alternate;
-        }
-        @keyframes floatIcon {
-            0% { transform: translateY(0px) rotate(0deg); }
-            100% { transform: translateY(-8px) rotate(3deg); }
-        }
+/* ---------- Layout ---------- */
+.app {
+  position: relative; z-index: 1;
+  height: 100dvh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+body.leaving .app { opacity: 0; transform: scale(1.04); }
 
-        .card-content h2 { font-size: 1.4rem; margin: 10px 0 5px 0; color: #fff; }
-        .card-content p { font-size: 0.8rem; color: #b0b0d0; margin: 0; line-height: 1.4; }
-        
-        .play-btn {
-            background: linear-gradient(45deg, #ff007f, #7f00ff); color: white;
-            padding: 10px 28px; border-radius: 30px; font-weight: bold; font-size: 0.85rem;
-            letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.5);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card:hover .play-btn {
-            transform: scale(1.08); box-shadow: 0 6px 20px rgba(255, 0, 127, 0.8);
-        }
+header { text-align: center; }
+header h1 {
+  font-family: 'Orbitron', sans-serif; font-weight: 900;
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  letter-spacing: 0.12em;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.35));
+}
+header p { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
 
-        .nav-controls {
-            position: absolute; bottom: 35px; display: flex; gap: 18px; z-index: 10;
-        }
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white; padding: 10px 24px; border-radius: 30px; cursor: pointer;
-            font-weight: bold; font-size: 0.9rem; transition: all 0.3s; backdrop-filter: blur(8px);
-        }
-        .nav-btn:hover { background: rgba(0, 255, 255, 0.25); border-color: #00ffff; box-shadow: 0 0 18px rgba(0,255,255,0.4); }
-        .swipe-hint {
-            position: absolute; bottom: 14px; font-size: 0.75rem; color: rgba(255, 255, 255, 0.45); letter-spacing: 1px;
-        }
-        footer {
-            position: absolute; bottom: 0; width: 100%; text-align: center; font-size: 0.7rem;
-            color: rgba(255,255,255,0.3); padding: 4px; pointer-events: none; z-index: 10;
-        }
-    </style>
+/* ---------- 3D cylinder ---------- */
+.stage {
+  flex: 1; min-height: 0; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  perspective: 1000px;
+  touch-action: pan-y;
+  cursor: grab;
+  position: relative;
+}
+.stage.grabbing { cursor: grabbing; }
+.stage::after { /* glowing floor under the ring */
+  content: ""; position: absolute; left: 50%; bottom: 8%;
+  width: min(80vw, 520px); height: 40px; transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 240, 255, 0.28), transparent 70%);
+  pointer-events: none;
+}
+
+.ring {
+  position: relative;
+  width: var(--card-w); height: var(--card-h);
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ring.dragging { transition: none; }
+
+.card {
+  position: absolute; inset: 0;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 65%),
+    linear-gradient(180deg, rgba(22, 24, 40, 0.96), rgba(10, 11, 20, 0.98));
+  border: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 18px 12px; text-align: center;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: opacity 0.45s, filter 0.45s, border-color 0.45s, box-shadow 0.45s;
+  opacity: 0.4; filter: brightness(0.6) saturate(0.7);
+}
+.card.active {
+  opacity: 1; filter: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 55%, transparent),
+              inset 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
+  cursor: pointer;
+}
+.card .icon {
+  font-size: calc(var(--card-w) * 0.36); line-height: 1;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+.card.active .icon { animation: bob 2.4s ease-in-out infinite alternate; }
+@keyframes bob { to { transform: translateY(-7px) rotate(3deg); } }
+.card .name {
+  font-family: 'Orbitron', sans-serif; font-weight: 700;
+  font-size: calc(var(--card-w) * 0.085); line-height: 1.25;
+}
+.card .tag {
+  font-size: calc(var(--card-w) * 0.07); font-weight: 600;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  padding: 2px 10px; border-radius: 99px;
+}
+
+/* ---------- Info panel ---------- */
+.panel {
+  width: 100%; max-width: 460px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 14px 14px 12px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  text-align: center;
+}
+.panel h2 {
+  font-family: 'Orbitron', sans-serif; font-size: 1.15rem; font-weight: 700;
+  color: var(--accent, var(--cyan));
+  transition: color 0.4s;
+}
+.panel .desc { color: #c8d0e4; font-size: 0.98rem; line-height: 1.35; margin: 4px 0 12px; min-height: 2.7em; }
+
+.row { display: flex; align-items: center; gap: 10px; }
+.arrow {
+  flex: 0 0 48px; height: 48px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text); font-size: 1.2rem; cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.arrow:active { transform: scale(0.93); background: rgba(0, 240, 255, 0.18); }
+.play {
+  flex: 1; height: 48px; border: none; border-radius: 14px; cursor: pointer;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 0.95rem; letter-spacing: 0.08em;
+  color: #fff;
+  background: linear-gradient(90deg, var(--pink), #7f3cff);
+  box-shadow: 0 6px 20px rgba(255, 45, 138, 0.4);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.play:active { transform: scale(0.97); }
+
+.dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.dot {
+  width: 8px; height: 8px; border-radius: 99px; border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.25);
+  transition: width 0.3s, background 0.3s;
+}
+.dot.on { width: 24px; background: var(--accent, var(--cyan)); }
+
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+footer { margin-top: 8px; font-size: 0.78rem; color: rgba(255, 255, 255, 0.35); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring { transition-duration: 0.01s; }
+  .card.active .icon { animation: none; }
+}
+</style>
 </head>
 <body>
 
-    <div id="bg-video-wrapper">
-        <video autoplay loop muted playsinline poster="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23060609'/></svg>">
-            <source src="spin_bg.mp4" type="video/mp4">
-        </video>
-        <div class="video-overlay"></div>
+<div id="bg">
+  <!-- BACKGROUND VIDEO: same file the Spin The Wheel game uses -->
+  <video id="bgVideo" autoplay muted loop playsinline preload="auto">
+    <source src="bg.mp4" type="video/mp4">
+  </video>
+</div>
+
+<div class="app">
+  <header>
+    <h1>ARCADE ZONE</h1>
+    <p>Swipe to browse, tap the front card to play</p>
+  </header>
+
+  <div class="stage" id="stage" aria-label="Game selector">
+    <div class="ring" id="ring"></div>
+  </div>
+
+  <section class="panel" id="panel">
+    <h2 id="gameName"></h2>
+    <p class="desc" id="gameDesc"></p>
+    <div class="row">
+      <button class="arrow" id="prevBtn" aria-label="Previous game">◀</button>
+      <button class="play" id="playBtn">PLAY</button>
+      <button class="arrow" id="nextBtn" aria-label="Next game">▶</button>
     </div>
+    <div class="dots" id="dots"></div>
+  </section>
 
-    <div class="scene">
-        <div class="header-title">
-            <h1>ARCADE ZONE</h1>
-            <p>Select Game &bull; Drag to Rotate</p>
-        </div>
+  <footer>✨ Maa Kamakhya Group ✨</footer>
+</div>
 
-        <div class="carousel-container" id="carousel">
-            <!-- 1. Horror Game -->
-            <a href="horror.html" class="card" style="transform: rotateY(0deg) translateZ(360px);">
-                <div class="card-icon">👻</div>
-                <div class="card-content">
-                    <h2>The Last Night</h2>
-                    <p>Survive the haunted estate and find the secret mystery key.</p>
-                </div>
-                <div class="play-btn">PLAY NOW</div>
-            </a>
+<script>
+/* =========================================================
+   GAME LIST — to add a game, just add one more line here.
+   The cylinder resizes itself automatically.
+   ========================================================= */
+const GAMES = [
+  { href: "horror.html",       icon: "👻", name: "The Last Night", tag: "Horror",  color: "#a855f7",
+    desc: "Survive the haunted estate and find the secret key." },
+  { href: "jais_express.html", icon: "🛺", name: "Jais Express",   tag: "Racing",  color: "#ffcf3f",
+    desc: "Drive your auto through the stations of Jais. Dodge traffic, grab coins." },
+  { href: "spin.html",         icon: "🎯", name: "Spin The Wheel", tag: "Luck",    color: "#00f0ff",
+    desc: "Spin and try your luck to win teddy bears and prizes." },
+  { href: "panda.html",        icon: "🐼", name: "Tap The Panda",  tag: "Reflex",  color: "#8aff3c",
+    desc: "Tap the panda fast. It speeds up as you score." },
+  { href: "dharma.html",       icon: "🏹", name: "Dharma Quiz",    tag: "Quiz",    color: "#ff7a1a",
+    desc: "धर्म प्रश्नोत्तरी — 150 mythology questions with 3 lifelines." }
+];
 
-            <!-- 2. Jais Express -->
-            <a href="jais_express.html" class="card" style="transform: rotateY(72deg) translateZ(360px);">
-                <div class="card-icon">🛺</div>
-                <div class="card-content">
-                    <h2>Jais Express</h2>
-                    <p>High-speed 3D auto driver highway arcade racer.</p>
-                </div>
-                <div class="play-btn">PLAY NOW</div>
-            </a>
+const N = GAMES.length;
+const STEP = 360 / N;
+const ring = document.getElementById("ring");
+const stage = document.getElementById("stage");
+const dotsBox = document.getElementById("dots");
+const root = document.documentElement;
 
-            <!-- 3. Spin The Wheel -->
-            <a href="spin.html" class="card" style="transform: rotateY(144deg) translateZ(360px);">
-                <div class="card-icon">🎯</div>
-                <div class="card-content">
-                    <h2>Spin The Wheel</h2>
-                    <p>Test your luck to win Teddy Bears & Prizes!</p>
-                </div>
-                <div class="play-btn">PLAY NOW</div>
-            </a>
+let index = 0;     // which card faces the front (can go below 0 or above N; we wrap it)
+let radius = 0;
 
-            <!-- 4. Tap The Panda -->
-            <a href="panda.html" class="card" style="transform: rotateY(216deg) translateZ(360px);">
-                <div class="card-icon">🐼</div>
-                <div class="card-content">
-                    <h2>Tap The Panda</h2>
-                    <p>Fast-paced reflex challenge with dynamic speed scaling!</p>
-                </div>
-                <div class="play-btn">PLAY NOW</div>
-            </a>
+/* ---------- Build cards and dots ---------- */
+GAMES.forEach((g, i) => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.style.setProperty("--accent", g.color);
+  card.dataset.i = i;
+  card.innerHTML = `<div class="icon">${g.icon}</div><div class="name">${g.name}</div><div class="tag">${g.tag}</div>`;
+  ring.appendChild(card);
 
-            <!-- 5. Dharma Quiz -->
-            <a href="dharma.html" class="card" style="transform: rotateY(288deg) translateZ(360px);">
-                <div class="card-icon">🏹</div>
-                <div class="card-content">
-                    <h2>Dharma Quiz</h2>
-                    <p>धर्म प्रश्नोत्तरी: 150 mythological questions & 3 lifelines.</p>
-                </div>
-                <div class="play-btn">PLAY NOW</div>
-            </a>
-        </div>
+  const dot = document.createElement("button");
+  dot.className = "dot";
+  dot.setAttribute("aria-label", "Show " + g.name);
+  dot.addEventListener("click", () => goTo(i));
+  dotsBox.appendChild(dot);
+});
+const cards = [...ring.children];
+const dots = [...dotsBox.children];
 
-        <div class="nav-controls">
-            <button class="nav-btn" id="prevBtn">&#10094; Prev</button>
-            <button class="nav-btn" id="nextBtn">Next &#10095;</button>
-        </div>
-        <div class="swipe-hint">&larr; Swipe horizontally or use arrow buttons &rarr;</div>
-    </div>
+/* ---------- Geometry: a real cylinder that spins in place ---------- */
+function layout() {
+  const w = cards[0].offsetWidth;
+  // Distance from the centre so the cards just touch, plus a small gap
+  radius = Math.round((w / 2) / Math.tan(Math.PI / N) + w * 0.14);
+  cards.forEach((c, i) => {
+    c.style.transform = `rotateY(${i * STEP}deg) translateZ(${radius}px)`;
+  });
+  render();
+}
 
-    <footer>✨ Maa Kamakhya Group &bull; 3D Game Store Hub ✨</footer>
+// Pushing the ring back by its radius keeps the front card at normal size
+// and makes the whole cylinder rotate around its own centre.
+function render(dragDeg = 0) {
+  ring.style.transform = `translateZ(${-radius}px) rotateY(${-index * STEP + dragDeg}deg)`;
+}
 
-    <script>
-        const carousel = document.getElementById('carousel');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
+function activeIndex() { return ((index % N) + N) % N; }
 
-        let currAngle = 0;
-        const cardCount = 5;
-        const angleStep = 360 / cardCount;
+function update() {
+  render();
+  const a = activeIndex();
+  const g = GAMES[a];
+  cards.forEach((c, i) => {
+    c.classList.toggle("active", i === a);
+    c.tabIndex = i === a ? 0 : -1;
+  });
+  dots.forEach((d, i) => d.classList.toggle("on", i === a));
+  root.style.setProperty("--accent", g.color);
+  document.getElementById("gameName").textContent = g.name;
+  document.getElementById("gameDesc").textContent = g.desc;
+  document.getElementById("playBtn").textContent = "PLAY " + g.name.toUpperCase();
+}
 
-        function updateCarousel() {
-            carousel.style.transform = `rotateY(${currAngle}deg)`;
-        }
+function go(dir) { index += dir; update(); }
 
-        nextBtn.addEventListener('click', () => { currAngle -= angleStep; updateCarousel(); });
-        prevBtn.addEventListener('click', () => { currAngle += angleStep; updateCarousel(); });
+function goTo(i) {
+  // take the shortest way round
+  let diff = i - activeIndex();
+  if (diff > N / 2) diff -= N;
+  if (diff < -N / 2) diff += N;
+  index += diff;
+  update();
+}
 
-        let isDragging = false, startX = 0, currentAngleOffset = 0;
+function openGame() {
+  const g = GAMES[activeIndex()];
+  document.body.classList.add("leaving");
+  setTimeout(() => { location.href = g.href; }, 260);
+}
 
-        carousel.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX; });
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            currentAngleOffset = (e.clientX - startX) * 0.45;
-            carousel.style.transform = `rotateY(${currAngle + currentAngleOffset}deg)`;
-        });
-        window.addEventListener('mouseup', () => {
-            if (!isDragging) return;
-            isDragging = false;
-            currAngle += currentAngleOffset; currentAngleOffset = 0;
-            currAngle = Math.round(currAngle / angleStep) * angleStep;
-            updateCarousel();
-        });
+/* ---------- Drag / swipe / tap ---------- */
+let startX = 0, dragDeg = 0, pressing = false, dragging = false, pressedCard = null;
+const DRAG_SENSITIVITY = 0.35;   // degrees per pixel
+const TAP_LIMIT = 8;             // pixels moved before it counts as a drag
 
-        carousel.addEventListener('touchstart', (e) => { isDragging = true; startX = e.touches[0].clientX; });
-        window.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            currentAngleOffset = (e.touches[0].clientX - startX) * 0.45;
-            carousel.style.transform = `rotateY(${currAngle + currentAngleOffset}deg)`;
-        });
-        window.addEventListener('touchend', () => {
-            if (!isDragging) return;
-            isDragging = false;
-            currAngle += currentAngleOffset; currentAngleOffset = 0;
-            currAngle = Math.round(currAngle / angleStep) * angleStep;
-            updateCarousel();
-        });
-    </script>
+stage.addEventListener("pointerdown", e => {
+  pressing = true; dragging = false; dragDeg = 0;
+  startX = e.clientX;
+  pressedCard = e.target.closest(".card");
+  stage.setPointerCapture(e.pointerId);
+  startVideo(); // first touch also unlocks video on strict browsers
+});
+
+stage.addEventListener("pointermove", e => {
+  if (!pressing) return;
+  const dx = e.clientX - startX;
+  if (!dragging && Math.abs(dx) > TAP_LIMIT) {
+    dragging = true;
+    ring.classList.add("dragging");
+    stage.classList.add("grabbing");
+  }
+  if (dragging) {
+    dragDeg = dx * DRAG_SENSITIVITY;
+    render(dragDeg);
+  }
+});
+
+function endPress() {
+  if (!pressing) return;
+  pressing = false;
+  ring.classList.remove("dragging");
+  stage.classList.remove("grabbing");
+
+  if (dragging) {
+    // snap to the nearest card
+    index = Math.round(index - dragDeg / STEP);
+    update();
+  } else if (pressedCard) {
+    const i = Number(pressedCard.dataset.i);
+    if (i === activeIndex()) openGame();   // tap the front card: play
+    else goTo(i);                          // tap a side card: bring it to front
+  }
+  pressedCard = null;
+}
+stage.addEventListener("pointerup", endPress);
+stage.addEventListener("pointercancel", endPress);
+
+/* Mouse wheel / trackpad */
+let wheelLock = false;
+stage.addEventListener("wheel", e => {
+  e.preventDefault();
+  if (wheelLock) return;
+  const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (Math.abs(d) < 8) return;
+  go(d > 0 ? 1 : -1);
+  wheelLock = true;
+  setTimeout(() => wheelLock = false, 420);
+}, { passive: false });
+
+/* Buttons and keyboard */
+document.getElementById("prevBtn").addEventListener("click", () => go(-1));
+document.getElementById("nextBtn").addEventListener("click", () => go(1));
+document.getElementById("playBtn").addEventListener("click", openGame);
+window.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") go(-1);
+  if (e.key === "ArrowRight") go(1);
+  if (e.key === "Enter" && document.activeElement.tagName !== "BUTTON") openGame();
+});
+
+/* ---------- Background video ---------- */
+const video = document.getElementById("bgVideo");
+video.muted = true;               // must be muted for autoplay on phones
+function startVideo() {
+  if (!video.paused) return;
+  const p = video.play();
+  if (p) p.catch(() => {});       // blocked? we'll retry on the next touch
+}
+startVideo();
+video.addEventListener("canplay", startVideo);
+// Some phones (battery saver / data saver) block autoplay: start on any tap
+["pointerdown", "touchstart", "click", "keydown"].forEach(ev =>
+  document.addEventListener(ev, startVideo, { passive: true })
+);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) startVideo(); });
+
+/* Coming back with the browser's Back button: undo the fade-out */
+window.addEventListener("pageshow", () => { document.body.classList.remove("leaving"); startVideo(); });
+
+/* ---------- Start ---------- */
+window.addEventListener("resize", layout);
+layout();
+update();
+</script>
 </body>
 </html>
