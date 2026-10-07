@@ -13,14 +13,17 @@
 
    Testing helpers (browser console):
      ArcadeIntro.play()        play it now
-     ArcadeIntro.reset()       forget "already watched" (plays again on next entry)
-   or open  index.html?intro=reset   (same as reset, also shows the splash again)
+     ArcadeIntro.reset()       show the "tap to enter" splash (and intro) again on next load
+   or open  index.html?intro=reset   (same, without the console)
    Force a performance level:  index.html?introperf=low | mid | high
    ========================================================= */
 (function () {
   "use strict";
 
   var CONFIG = {
+    /* true  = play on every visit (every time "TAP TO ENTER" is tapped)
+       false = play only the first time on each device (remembered in localStorage) */
+    PLAY_EVERY_VISIT: true,
     STORAGE_KEY: "gz_intro_seen_v1",
     TITLE: "CHOOSE YOUR GAME",
     /* Future artwork: a transparent PNG/WebP of the character, standing,
@@ -1014,7 +1017,8 @@
   window.ArcadeIntro = {
     init: init,
     autoPlay: function () {
-      if (!hooks || reducedMotion() || lsGet(CONFIG.STORAGE_KEY)) return false;
+      if (!hooks || reducedMotion()) return false;
+      if (!CONFIG.PLAY_EVERY_VISIT && lsGet(CONFIG.STORAGE_KEY)) return false;
       return play();
     },
     play: play,
