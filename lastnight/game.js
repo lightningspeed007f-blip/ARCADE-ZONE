@@ -84,8 +84,8 @@ G.give = function (id, quiet) {
     if (G.has(id)) return;
     S.inv.push(id); A.pickup(); refreshInv();
     const it = LN.content.ITEMS[id];
-    if (!quiet && it) G.toast("Taken: " + it.name);
-    if (!S.flags.journalHint) { S.flags.journalHint = true; G.later(2.8, () => G.toast(isTouch ? "Tap ☰ to see what you carry" : "Press TAB to see what you carry")); }
+    if (!quiet && it) G.toast("Mil gaya: " + it.name);
+    if (!S.flags.journalHint) { S.flags.journalHint = true; G.later(2.8, () => G.toast(isTouch ? "Apna saamaan dekhne ke liye ☰ dabao" : "Apna saamaan dekhne ke liye TAB dabao")); }
 };
 G.take = function (id) { S.inv = S.inv.filter(i => i !== id); refreshInv(); };
 function refreshInv() {
@@ -132,14 +132,14 @@ G.openOverlay = openOverlay; G.closeOverlay = closeOverlay;
 
 function openJournal() {
     const inv = $("jInv"), notes = $("jNotes");
-    inv.innerHTML = S.inv.length ? "" : "<p class='empty'>Nothing yet.</p>";
+    inv.innerHTML = S.inv.length ? "" : "<p class='empty'>Abhi kuch nahi.</p>";
     S.inv.forEach(id => {
         const it = LN.content.ITEMS[id];
         const d = document.createElement("div"); d.className = "jitem";
         d.innerHTML = `<img src="${ART.icon(id)}" alt=""><div><b>${it.name}</b><span>${it.desc}</span></div>`;
         inv.appendChild(d);
     });
-    notes.innerHTML = S.notes.length ? "" : "<p class='empty'>Nothing read yet.</p>";
+    notes.innerHTML = S.notes.length ? "" : "<p class='empty'>Abhi tak kuch nahi padha.</p>";
     S.notes.forEach(id => {
         const n = LN.content.NOTES[id];
         const b = document.createElement("button"); b.className = "jnote"; b.textContent = n.title;
@@ -474,7 +474,7 @@ G.hide = function (spot) {
     S.x = spot.view.x; S.y = spot.view.y; S.a = spot.view.a;
     $("hideMask").className = "show " + spot.mask;
     A.creak({ x: S.x, y: S.y }, 0.4, 0.5);
-    spot.exitInter = { label: "Come out", use: G.unhide };
+    spot.exitInter = { label: "Bahar niklo", use: G.unhide };
     if (ghost.on && (ghost.mode === "hunt" || ghost.mode === "search") && ghost.floor === S.floor) ghostOnHide(spot);
 };
 G.unhide = function () {
@@ -932,9 +932,9 @@ function draw(dt) {
         const lbl = labelOf(t);
         if (lbl) {
             const holdIt = typeof t.hold === "function" ? t.hold() : t.hold;
-            pr.innerHTML = (isTouch ? "" : `<kbd>E</kbd>`) + `<span>${lbl}${holdIt ? " <i>(hold)</i>" : ""}</span>`;
+            pr.innerHTML = (isTouch ? "" : `<kbd>E</kbd>`) + `<span>${lbl}${holdIt ? " <i>(dabaye rakho)</i>" : ""}</span>`;
             pr.classList.add("on");
-            $("btnUse").classList.add("on"); $("btnUse").textContent = lbl.split(" ")[0];
+            $("btnUse").classList.add("on"); $("btnUse").textContent = lbl.replace(/\s*\(.*\)$/, "").split(" ").pop();
             $("dot").classList.add("live");
         } else hidePrompt();
     } else hidePrompt();
@@ -991,13 +991,13 @@ function storyNext() {
     if (storyCur.type === "video") {
         im.classList.remove("on"); vid.style.display = "block"; vid.src = storyCur.src; vid.muted = false;
         vid.play().catch(() => { vid.muted = true; vid.play().catch(() => storyNext()); });
-        $("storyHint").textContent = isTouch ? "Tap to skip" : "SPACE to skip";
+        $("storyHint").textContent = isTouch ? "Skip karne ke liye tap karo" : "Skip karne ke liye SPACE dabao";
     } else {
         vid.style.display = "none"; vid.removeAttribute("src");
         im.classList.remove("on");
         setTimeout(() => { im.src = storyCur.src; im.classList.add("on"); }, 250);
         storyTimer = setTimeout(storyNext, STORY.imageSeconds * 1000);
-        $("storyHint").textContent = isTouch ? "Tap to continue" : "SPACE to continue";
+        $("storyHint").textContent = isTouch ? "Aage badhne ke liye tap karo" : "Aage badhne ke liye SPACE dabao";
     }
 }
 function storySkip() { storyQueue = []; storyNext(); }

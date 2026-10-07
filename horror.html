@@ -187,13 +187,13 @@ body.touch #inv { top: 14px; right: 14px; }
     <div id="toast"></div>
     <div id="inv"></div>
     <div id="stamina"><div></div></div>
-    <div id="lockHint">Click to look around</div>
-    <div id="controlsHint">WASD move · Mouse look · Shift run · E interact · Tab journal · F torch · Esc pause</div>
+    <div id="lockHint">Idhar-udhar dekhne ke liye click karo</div>
+    <div id="controlsHint">WASD chalo · Mouse dekho · Shift bhaago · E use karo · Tab journal · F torch · Esc pause</div>
 </div>
 
 <div id="joy"><div id="stick"></div></div>
-<button id="btnUse">Use</button>
-<button id="btnRun">RUN</button>
+<button id="btnUse">Karo</button>
+<button id="btnRun">BHAAGO</button>
 <button id="btnJournal" aria-label="Journal">☰</button>
 
 <div id="fade"></div>
@@ -205,17 +205,17 @@ body.touch #inv { top: 14px; right: 14px; }
         <h2 id="noteTitle"></h2>
         <canvas id="noteArt" width="440" height="427"></canvas>
         <div id="noteBody"></div>
-        <div class="hintline">E / CLICK TO PUT IT DOWN</div>
+        <div class="hintline">RAKHNE KE LIYE E / CLICK</div>
     </div>
 </div>
 <div id="journal" class="overlay">
     <div class="card">
-        <h2>What I have</h2>
+        <h2>Mere paas kya hai</h2>
         <div class="jcols">
-            <div><h3>CARRYING</h3><div id="jInv"></div></div>
-            <div><h3>READ</h3><div id="jNotes"></div></div>
+            <div><h3>SAAMAAN</h3><div id="jInv"></div></div>
+            <div><h3>PADHA HUA</h3><div id="jNotes"></div></div>
         </div>
-        <div class="row"><button class="btn quiet closeOverlay">Close</button></div>
+        <div class="row"><button class="btn quiet closeOverlay">Band karo</button></div>
     </div>
 </div>
 <div id="clockView" class="overlay">
@@ -224,72 +224,72 @@ body.touch #inv { top: 14px; right: 14px; }
         <canvas id="clockCanvas" width="520" height="520"></canvas>
         <div id="clockRead"></div>
         <div class="cgrid">
-            <span>HOUR HAND</span><div><button class="cbtn" id="clockHD">‹</button><button class="cbtn" id="clockHU">›</button></div>
-            <span>MINUTE HAND</span><div><button class="cbtn" id="clockM5D">«</button><button class="cbtn" id="clockMD">‹</button><button class="cbtn" id="clockMU">›</button><button class="cbtn" id="clockM5U">»</button></div>
+            <span>GHANTE KI SUI</span><div><button class="cbtn" id="clockHD">‹</button><button class="cbtn" id="clockHU">›</button></div>
+            <span>MINUTE KI SUI</span><div><button class="cbtn" id="clockM5D">«</button><button class="cbtn" id="clockMD">‹</button><button class="cbtn" id="clockMU">›</button><button class="cbtn" id="clockM5U">»</button></div>
         </div>
-        <div class="row"><button class="btn" id="clockSet">Leave the hands here</button><button class="btn quiet" id="clockLeave">Step away</button></div>
-        <div class="ckeys">← → HOUR · ↑ ↓ MINUTE · ENTER SET · ESC LEAVE</div>
+        <div class="row"><button class="btn" id="clockSet">Suiyan yahin chhod do</button><button class="btn quiet" id="clockLeave">Peeche hato</button></div>
+        <div class="ckeys">← → GHANTA · ↑ ↓ MINUTE · ENTER SET · ESC CHHODO</div>
     </div>
 </div>
 <div id="pause" class="overlay">
     <div class="card">
-        <h2>Paused</h2>
+        <h2>Ruka hua</h2>
         <div class="keys">
-            <div><b>W A S D</b> move</div>
-            <div><b>Mouse</b> look (click to capture)</div>
-            <div><b>Shift</b> run</div>
-            <div><b>E</b> interact / hold</div>
+            <div><b>W A S D</b> chalo</div>
+            <div><b>Mouse</b> dekho (pakadne ke liye click)</div>
+            <div><b>Shift</b> bhaago</div>
+            <div><b>E</b> use karo / dabaye rakho</div>
             <div><b>Tab</b> journal</div>
             <div><b>F</b> torch on / off</div>
         </div>
-        <label>Mouse sensitivity <input id="sens" type="range" min="0.4" max="2" step="0.05" value="1"></label>
+        <label>Mouse ki speed <input id="sens" type="range" min="0.4" max="2" step="0.05" value="1"></label>
         <div class="row">
-            <button class="btn" id="btnResume">Resume</button>
+            <button class="btn" id="btnResume">Wapas khelo</button>
             <button class="btn quiet" id="btnPJournal">Journal</button>
-            <a class="btn quiet" href="index.html">Leave</a>
+            <a class="btn quiet" href="index.html">Chhod do</a>
         </div>
     </div>
 </div>
 
 <!-- screens -->
-<div id="loading" class="screen show">Opening the house…</div>
+<div id="loading" class="screen show">Ghar khul raha hai…</div>
 <div id="titleScreen" class="screen">
     <a class="back" href="index.html">‹ Arcade</a>
     <h1>THE LAST NIGHT</h1>
     <div class="sub">Ravi Ka Badla</div>
     <div class="row">
-        <button class="btn" id="btnBegin">Begin</button>
-        <button class="btn" id="btnContinue" style="display:none">Continue</button>
+        <button class="btn" id="btnBegin">Shuru karo</button>
+        <button class="btn" id="btnContinue" style="display:none">Aage khelo</button>
     </div>
-    <div class="tip">Headphones. Lights off.<br>WASD · Mouse · Shift run · E interact · Tab journal</div>
+    <div class="tip">Headphones lagao. Lights band karo.<br>WASD · Mouse · Shift bhaago · E use karo · Tab journal</div>
 </div>
 <div id="story" class="screen">
     <video id="storyVideo" playsinline></video>
     <img id="storyImage" alt="">
     <div id="storyLoading" style="display:none">…</div>
-    <button class="btn quiet" id="storySkip">Skip ›</button>
+    <button class="btn quiet" id="storySkip">Skip karo ›</button>
     <div id="storyHint"></div>
 </div>
 <div id="deathScreen" class="screen">
-    <h1>THE HOUSE KEEPS ITS GUESTS</h1>
-    <p>You never left.</p>
+    <h1>YE GHAR MEHMAAN NAHI CHHODTA</h1>
+    <p>Tum kabhi bahar nikle hi nahi.</p>
     <div class="row">
-        <button class="btn" id="btnRetry">Wake up</button>
-        <a class="btn quiet" href="index.html">Leave</a>
+        <button class="btn" id="btnRetry">Jaago</button>
+        <a class="btn quiet" href="index.html">Chhod do</a>
     </div>
 </div>
 <div id="endScreen" class="screen">
     <div class="story">
-        <p>The door opened onto a grey dawn.</p>
-        <p>You walked until the rain stopped and the house was gone behind the trees.</p>
-        <p>At the bus stand, an old man asked you the time.</p>
-        <p>Your watch had stopped.</p>
+        <p>Darwaza khula. Bahar dhundhli si subah thi.</p>
+        <p>Tum chalte rahe, jab tak baarish ruk nahi gayi aur woh ghar pedon ke peeche gaayab nahi ho gaya.</p>
+        <p>Bus stand pe ek budhe aadmi ne tumse time poocha.</p>
+        <p>Tumhari ghadi ruki hui thi.</p>
         <p class="last">3:17</p>
     </div>
     <h1>THE LAST NIGHT</h1>
     <div class="row">
-        <button class="btn" id="btnAgain">Play again</button>
-        <a class="btn quiet" href="index.html">Back to the arcade</a>
+        <button class="btn" id="btnAgain">Phir se khelo</button>
+        <a class="btn quiet" href="index.html">Arcade pe wapas</a>
     </div>
 </div>
 
