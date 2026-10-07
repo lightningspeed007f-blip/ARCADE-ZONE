@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#05060a">
 <title>Game Zone</title>
+<script src="gamepass.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305060a'/%3E%3Cpath d='M20 22h24c8 0 12 6 13 14l1 8c1 6-6 9-10 4l-5-6H21l-5 6c-4 5-11 2-10-4l1-8c1-8 5-14 13-14z' fill='none' stroke='%2300f0ff' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
@@ -138,6 +139,12 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   font-size: calc(var(--cw) * 0.062); letter-spacing: 1px; color: rgba(255,255,255,0.8);
   display: none;
 }
+.card .lock {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  font-size: calc(var(--cw) * 0.07); font-weight: 700; letter-spacing: 1px;
+  padding: 3px 9px; border-radius: 20px;
+  background: rgba(5,6,10,0.82); border: 1px solid rgba(255,207,63,0.7); color: #ffcf3f;
+}
 .card.active .tap { display: block; animation: blink 1.6s ease-in-out infinite; }
 
 /* ===================== BOTTOM INFO ===================== */
@@ -266,15 +273,15 @@ var ICONS = {
 /* GAME LIST — add a new game by adding one line here.
    img = card artwork in the repo (if it fails to load, the neon icon shows instead) */
 var GAMES = [
-  { href: "horror.html",       img: "card_horror.jpg", icon: ICONS.horror, name: "The Last Night", tag: "Horror", color: "#ff3b5c",
+  { href: "horror.html", locked: true,       img: "card_horror.jpg", icon: ICONS.horror, name: "The Last Night", tag: "Horror", color: "#ff3b5c",
     desc: "One night in a house that belongs to the dead. Find a way out before morning." },
   { href: "jais_express.html", img: "card_jais.jpg",   icon: ICONS.auto,   name: "Jais Express",   tag: "Racing", color: "#ff9a1f",
     desc: "Drive your auto through Jais. Dodge traffic, grab coins." },
-  { href: "spin.html",         img: "card_spin.jpg",   icon: ICONS.wheel,  name: "Spin The Wheel", tag: "Luck",   color: "#ffcf3f",
+  { href: "spin.html", locked: true,         img: "card_spin.jpg",   icon: ICONS.wheel,  name: "Spin The Wheel", tag: "Luck",   color: "#ffcf3f",
     desc: "Spin and try your luck to win teddy bears and toffees." },
   { href: "panda.html",        img: "card_panda.jpg",  icon: ICONS.panda,  name: "Tap The Panda",  tag: "Reflex", color: "#c77dff",
     desc: "Tap the panda fast. It speeds up as you score." },
-  { href: "dharma.html",       img: "card_dharma.jpg", icon: ICONS.bow,    name: "Dharma Quiz",    tag: "Quiz",   color: "#e3b55c",
+  { href: "dharma.html", locked: true,       img: "card_dharma.jpg", icon: ICONS.bow,    name: "Dharma Quiz",    tag: "Quiz",   color: "#e3b55c",
     desc: "धर्म प्रश्नोत्तरी — 150 questions with 3 lifelines." }
 ];
 
@@ -352,7 +359,8 @@ GAMES.forEach(function (g, i) {
     '<div class="icon" style="color:' + g.color + '">' + g.icon + '</div>' +
     '<div class="name">' + g.name + '</div>' +
     '<div class="tag" style="color:' + g.color + ';border-color:' + rgba(g.color, 0.6) + '">' + g.tag + '</div>' +
-    '<div class="tap">TAP TO PLAY</div>';
+    '<div class="tap">TAP TO PLAY</div>' +
+    (g.locked ? '<div class="lock">🔒 CODE</div>' : '');
   if (g.img) {
     var im = new Image();
     im.className = "art";
@@ -539,7 +547,21 @@ if (getStore("sessionStorage", "gz_entered")) { splashOpen = false; splash.style
 
 document.addEventListener("touchstart", function () { startVideo(); if (!splashOpen && music.paused) startMusic(); }, { passive: true });
 document.addEventListener("click", function () { startVideo(); if (!splashOpen && music.paused) startMusic(); });
+/* ===================== GAME PASS ===================== */
+/* Back in the hub = that player's pass is over; the next game needs a new code */
+function endPasses() { if (window.GamePass) GamePass.endAllPasses(); }
+endPasses();
+/* Staff: tap the GAME ZONE title 5 times to open the code generator */
+var staffTaps = 0, staffTimer = null;
+document.querySelector("header h1").addEventListener("click", function () {
+  staffTaps++;
+  clearTimeout(staffTimer);
+  staffTimer = setTimeout(function () { staffTaps = 0; }, 2500);
+  if (staffTaps >= 5) { staffTaps = 0; location.href = "organizer.html"; }
+});
+
 window.addEventListener("pageshow", function () {
+  endPasses();
   launching = false; launchT = 0;
   document.body.className = document.body.className.replace(/\s*leaving/g, "");
   startVideo();
