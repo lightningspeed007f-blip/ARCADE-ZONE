@@ -21,6 +21,8 @@
   opacity: 0; transition: opacity 0.4s ease;
 }
 .iz-video.show { opacity: 1; }
+/* wide screens: show the whole portrait video instead of cropping his face */
+@media (min-aspect-ratio: 4/5) { .iz-video { object-fit: contain; } }
 .iz-flash {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle at var(--fx, 50%) var(--fy, 40%),

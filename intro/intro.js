@@ -29,12 +29,13 @@
     CHARACTER_IMAGE: "",
     /* Where the snapping hand is inside that image (0..1 of width / height) */
     CHARACTER_HAND: { x: 0.8, y: 0.1 },
-    /* Intro video. Upload it as  intro/intro.mp4  (H.264 MP4). It plays
-       full screen first, then the trickster snaps and throws the cards.
-       If the file is missing or can't play, the normal drawn intro runs. */
+    /* Intro video (H.264 MP4). It plays full screen first; as it ends the
+       real cards burst out of the throw and land in their places (the drawn
+       character is not shown). If the file is missing or can't play, the
+       full drawn intro runs instead. "" = always the drawn intro. */
     VIDEO: "intro/intro.mp4",
     /* Longest wait for the video to start before falling back (ms) */
-    VIDEO_WAIT: 4000
+    VIDEO_WAIT: 6000
   };
 
   /* Moments on the timeline (ms) */
@@ -217,7 +218,7 @@
   var fanScale = 0.4, fanRx = 100, fanRy = 100, spreadX = 100, peakMax = 1.3;
   var bg = null, vig = null, sprites = null, bulbs = [], dust = [], parts = [];
   var cardSlot = [], cardOrder = [], landed = [], hand = null, charImg = null;
-  var videoEl = null, videoTimer = 0, startAt = 0;
+  var videoEl = null, videoTimer = 0, startAt = 0, videoMode = false, preVideo = null;
   var events = [], perfLog = [], classTimers = [];
 
   /* ---------- glow sprites (drawn once, then just stamped) ---------- */
@@ -469,6 +470,7 @@
   }
 
   function handScreen(T) {
+    if (videoMode) return { x: W / 2, y: H * 0.42 };              // cards come out of the video's throw
     var P = poseAt(T);
     if (charImg) {
       var iw = 100 * charImg.width / charImg.height;
@@ -662,7 +664,7 @@
     var c = c2, i, b;
     var P = poseAt(T), cam = camAt(T);
     var atm = T < T_WALK ? 0.3 * prog(T, 0, T_WALK) : lerp(0.3, 1, eOutQ(prog(T, T_WALK, 1000)));
-    var spot = eOutQ(prog(T, 900, 900));
+    var spot = videoMode ? 0 : eOutQ(prog(T, 900, 900));   // no spotlight on an empty stage
     var lit = T >= T_SNAP, snapAge = T - T_SNAP;
     var par = -P.x * 0.22;
 
@@ -730,7 +732,7 @@
     }
 
     c.globalAlpha = 1;
-    drawCharacter(c, T, P);
+    if (!videoMode) drawCharacter(c, T, P);
 
     /* the snap: magenta lighting hit + glow on the hand */
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -958,7 +960,7 @@
     back.appendChild(cv);
     front = document.createElement("div");
     front.className = "iz-front";
-    front.innerHTML = '<video class="iz-video" playsinline preload="auto"></video><div class="iz-flash"></div><div class="iz-title"></div>' +
+    front.innerHTML = '<div class="iz-flash"></div><div class="iz-title"></div>' +
                       '<button type="button" class="iz-skip">SKIP INTRO &rsaquo;</button>';
     flashEl = front.querySelector(".iz-flash");
     flashEl.style.setProperty("--fpeak", tier.flash);
@@ -976,8 +978,14 @@
     prepCards();
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
-    videoEl = front.querySelector(".iz-video");
-    if (CONFIG.VIDEO) playVideo();
+    videoMode = false;
+    videoEl = null;
+    if (CONFIG.VIDEO) {
+      videoEl = preVideo || makeVideo();
+      preVideo = null;
+      front.insertBefore(videoEl, front.firstChild);              // under the flash, title and skip button
+    }
+    if (videoEl) playVideo();
     else startTimeline(0);
     return true;
   }
@@ -988,10 +996,7 @@
     if (!running) return;
     T = startAt = from; lastNow = 0;
     events = buildEvents().filter(function (ev) { return ev.t >= from; });
-    if (from > 0) {
-      skipEl.classList.add("show");
-      events.unshift({ t: from, fn: function () { Sfx.droneOn(); } });
-    }
+    if (from > 0) skipEl.classList.add("show");
     raf = requestAnimationFrame(frame);
   }
 
@@ -1003,6 +1008,15 @@
     v.onended = v.onerror = v.onplaying = null;
     try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {}
     if (v.parentNode) v.parentNode.removeChild(v);
+  }
+
+  function makeVideo() {
+    var v = document.createElement("video");
+    v.className = "iz-video";
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.preload = "auto";
+    return v;
   }
 
   function playVideo() {
@@ -1024,10 +1038,10 @@
     v.onended = function () {
       if (videoEl !== v) return;
       v.classList.remove("show");                                // fade out, then the card throw
-      videoTimer = setTimeout(function () { removeVideo(); startTimeline(T_RAISE - 50); }, 400);
+      videoTimer = setTimeout(function () { removeVideo(); videoMode = true; startTimeline(T_SNAP - 60); }, 250);
     };
     videoTimer = setTimeout(fallback, CONFIG.VIDEO_WAIT);
-    v.src = CONFIG.VIDEO;
+    if (!v.getAttribute("src")) v.src = CONFIG.VIDEO;
     try {
       var pr = v.play();
       if (pr && pr.catch) pr.catch(function (e) {
@@ -1062,6 +1076,13 @@
 
   function init(h) {
     hooks = h;
+    /* first visit: start downloading the video now, so it's ready at the tap */
+    var saveData = navigator.connection && navigator.connection.saveData;
+    if (CONFIG.VIDEO && !lsGet(CONFIG.STORAGE_KEY) && !reducedMotion() && !saveData) {
+      preVideo = makeVideo();
+      preVideo.src = CONFIG.VIDEO;
+      try { preVideo.load(); } catch (e) {}
+    }
     if (CONFIG.CHARACTER_IMAGE) {
       var im = new Image();
       im.onload = function () { charImg = im; };

@@ -7,11 +7,15 @@ The intro moves the hub's **real** five `.card` elements and hands them back to 
 It never creates copies of the cards.
 
 ## Intro video
-Upload your video as **`intro/intro.mp4`** (H.264 MP4, ideally under ~8 MB, any length).
-- It plays full screen with sound (muted if the hub sound is off). Then the trickster snaps and throws the cards into place.
-- "Skip intro" skips the whole intro.
-- If the file is missing or doesn't start within 4 seconds, the normal drawn intro plays instead.
-- To use a different name, change `CONFIG.VIDEO` in `intro.js`.
+`intro/intro.mp4` (H.264 MP4, portrait) plays full screen first, with sound (muted if the hub sound is off).
+As it ends, the real cards burst out of the joker's throw and land in their places. The drawn character is not shown.
+- The file is compressed for the web (720x1280, 30 fps, about 2.5 MB, "faststart" so it starts while downloading).
+  To replace it, re-encode the new video the same way:
+  `ffmpeg -i new.mp4 -vf "scale=720:1280,fps=30" -c:v libx264 -crf 22 -preset slow -c:a aac -b:a 128k -movflags +faststart intro/intro.mp4`
+- On a first visit the video starts downloading as soon as the page opens.
+- On wide screens the whole portrait video is shown, with dark bars at the sides.
+- "Skip intro" skips everything.
+- If the file is missing or doesn't start within 6 seconds, the full drawn intro plays instead.
 
 ## Testing
 - `index.html?intro=reset` forgets that the intro was watched and shows the splash again.
