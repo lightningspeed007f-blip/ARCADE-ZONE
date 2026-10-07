@@ -94,8 +94,7 @@ const $ = id => document.getElementById(id);
 const GP = window.GamePass;
 const LOG_KEY = 'gz_org_log';
 let selGame = Object.keys(GP.GAMES)[0];
-let unlocked = false;
-try { unlocked = sessionStorage.getItem('gz_org_ok') === '1'; } catch (e) {}
+let unlocked = GP.staffOk();
 
 function loadLog(){ try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { return []; } }
 function saveLog(l){ try { localStorage.setItem(LOG_KEY, JSON.stringify(l.slice(0, 200))); } catch (e) {} }
@@ -108,20 +107,23 @@ function show(){
   else setTimeout(() => $('pin').focus(), 100);
 }
 function tryPin(){
-  if ($('pin').value === GP.CONFIG.ORGANIZER_PIN) {
-    unlocked = true;
-    try { sessionStorage.setItem('gz_org_ok', '1'); } catch (e) {}
-    show();
-  } else { $('pinErr').textContent = 'Wrong PIN.'; $('pin').value = ''; }
+  const r = GP.checkPin($('pin').value);
+  $('pin').value = '';
+  if (r.ok) { unlocked = true; $('pinErr').textContent = ''; show(); }
+  else $('pinErr').textContent = r.msg;
 }
 $('pinBtn').addEventListener('click', tryPin);
 $('pin').addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
-$('lockBtn').addEventListener('click', () => {
+function lockStaff(){
   unlocked = false;
-  try { sessionStorage.removeItem('gz_org_ok'); } catch (e) {}
+  GP.staffLogout();
   $('pin').value = ''; $('pinErr').textContent = '';
+  $('out').hidden = true;
   show();
-});
+}
+$('lockBtn').addEventListener('click', lockStaff);
+// Phone left on the counter? The staff page locks itself after 5 minutes without a tap.
+GP.autoLock(() => { if (unlocked) lockStaff(); }, 5);
 
 // One button per locked game
 Object.keys(GP.GAMES).forEach(k => {
