@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05060a">
+<title>Game Zone Staff</title>
+<script src="gamepass.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#05060a; --panel:#0f1220; --line:#252c44; --cyan:#00f0ff; --gold:#ffcf3f; --red:#ff5a6e; --muted:#8a94ad; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{min-height:100vh;background:radial-gradient(circle at 50% 0%,#17102b 0%,var(--bg) 70%);color:#eef4f8;
+       font-family:'Rajdhani','Segoe UI',sans-serif;display:flex;justify-content:center;padding:18px 16px 32px;}
+  .wrap{width:100%;max-width:420px;}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;}
+  h1{font-family:'Orbitron',sans-serif;font-size:18px;letter-spacing:2px;color:var(--cyan);}
+  a.back,.btn{display:inline-block;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:#141a2c;
+       color:#c4cce0;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;}
+  .btn.primary{background:var(--cyan);border-color:var(--cyan);color:#04121a;}
+  .btn.wide{width:100%;padding:13px;font-size:14px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;}
+  h3{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:1px;margin-bottom:10px;}
+  label{display:block;color:var(--muted);font-size:14px;margin:10px 0 6px;}
+  input{width:100%;font-family:'Orbitron',monospace;font-size:24px;letter-spacing:6px;text-align:center;padding:10px;
+        border-radius:12px;border:1px solid var(--line);background:#0a0d18;color:#fff;}
+  input:focus{outline:2px solid var(--cyan);outline-offset:1px;}
+  .games{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .games button{padding:12px 6px;border-radius:12px;border:1px solid var(--line);background:#141a2c;color:#c4cce0;
+        font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;cursor:pointer;}
+  .games button.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 14px rgba(255,207,63,.25);}
+  .err{color:var(--red);min-height:20px;font-size:14px;margin-top:6px;}
+  .code{font-family:'Orbitron',monospace;font-size:48px;font-weight:900;letter-spacing:6px;color:var(--gold);text-align:center;
+        text-shadow:0 0 16px rgba(255,207,63,.45);margin:4px 0;}
+  .info{text-align:center;color:#c4cce0;font-size:15px;}
+  .log{font-size:14px;color:#c4cce0;}
+  .log div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);}
+  .log b{font-family:'Orbitron',monospace;}
+  .muted{color:var(--muted);font-size:13px;line-height:1.4;}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← GAME ZONE</a>
+    <h1>STAFF</h1>
+    <button class="btn" id="lockBtn" hidden>🔒 LOCK</button>
+  </div>
+
+  <!-- PIN -->
+  <div class="card" id="pinCard">
+    <h3>Enter staff PIN</h3>
+    <input id="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Staff PIN">
+    <div class="err" id="pinErr" role="alert"></div>
+    <button class="btn primary wide" id="pinBtn">UNLOCK</button>
+  </div>
+
+  <div id="main" hidden>
+    <div class="card">
+      <h3>🎟 Make a game code</h3>
+      <label>1. Which game?</label>
+      <div class="games" id="games"></div>
+      <label for="dev">2. Player ID (4 digits on the player's lock screen)</label>
+      <input id="dev" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 4821" autocomplete="off">
+      <div class="err" id="genErr" role="alert"></div>
+      <button class="btn primary wide" id="genBtn">MAKE CODE</button>
+      <div id="out" hidden style="margin-top:14px;">
+        <div class="code" id="codeBig"></div>
+        <div class="info" id="codeInfo"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🎡 Spin The Wheel spins</h3>
+      <p class="muted">Players need an entry code (above) to open the wheel. Spins themselves are still sold in the Spin organizer panel (prizes, stock, claim checks).</p>
+      <a class="btn wide" style="text-align:center;margin-top:10px;" href="spin.html?organizer">OPEN SPIN ORGANIZER</a>
+    </div>
+
+    <div class="card">
+      <h3>Codes made on this phone</h3>
+      <div class="log" id="log"></div>
+      <p class="muted" id="total" style="margin-top:8px;"></p>
+    </div>
+
+    <p class="muted">Jais Express and Tap The Panda are free — no code needed.
+      Each code works once, only on the phone with that Player ID, for about <span id="mins"></span> minutes.</p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const GP = window.GamePass;
+const LOG_KEY = 'gz_org_log';
+let selGame = Object.keys(GP.GAMES)[0];
+let unlocked = false;
+try { unlocked = sessionStorage.getItem('gz_org_ok') === '1'; } catch (e) {}
+
+function loadLog(){ try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { return []; } }
+function saveLog(l){ try { localStorage.setItem(LOG_KEY, JSON.stringify(l.slice(0, 200))); } catch (e) {} }
+
+function show(){
+  $('pinCard').hidden = unlocked;
+  $('main').hidden = !unlocked;
+  $('lockBtn').hidden = !unlocked;
+  if (unlocked) { renderLog(); setTimeout(() => $('dev').focus(), 100); }
+  else setTimeout(() => $('pin').focus(), 100);
+}
+function tryPin(){
+  if ($('pin').value === GP.CONFIG.ORGANIZER_PIN) {
+    unlocked = true;
+    try { sessionStorage.setItem('gz_org_ok', '1'); } catch (e) {}
+    show();
+  } else { $('pinErr').textContent = 'Wrong PIN.'; $('pin').value = ''; }
+}
+$('pinBtn').addEventListener('click', tryPin);
+$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
+$('lockBtn').addEventListener('click', () => {
+  unlocked = false;
+  try { sessionStorage.removeItem('gz_org_ok'); } catch (e) {}
+  $('pin').value = ''; $('pinErr').textContent = '';
+  show();
+});
+
+// One button per locked game
+Object.keys(GP.GAMES).forEach(k => {
+  const b = document.createElement('button');
+  b.textContent = GP.GAMES[k] + (k === 'spin' ? ' (entry)' : '');
+  b.className = k === selGame ? 'on' : '';
+  b.addEventListener('click', () => {
+    selGame = k;
+    [...$('games').children].forEach(x => x.classList.toggle('on', x === b));
+  });
+  $('games').appendChild(b);
+});
+
+function make(){
+  const dev = $('dev').value.replace(/\D/g, '');
+  $('genErr').textContent = '';
+  if (dev.length !== 4) { $('genErr').textContent = 'Type the 4-digit Player ID from the player\'s screen.'; return; }
+  const log = loadLog();
+  let code, tries = 0;
+  do { code = GP.makeCode(dev, selGame); tries++; } while (log.some(r => r.code === code) && tries < 50);
+  log.unshift({ code, dev, game: selGame, time: Date.now() });
+  saveLog(log);
+  $('codeBig').textContent = code.slice(0, 3) + ' ' + code.slice(3);
+  $('codeInfo').textContent = `${GP.GAMES[selGame]} • Player ID ${dev} • works once, ~${GP.CONFIG.CODE_VALID_MIN} min`;
+  $('out').hidden = false;
+  $('dev').value = '';
+  renderLog();
+}
+$('genBtn').addEventListener('click', make);
+$('dev').addEventListener('keydown', e => { if (e.key === 'Enter') make(); });
+
+function renderLog(){
+  const log = loadLog();
+  $('log').innerHTML = log.slice(0, 15).map(r => {
+    const t = new Date(r.time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    return `<div><span>${t} · ${GP.GAMES[r.game] || r.game} · ID ${r.dev}</span><b>${r.code}</b></div>`;
+  }).join('') || '<p class="muted">No codes yet.</p>';
+  const today = new Date().toDateString();
+  const n = log.filter(r => new Date(r.time).toDateString() === today).length;
+  $('total').textContent = `Codes made today: ${n}`;
+}
+
+$('mins').textContent = GP.CONFIG.CODE_VALID_MIN;
+show();
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Spin & Win</title>
+<script src="gamepass.js" data-game="spin"></script>
 <meta name="apple-mobile-web-app-title" content="Spin & Win">
 <meta name="application-name" content="Spin & Win">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
@@ -624,7 +625,7 @@ function claimHash(dev, type, spinNo){ return h4(`C|${dev}|${type}|${spinNo}`); 
 /* ---------- state ---------- */
 const P_KEY = 'mkg_player_v2', O_KEY = 'mkg_org_v2';
 let player = load(P_KEY, () => ({ deviceId:'', credits:0, teddyOn:true, posterOn:true, used:[], history:[], spinNo:0 }));
-if(!/^\d{4}$/.test(player.deviceId)) player.deviceId = String(1000 + Math.floor(Math.random() * 9000));
+if(!/^\d{4}$/.test(player.deviceId)) player.deviceId = window.GamePass ? GamePass.deviceId() : String(1000 + Math.floor(Math.random() * 9000));
 const savePlayer = () => store(P_KEY, player);
 savePlayer();
  

@@ -15,11 +15,10 @@
     margin:0; min-height:100vh; min-height:100dvh;
     background:radial-gradient(ellipse at 50% -10%,#12283a 0%,var(--bg) 60%);
     font-family:'Rajdhani',system-ui,sans-serif; color:#fff;
-    display:flex; align-items:center; justify-content:center;
     padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
-    overflow:hidden; touch-action:manipulation;
+    overflow-x:hidden; touch-action:manipulation;
   }
-  .wrap{width:100%;max-width:420px;}
+  .wrap{width:100%;max-width:420px;margin:0 auto;}
 
   /* Header */
   .header-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
@@ -62,6 +61,7 @@
     display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:12px;
     background:linear-gradient(180deg,#111a25,#0b1119); border:2px solid var(--line); border-radius:22px;
     padding:14px; box-shadow:0 14px 40px rgba(0,0,0,.8); transition:box-shadow .3s,border-color .3s;
+    touch-action:none;
   }
   .arena.fire{border-color:var(--pink);box-shadow:0 0 0 1px var(--pink),0 0 45px rgba(255,45,138,.45);}
   .arena.frozen{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 45px rgba(0,240,255,.45);}
@@ -148,7 +148,53 @@
   .btn-start:active{transform:scale(.96);}
   .hint{color:var(--muted);font-size:12px;margin-top:10px;}
 
+  .name-row{display:flex;align-items:center;gap:8px;width:100%;max-width:280px;margin:0 0 12px;}
+  .name-row label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--muted);white-space:nowrap;}
+  .name-row input{
+    flex:1;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid #2a3a50;background:#0a1018;color:#fff;
+    font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;user-select:text;-webkit-user-select:text;
+  }
+  .name-row input:focus{outline:2px solid var(--cyan);outline-offset:1px;}
+
+  /* Live scoreboard */
+  .board{margin-top:12px;background:var(--panel);border:1.5px solid #223040;border-radius:16px;padding:10px 10px 8px;}
+  .board-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .board-title{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 1.2s infinite;}
+  .tabs{display:flex;gap:4px;}
+  .tabs button{
+    font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;padding:4px 8px;border-radius:8px;cursor:pointer;
+    background:transparent;border:1px solid #223040;color:var(--muted);
+  }
+  .tabs button.on{color:#0b0f15;background:var(--gold);border-color:var(--gold);}
+  .board ol{list-style:none;margin:0;padding:0;}
+  .board li{
+    display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:6px;
+    padding:4px 6px;border-radius:8px;font-size:15px;font-weight:700;
+  }
+  .board li:nth-child(odd){background:rgba(255,255,255,.03);}
+  .board li .rk{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--muted);}
+  .board li .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .board li .sc{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--green);}
+  .board li.top1 .rk{color:var(--gold);} .board li.top2 .rk{color:#d6dde6;} .board li.top3 .rk{color:#e09a5c;}
+  .board li.me{background:rgba(255,45,138,.18)!important;outline:1px solid var(--pink);}
+  .board li.me .nm{color:#fff;}
+  .board li.gap{display:block;text-align:center;color:var(--muted);padding:0;font-size:12px;background:none!important;}
+  .board .empty{color:var(--muted);font-size:14px;text-align:center;padding:10px 0;}
+  .board-note{color:var(--muted);font-size:12px;text-align:center;margin-top:6px;min-height:16px;}
+  .board-note b{color:var(--pink);}
+
+  @media (pointer:coarse){ .hint{display:none;} }   /* keyboard tips are for computers */
+  @media (max-width:380px){
+    .modal{padding:10px;}
+    .modal h2{font-size:20px;margin-bottom:4px;}
+    .modal p{margin-bottom:8px;}
+    .stats{margin-bottom:8px;gap:6px;} .stats div{padding:4px;}
+    .badge{margin-bottom:6px;}
+    .name-row{margin-bottom:8px;}
+  }
   @media (prefers-reduced-motion:reduce){
+    .live-dot{animation:none;}
     .arena.shake{animation:none;} .badge{animation:none;}
   }
 </style>
@@ -188,6 +234,18 @@
     </div>
   </div>
 
+  <div class="board" id="board" aria-live="polite">
+    <div class="board-head">
+      <div class="board-title"><span class="live-dot"></span>LIVE SCOREBOARD</div>
+      <div class="tabs">
+        <button id="tabToday" class="on">TODAY</button>
+        <button id="tabAll">ALL TIME</button>
+      </div>
+    </div>
+    <ol id="boardList"></ol>
+    <div class="board-note" id="boardNote"></div>
+  </div>
+
 </div>
 
 <script>
@@ -198,6 +256,10 @@ const STREAK_SOUNDS = { 5:'streak5.mp3', 10:'streak10.mp3', 15:'streak15.mp3', 2
 const MILESTONE_TEXT = { 5:'NICE! 5x', 10:'ON FIRE! 2x POINTS', 15:'UNSTOPPABLE!', 20:'PANDAMONIUM! 3x' };
 const EMOJI = { panda:'🐼', gold:'🐼', bomb:'💣', ice:'❄️', heart:'❤️' };
 const KEYS = ['q','w','e','a','s','d','z','x','c'];
+const BOARD_ROWS = 10;
+// OPTIONAL — shared online scoreboard for every phone (see bottom of this file for setup).
+// Leave empty to keep the scoreboard on this phone only.
+const ONLINE_DB_URL = '';   // e.g. 'https://your-project-default-rtdb.firebaseio.com'
 
 /* ================= SETUP ================= */
 const $ = id => document.getElementById(id);
@@ -220,6 +282,11 @@ const store = {
 let best = store.get('tp_best', 0);
 let bestStreak = store.get('tp_bestStreak', 0);
 let muted = store.get('tp_muted', false);
+let playerName = store.get('tp_name', '');
+let boardLocal = store.get('tp_board', []);   // [{n:name, s:score, k:topStreak, t:time}]
+let boardOnline = null;                        // same shape, from the online scoreboard
+let boardTab = 'today';
+let lastRank = 0;
 
 let score=0, streak=0, bestRun=0, coins=0, lives=LIVES_MAX, hits=0;
 let running=false, paused=false, counting=false, newBestShown=false;
@@ -426,6 +493,120 @@ function hud(){
   $('mult').textContent = '×' + mult();
   $('mult').classList.toggle('on', mult() > 1);
   [...$('hearts').children].forEach((h,k) => h.classList.toggle('lost', k >= lives));
+  renderBoard();
+}
+
+/* ================= LIVE SCOREBOARD ================= */
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const cleanName = n => String(n || '').replace(/\s+/g, ' ').trim().slice(0, 14);
+function startOfToday(){ const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+
+function boardEntries(){
+  let list = (ONLINE_DB_URL && boardOnline) ? boardOnline : boardLocal;
+  if (boardTab === 'today') { const t0 = startOfToday(); list = list.filter(e => e.t >= t0); }
+  return list.slice();
+}
+
+// Board with the current player's live score slotted in while they play
+function rankedBoard(){
+  const list = boardEntries();
+  const live = (running || paused || counting) ? { n: playerName || 'You', s: score, live: true } : null;
+  if (live) list.push(live);
+  list.sort((a, b) => b.s - a.s || (a.live ? -1 : b.live ? 1 : a.t - b.t));
+  return { list, live };
+}
+
+function renderBoard(){
+  const { list, live } = rankedBoard();
+  const ol = $('boardList'), note = $('boardNote');
+  if (!list.length) {
+    ol.innerHTML = '<div class="empty">No scores yet — be the first!</div>';
+    note.textContent = ONLINE_DB_URL ? 'Online scoreboard' : 'Scores saved on this phone';
+    return;
+  }
+  const myIdx = live ? list.indexOf(live) : -1;
+  const row = (e, i) => `<li class="${i < 3 ? 'top' + (i + 1) : ''}${e.live ? ' me' : ''}">` +
+    `<span class="rk">#${i + 1}</span><span class="nm">${e.live ? '▶ ' : ''}${esc(e.n)}</span><span class="sc">${e.s}</span></li>`;
+  let html = list.slice(0, BOARD_ROWS).map(row).join('');
+  if (myIdx >= BOARD_ROWS) html += '<li class="gap">⋯</li>' + row(live, myIdx);
+  ol.innerHTML = html;
+
+  if (live) {
+    const rank = myIdx + 1;
+    if (lastRank && rank < lastRank && rank <= BOARD_ROWS && running) {
+      if (rank === 1 && list.length > 1) banner('#1 ON THE BOARD!'); else if (rank <= 3) banner('UP TO #' + rank + '!');
+    }
+    lastRank = rank;
+    const ahead = myIdx > 0 ? list[myIdx - 1] : null;
+    note.innerHTML = ahead
+      ? `<b>${ahead.s - score + 1}</b> more to pass ${esc(ahead.n)}`
+      : (list.length > 1 ? '<b>You are #1!</b> Keep going' : 'Set the first score!');
+  } else {
+    note.textContent = ONLINE_DB_URL
+      ? (boardOnline ? 'Online scoreboard · updates live' : 'Connecting to online scoreboard…')
+      : 'Scores saved on this phone';
+  }
+}
+
+function saveScore(entry){
+  boardLocal.push(entry);
+  boardLocal.sort((a, b) => b.s - a.s);
+  boardLocal = boardLocal.slice(0, 100);
+  store.set('tp_board', boardLocal);
+  if (ONLINE_DB_URL) {
+    if (boardOnline) boardOnline.push(entry);
+    fetch(ONLINE_DB_URL + '/panda/scores.json', { method:'POST', body: JSON.stringify(entry) })
+      .then(() => fetch(ONLINE_DB_URL + '/panda/last.json', { method:'PUT', body: JSON.stringify(Date.now()) }))
+      .catch(() => {});
+  }
+}
+// Rank of a finished score on the board shown now (1 = top)
+function rankOf(entry){ return boardEntries().filter(e => e !== entry && e.s > entry.s).length + 1; }
+
+function loadOnline(){
+  if (!ONLINE_DB_URL) return;
+  fetch(ONLINE_DB_URL + '/panda/scores.json?orderBy=%22s%22&limitToLast=200')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      boardOnline = Object.values(data || {})
+        .filter(e => e && typeof e.s === 'number' && typeof e.t === 'number')
+        .map(e => ({ n: cleanName(e.n) || 'Player', s: Math.max(0, e.s | 0), k: e.k | 0, t: e.t }));
+      renderBoard();
+    })
+    .catch(() => {});
+}
+function connectOnline(){
+  if (!ONLINE_DB_URL) return;
+  loadOnline();
+  // Firebase streams a message whenever anyone posts a score → refresh the board
+  if (window.EventSource) {
+    const es = new EventSource(ONLINE_DB_URL + '/panda/last.json');
+    es.addEventListener('put', loadOnline);
+    es.onerror = () => {};
+  }
+  setInterval(loadOnline, 30000);   // safety net if the stream drops
+}
+
+// Same-phone live updates (e.g. a second tab showing the board)
+window.addEventListener('storage', e => {
+  if (e.key === 'tp_board') { boardLocal = store.get('tp_board', []); renderBoard(); }
+});
+$('tabToday').addEventListener('click', () => setTab('today'));
+$('tabAll').addEventListener('click', () => setTab('all'));
+function setTab(t){
+  boardTab = t;
+  $('tabToday').classList.toggle('on', t === 'today');
+  $('tabAll').classList.toggle('on', t === 'all');
+  renderBoard();
+}
+
+function nameField(){
+  return `<div class="name-row"><label for="pName">PLAYER</label>
+    <input id="pName" maxlength="14" placeholder="Your name" autocomplete="off" value="${esc(playerName)}"></div>`;
+}
+function readName(){
+  const el = $('pName');
+  if (el) { playerName = cleanName(el.value); store.set('tp_name', playerName); }
 }
 
 /* ================= SCREENS ================= */
@@ -448,12 +629,16 @@ function startScreen(){
        <span>💣 don't tap!</span><span>❄️ slow motion</span>
        <span>❤️ extra life</span><span>🔥 10x = 2× pts</span>
      </div>
+     ${nameField()}
      <p>Best: <b style="color:var(--gold)">${best}</b> · Top streak: <b style="color:var(--pink)">${bestStreak}x</b></p>`,
     'START GAME', startGame);
 }
 
 function startGame(){
+  readName();
+  if (!playerName) { const el = $('pName'); if (el) { el.focus(); el.placeholder = 'Type your name first'; } return; }
   ac(); hideModal();
+  lastRank = 0;
   clearTimeout(spawnTimer); clearTimeout(cdTimer); clearTimeout(slowTimer);
   score = 0; streak = 0; bestRun = 0; coins = 0; lives = LIVES_MAX; hits = 0;
   slowUntil = 0; lastHole = -1; newBestShown = false; running = false; paused = false;
@@ -492,6 +677,14 @@ function endGame(){
   if (isNew) { best = score; store.set('tp_best', best); }
   if (bestRun > bestStreak) { bestStreak = bestRun; store.set('tp_bestStreak', bestStreak); }
 
+  let rankLine = '';
+  if (score > 0) {
+    const entry = { n: playerName || 'Player', s: score, k: bestRun, t: Date.now() };
+    saveScore(entry);
+    const r = rankOf(entry);
+    rankLine = `<p>Scoreboard rank: <b style="color:var(--cyan)">#${r}</b> ${boardTab === 'today' ? 'today' : 'all time'}</p>`;
+  }
+
   showModal('GAME OVER',
     `<div class="stats">
        <div><small>SCORE</small><b style="color:var(--green)">${score}</b></div>
@@ -499,7 +692,8 @@ function endGame(){
        <div><small>TOP STREAK</small><b style="color:var(--pink)">${bestRun}x</b></div>
        <div><small>COINS</small><b style="color:var(--gold)">${coins}</b></div>
      </div>
-     <p>All-time top streak: <b>${bestStreak}x</b></p>`,
+     ${rankLine}
+     ${nameField()}`,
     'PLAY AGAIN', startGame, isNew);
   hud();
 }
@@ -514,6 +708,10 @@ $('muteBtn').addEventListener('click', () => {
 });
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
+  if (e.target && e.target.tagName === 'INPUT') {
+    if (k === 'enter') { e.preventDefault(); modalAction(); }
+    return;
+  }
   const idx = KEYS.indexOf(k);
   if (idx >= 0) { tap(idx); return; }
   if ((k === ' ' || k === 'enter') && !modal.classList.contains('hidden')) { e.preventDefault(); modalAction(); }
@@ -525,6 +723,22 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 $('muteBtn').textContent = muted ? '🔇' : '🔊';
 hud();
 startScreen();
+connectOnline();
+
+/* ================= ONLINE SCOREBOARD SETUP (optional) =================
+   Without this, each phone keeps its own scoreboard.
+   For one shared live board across every phone:
+   1. Go to console.firebase.google.com → Add project (free).
+   2. Build → Realtime Database → Create database → start in locked mode.
+   3. Rules tab → paste and Publish:
+      { "rules": { "panda": {
+          ".read": true,
+          "scores": { ".indexOn": ["s"], "$id": { ".write": "!data.exists()",
+            ".validate": "newData.child('s').isNumber() && newData.child('s').val() >= 0 && newData.child('s').val() < 100000 && newData.child('n').isString() && newData.child('n').val().length <= 14 && newData.child('t').isNumber()" } },
+          "last": { ".write": true, ".validate": "newData.isNumber()" } } } }
+   4. Copy the database URL (https://….firebaseio.com or …firebasedatabase.app)
+      into ONLINE_DB_URL at the top of this script.
+   ===================================================================== */
 </script>
 </body>
 </html>
