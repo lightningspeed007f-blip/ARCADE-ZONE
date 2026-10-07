@@ -6,11 +6,16 @@ Files: `intro.js` (logic, drawing, Web Audio sounds) and `intro.css` (layers, ti
 The intro moves the hub's **real** five `.card` elements and hands them back to the cylinder when they land.
 It never creates copies of the cards.
 
+## When it plays
+By default it plays on **every visit**, each time a player taps "TAP TO ENTER".
+Coming back from a game skips the splash, so it doesn't replay then.
+To play it only once per device, set `CONFIG.PLAY_EVERY_VISIT = false` in `intro.js`.
+
 ## Testing
-- `index.html?intro=reset` forgets that the intro was watched and shows the splash again.
+- `index.html?intro=reset` shows the "TAP TO ENTER" splash again (and, in once-per-device mode, forgets that the intro was watched).
 - Console: `ArcadeIntro.reset()`, `ArcadeIntro.play()`, `ArcadeIntro.skip()`.
 - `index.html?introperf=low|mid|high` forces a performance level.
-- The localStorage key is `gz_intro_seen_v1`.
+- In once-per-device mode the localStorage key is `gz_intro_seen_v1`.
 
 ## Adding real character artwork
 The character is drawn in code for now. To use artwork instead:
