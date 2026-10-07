@@ -344,15 +344,15 @@ W.build = function () {
 
     /* ---------- GROUND FLOOR ---------- */
     // doors
-    door(G, { id: "studyDoor", x: 7, y: 3, axis: "y", side: 1, hinge: 0, tex: "d_study", locked: true, key: "studyKey", lockMsg: "Locked. A brass plate reads STUDY." });
+    door(G, { id: "studyDoor", x: 7, y: 3, axis: "y", side: 1, hinge: 0, tex: "d_study", locked: true, key: "studyKey", lockMsg: "Band hai. Peetal ki plate pe likha hai STUDY." });
     door(G, { id: "prayerDoor", x: 18, y: 3, axis: "y", side: 0, hinge: 1, tex: "d_room", open: 0.35, target: 0.35, ghostProof: true });
-    door(G, { id: "gate", x: 12, y: 2, axis: "x", mode: "slide", hinge: 0, tex: "d_gate", locked: true, key: "gateKey", speed: 0.8, lockMsg: "A collapsible iron gate. The padlock is new." });
+    door(G, { id: "gate", x: 12, y: 2, axis: "x", mode: "slide", hinge: 0, tex: "d_gate", locked: true, key: "gateKey", speed: 0.8, lockMsg: "Lohe ka collapsible gate. Taala naya hai." });
     door(G, { id: "parlorDoor", x: 7, y: 8, axis: "y", side: 1, hinge: 0, tex: "d_room", open: 1, target: 1 });
     door(G, { id: "diningDoor", x: 18, y: 8, axis: "y", side: 0, hinge: 1, tex: "d_room", open: 0.6, target: 0.6 });
     door(G, { id: "dkDoor", x: 21, y: 11, axis: "x", side: 0, hinge: 0, tex: "d_plain" });
     door(G, { id: "kitchenDoor", x: 18, y: 13, axis: "y", side: 0, hinge: 0, tex: "d_plain", open: 1, target: 1 });
-    door(G, { id: "boltDoor", x: 7, y: 13, axis: "y", side: 1, hinge: 1, tex: "d_bolted", locked: true, key: "bolt", lockMsg: "It won't move. Bolted from the other side." });
-    door(G, { id: "cellarDoor", x: 22, y: 16, axis: "x", side: 0, hinge: 1, tex: "d_cellar", locked: true, key: "cellarKey", lockMsg: "Chained shut. The padlock is heavy and old." });
+    door(G, { id: "boltDoor", x: 7, y: 13, axis: "y", side: 1, hinge: 1, tex: "d_bolted", locked: true, key: "bolt", lockMsg: "Hil hi nahi raha. Doosri taraf se kundi lagi hai." });
+    door(G, { id: "cellarDoor", x: 22, y: 16, axis: "x", side: 0, hinge: 1, tex: "d_cellar", locked: true, key: "cellarKey", lockMsg: "Zanjeer se band hai. Taala bhaari aur purana hai." });
     door(G, { id: "servantDoor", x: 7, y: 19, axis: "y", side: 0, hinge: 1, tex: "d_plain" });
     door(G, { id: "cupboard", x: 2, y: 11, axis: "x", mode: "slide", hinge: 0, tex: "d_cupboard", texBack: "d_cupboardBack", locked: true, key: "push", speed: 0.45, lockMsg: null });
 
@@ -380,7 +380,7 @@ W.build = function () {
     decal(G, 0, 13, "E", "wardrobe", { wood: true }, "almirah");
     decal(G, 5, 16, "S", "scratches", { kind: "text", text: "MISTY\n  5 -\n  6 -\n  7 -", size: 9, x: 40, y: 34, seed: 4 });
     decal(G, 1, 21, "N", "drawing", { n: 3, tilt: 1, low: true }, "drawing3");
-    decal(G, 7, 17, "E", "scratches", { kind: "text", text: "  we are\n  still\n  here", size: 9, x: 30, y: 46, seed: 6 }, "hallScratch");
+    decal(G, 7, 17, "E", "scratches", { kind: "text", text: "  hum\n  abhi bhi\n  yahin hain", size: 9, x: 30, y: 46, seed: 6 }, "hallScratch");
 
     // lights — moonlight through every window, the sky over the courtyard
     G.rows.forEach((row, y) => [...row].forEach((ch, x) => {
@@ -429,7 +429,7 @@ W.build = function () {
     door(U, { id: "bathDoor", x: 9, y: 5, axis: "x", side: 1, hinge: 1, tex: "d_plain" });
     door(U, { id: "bedDoor", x: 15, y: 5, axis: "x", side: 1, hinge: 0, tex: "d_room", open: 1, target: 1 });
     door(U, { id: "bathBedDoor", x: 11, y: 3, axis: "y", side: 0, hinge: 0, tex: "d_plain", open: 0.4, target: 0.4 });
-    door(U, { id: "atticDoor", x: 5, y: 7, axis: "x", side: 0, hinge: 0, tex: "d_attic", locked: true, key: "never", lockMsg: "Locked. Something on the other side scratches back." });
+    door(U, { id: "atticDoor", x: 5, y: 7, axis: "x", side: 0, hinge: 0, tex: "d_attic", locked: true, key: "never", lockMsg: "Band hai. Doosri taraf se koi wapas khurachta hai." });
 
     decal(U, 6, 5, "S", "portrait", { kind: "man", variant: "normal", label: "RAVI" }, "pRavi");
     decal(U, 12, 5, "S", "portrait", { kind: "woman", variant: "normal", label: "KAMLA" }, "pKamla");
@@ -459,7 +459,7 @@ W.build = function () {
     sprite(U, { id: "dollCorridor", x: 12.5, y: 10.4, spr: "doll", w: 0.14, h: 0.14, visible: false });
 
     /* ---------- BASEMENT ---------- */
-    door(B, { id: "steelDoor", x: 5, y: 10, axis: "y", mode: "slide", hinge: 0, tex: "d_steel", locked: true, key: "power", speed: 0.5, lockMsg: "A heavy steel door with an electric lock. The lock is dead." });
+    door(B, { id: "steelDoor", x: 5, y: 10, axis: "y", mode: "slide", hinge: 0, tex: "d_steel", locked: true, key: "power", speed: 0.5, lockMsg: "Bhaari steel ka darwaza, bijli wala lock. Lock band pada hai." });
     decal(B, 0, 2, "E", "fusebox", { fuse: false, on: false }, "fusebox");
     decal(B, 4, 9, "E", "switchPanel", {}, null);
     decal(B, 0, 11, "E", "chains", {});
@@ -467,7 +467,7 @@ W.build = function () {
     decal(B, 4, 8, "S", "scratches", { kind: "text", text: "3:17 3:17\n3:17  3:17\n 3:17 3:17\n3:17 3:17", size: 11, x: 8, y: 34, seed: 9 });
     decal(B, 0, 9, "E", "photos", { seed: 51, scratched: true, pinned: true });
     decal(B, 0, 10, "E", "keyring", { taken: false }, "keyring");
-    decal(B, 2, 13, "N", "scratches", { kind: "text", text: "THEY PUT ME\nBELOW THE\nLIGHT\n\nNOBODY LEAVES", size: 10, x: 14, y: 30, seed: 11 });
+    decal(B, 2, 13, "N", "scratches", { kind: "text", text: "UNHONE MUJHE\nROSHNI KE\nNEECHE DAALA\n\nKOI NAHI JAAYEGA", size: 10, x: 14, y: 30, seed: 11 });
     light(B, { id: "cellarSpill", x: 2.5, y: 1.2, r: 2.8, col: [0.6, 0.5, 0.4], i: 0.35, kind: "static" });
     [["c_landing", 2.5, 2.5], ["c_store1", 11.5, 1.5], ["c_store2", 8.5, 6.5], ["c_corr", 8.5, 10.5], ["c_ravi", 2.5, 10.5]]
         .forEach(([id, x, y]) => { light(B, { id, x, y, r: 5, col: bulb, i: 1.0, on: false, flicker: "bulb", bulb: true }); sprite(B, { id: id + "_s", x, y, spr: "bulb", w: 0.07, h: 0.26, z: B.cfg.wallH - 0.26 }); });
@@ -480,10 +480,10 @@ W.build = function () {
 
 /* stair links: walking into these faces moves you between floors */
 W.stairs = [
-    { from: "ground", x: 12, y: 0, face: "S", to: "upper", at: [1.5, 6.5], angle: 0, label: "Go upstairs" },
-    { from: "upper", x: 0, y: 6, face: "E", to: "ground", at: [12.5, 1.5], angle: Math.PI / 2, label: "Go downstairs" },
-    { from: "ground", x: 22, y: 18, face: "N", to: "basement", at: [2.5, 1.4], angle: Math.PI / 2, label: "Go down to the cellar" },
-    { from: "basement", x: 2, y: 0, face: "S", to: "ground", at: [22.5, 17.4], angle: -Math.PI / 2, label: "Go back up" }
+    { from: "ground", x: 12, y: 0, face: "S", to: "upper", at: [1.5, 6.5], angle: 0, label: "Upar jao" },
+    { from: "upper", x: 0, y: 6, face: "E", to: "ground", at: [12.5, 1.5], angle: Math.PI / 2, label: "Neeche jao" },
+    { from: "ground", x: 22, y: 18, face: "N", to: "basement", at: [2.5, 1.4], angle: Math.PI / 2, label: "Tehkhane mein jao" },
+    { from: "basement", x: 2, y: 0, face: "S", to: "ground", at: [22.5, 17.4], angle: -Math.PI / 2, label: "Wapas upar jao" }
 ];
 
 W.surfaceAt = function (F, x, y) { const z = zoneAt(F, Math.floor(x), Math.floor(y)); return z ? z.surf : "wood"; };

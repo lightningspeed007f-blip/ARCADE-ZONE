@@ -24,12 +24,12 @@ let S = null, RT = null;
    ITEMS
    ====================================================================== */
 C.ITEMS = {
-    studyKey: { name: "Small iron key", desc: "Pulled up from the well, wrapped in a wet cloth. Long black hair was wound around it." },
-    gateKey: { name: "Brass key — “UPAR”", desc: "From inside the study clock. The paper tag says UPAR: upstairs." },
-    photo: { name: "Family photograph", desc: "Diwali 1986. A man, a woman, a little girl. The man's face has been scratched out." },
-    cellarKey: { name: "Heavy iron key", desc: "From the pocket of the coat upstairs. The lining was still warm." },
-    fuse: { name: "Ceramic fuse", desc: "An old 30-amp mains fuse, wrapped in a child's handkerchief." },
-    keyring: { name: "Ravi's key ring", desc: "A big iron key for a padlock, and a small brass key shaped like a winding crank." }
+    studyKey: { name: "Chhoti lohe ki chaabi", desc: "Kuen se nikli, geele kapde mein lipti hui. Uspe lambe kaale baal lipte hue the." },
+    gateKey: { name: "Peetal ki chaabi — “UPAR”", desc: "Study ki ghadi ke andar se mili. Kaagaz ki parchi pe likha hai UPAR." },
+    photo: { name: "Family ki photo", desc: "Diwali 1986. Ek aadmi, ek aurat, ek chhoti bachchi. Aadmi ka chehra khurach ke mita diya gaya hai." },
+    cellarKey: { name: "Bhaari lohe ki chaabi", desc: "Upar wale coat ki jeb se mili. Andar ka kapda abhi bhi garam tha." },
+    fuse: { name: "Purana fuse", desc: "Ek purana 30-amp mains fuse, ek bachche ke rumaal mein lipta hua." },
+    keyring: { name: "Ravi ka chaabi ka guchha", desc: "Taale ki ek badi lohe ki chaabi, aur ghadi mein chaabi bharne wali ek chhoti peetal ki chaabi." }
 };
 
 /* ======================================================================
@@ -37,51 +37,51 @@ C.ITEMS = {
    ====================================================================== */
 C.NOTES = {
     news: {
-        title: "Torn newspaper", style: "news",
-        body: `<div class="mast">NAGAR SAMACHAR</div><div class="date">Monday, 16 November 1987</div>
-<h3>TRAGEDY AT MEHRA HAVELI</h3>
-<p>…the bodies of Smt. Kamla Mehra (34) and her daughter Misty (7) were discovered on Sunday morning by the milkman, who found the front door chained <b>from the inside</b>.</p>
-<p>Police say every clock in the house had stopped at <b>3:17</b>.</p>
-<p>The head of the household, Shri Ravi Mehra, has not been seen since early November. Neighbours told this paper he had “gone travelling”. A search of the property found—</p>
+        title: "Phata hua akhbaar", style: "news",
+        body: `<div class="mast">NAGAR SAMACHAR</div><div class="date">Somvaar, 16 November 1987</div>
+<h3>MEHRA HAVELI MEIN HAADSA</h3>
+<p>…Smt. Kamla Mehra (34) aur unki beti Misty (7) ki laashein Ravivaar subah doodhwale ko milin. Ghar ka main darwaza <b>andar se</b> zanjeer se band tha.</p>
+<p>Police ke mutaabik ghar ki har ghadi <b>3:17</b> pe ruki hui thi.</p>
+<p>Ghar ke maalik, Shri Ravi Mehra, November ki shuruaat se kisi ko nahi dikhe. Padosiyon ne bataya ki woh “safar pe gaye hain”. Ghar ki talaashi mein mila—</p>
 <p class="torn">&nbsp;</p>`
     },
     diary1: {
-        title: "Diary page — Kamla", style: "paper",
+        title: "Diary ka panna — Kamla", style: "paper",
         body: `<p class="date">12 November</p>
-<p>Ravi lowers the study key into the well every night now, tied to the bucket rope, so that I cannot read what he writes in there. He says the house tells him things at night. He says it <i>breathes</i>.</p>
-<p>Tonight he laid a fourth plate again. “For the guest,” he said.</p>
-<p>We have not had a guest in years.</p>`,
+<p>Ravi ab har raat study ki chaabi baalti ki rassi se baandh ke kuen mein latka deta hai, taaki main na padh sakun ki woh wahan kya likhta hai. Kehta hai raat ko ghar usse baatein karta hai. Kehta hai ghar <i>saans leta hai</i>.</p>
+<p>Aaj raat usne phir se chauthi thaali lagayi. “Mehmaan ke liye,” usne kaha.</p>
+<p>Saalon se hamare ghar koi mehmaan nahi aaya.</p>`,
         onRead: () => { G.flag("readDiary1", true); }
     },
     ravi: {
-        title: "Note on the desk", style: "scrawl",
-        body: `<p>It breathes at night. In. Out. In.</p>
-<p>I counted every night. It always stops at the same minute, and every clock in the house stops with it.</p>
-<p class="big">WHEN THE HOUSE STOPPED BREATHING,<br>THE HANDS SHOWED THE WAY.</p>
-<p>Keep the gate locked. Keep Misty upstairs.<br>Keep the guest's plate warm.</p>`
+        title: "Desk pe pada note", style: "scrawl",
+        body: `<p>Raat ko yeh saans leta hai. Andar. Bahar. Andar.</p>
+<p>Maine har raat gina. Yeh hamesha usi minute pe rukta hai, aur ghar ki har ghadi iske saath ruk jaati hai.</p>
+<p class="big">JAB GHAR KI SAANS RUKI,<br>SUIYON NE RAASTA DIKHAYA.</p>
+<p>Gate band rakho. Misty ko upar rakho.<br>Mehmaan ki thaali garam rakho.</p>`
     },
     photo: {
-        title: "Family photograph", style: "photo",
-        body: `<div class="photoFrame"><canvas id="photoCanvas" width="300" height="200"></canvas></div><p class="back">On the back: <i>“Diwali 1986. The last good one.”</i></p>`,
+        title: "Family ki photo", style: "photo",
+        body: `<div class="photoFrame"><canvas id="photoCanvas" width="300" height="200"></canvas></div><p class="back">Peeche likha hai: <i>“Diwali 1986. Aakhri achhi Diwali.”</i></p>`,
         onRead: () => drawPhoto()
     },
     diary2: {
         title: "Diary — Kamla", style: "paper",
         body: `<p class="date">14 November</p>
-<p>We had to. Pandit-ji said that what lives in Ravi will sleep if he is kept below the house, away from the light. The door down there is steel now. I could not look at him.</p>
-<p>Misty asks where Papa went. I told her he is travelling. She hid the fuse in her toy box so nobody can turn the lights on downstairs. Good girl.</p>
-<p>Pandit-ji said one more thing: <b>the big clock in the hall must never stop. If it stops, the night will not end.</b> Keep it wound.</p>
-<p>It is three o'clock. I can hear him singing under the floor.</p>`,
+<p>Humein yeh karna pada. Pandit-ji ne kaha ki Ravi ke andar jo hai, woh so jaayega agar use ghar ke neeche, roshni se door rakha jaaye. Neeche ka darwaza ab steel ka hai. Main uski taraf dekh bhi nahi paayi.</p>
+<p>Misty poochhti hai Papa kahan gaye. Maine bola woh safar pe hain. Usne fuse apne toy box mein chhupa diya taaki koi neeche ki lights na jala sake. Meri achhi bachchi.</p>
+<p>Pandit-ji ne ek baat aur kahi: <b>hall ki badi ghadi kabhi rukni nahi chahiye. Agar woh ruki, toh yeh raat kabhi khatam nahi hogi.</b> Usme chaabi bharte raho.</p>
+<p>Teen baj gaye hain. Mujhe farsh ke neeche se uske gaane ki awaaz aa rahi hai.</p>`,
         onRead: () => { G.flag("readDiary2", true); }
     },
     pandit: {
-        title: "Folded paper under the bell", style: "paper",
-        body: `<p>Keep the diyas burning, day and night.</p><p><b>Where the lamps burn, he cannot cross.</b></p><p class="sign">— Pt. Shivnath</p>`,
+        title: "Ghanti ke neeche muda kaagaz", style: "paper",
+        body: `<p>Diye jalte rehne do, din raat.</p><p><b>Jahan diye jalte hain, woh wahan nahi aa sakta.</b></p><p class="sign">— Pt. Shivnath</p>`,
         onRead: () => G.flag("readPandit", true)
     },
-    drawing1: { title: "Misty's drawing", style: "drawing", drawing: 1, body: "" },
-    drawing2: { title: "Misty's drawing", style: "drawing", drawing: 2, body: "" },
-    drawing3: { title: "A drawing, low on the wall", style: "drawing", drawing: 3, body: `<p class="back">The blue figure is carrying a suitcase.</p>` }
+    drawing1: { title: "Misty ki drawing", style: "drawing", drawing: 1, body: "" },
+    drawing2: { title: "Misty ki drawing", style: "drawing", drawing: 2, body: "" },
+    drawing3: { title: "Deewar pe neeche bani drawing", style: "drawing", drawing: 3, body: `<p class="back">Neele aadmi ke haath mein suitcase hai.</p>` }
 };
 function drawPhoto() {
     // an old print: the painted family, softened, sepia-toned, creased and grainy
@@ -110,11 +110,11 @@ function drawPhoto() {
    HIDING SPOTS
    ====================================================================== */
 const HIDES = [
-    { id: "almirah", floor: "ground", x: 1.05, y: 13.5, label: "Hide in the almirah", view: { x: 1.22, y: 13.5, a: 0 }, exit: { x: 1.7, y: 13.5, a: 0 }, near: { x: 2.4, y: 13.6 }, mask: "gap" },
-    { id: "pantry", floor: "ground", x: 20.5, y: 15.95, label: "Hide in the pantry", view: { x: 20.5, y: 15.8, a: -Math.PI / 2 }, exit: { x: 20.5, y: 15.3, a: -Math.PI / 2 }, near: { x: 20.6, y: 14.6 }, mask: "slats" },
-    { id: "wardrobe", floor: "upper", x: 14.5, y: 1.05, label: "Hide in the almirah", view: { x: 14.5, y: 1.2, a: Math.PI / 2 }, exit: { x: 14.4, y: 1.75, a: Math.PI / 2 }, near: { x: 14.3, y: 2.6 }, mask: "gap" },
-    { id: "tub", floor: "upper", x: 9.0, y: 3.4, label: "Hide behind the curtain", view: { x: 9.0, y: 3.7, a: Math.PI / 2 }, exit: { x: 10.4, y: 3.4, a: Math.PI }, near: { x: 9.6, y: 4.5 }, mask: "curtain" },
-    { id: "crates", floor: "basement", x: 16.5, y: 7.55, label: "Crouch in the gap between the crates", view: { x: 16.5, y: 7.78, a: -Math.PI / 2 }, exit: { x: 16.5, y: 7.35, a: -Math.PI / 2 }, near: { x: 16.5, y: 6.1 }, mask: "crates" }
+    { id: "almirah", floor: "ground", x: 1.05, y: 13.5, label: "Almari mein chhupo", view: { x: 1.22, y: 13.5, a: 0 }, exit: { x: 1.7, y: 13.5, a: 0 }, near: { x: 2.4, y: 13.6 }, mask: "gap" },
+    { id: "pantry", floor: "ground", x: 20.5, y: 15.95, label: "Pantry mein chhupo", view: { x: 20.5, y: 15.8, a: -Math.PI / 2 }, exit: { x: 20.5, y: 15.3, a: -Math.PI / 2 }, near: { x: 20.6, y: 14.6 }, mask: "slats" },
+    { id: "wardrobe", floor: "upper", x: 14.5, y: 1.05, label: "Almari mein chhupo", view: { x: 14.5, y: 1.2, a: Math.PI / 2 }, exit: { x: 14.4, y: 1.75, a: Math.PI / 2 }, near: { x: 14.3, y: 2.6 }, mask: "gap" },
+    { id: "tub", floor: "upper", x: 9.0, y: 3.4, label: "Parde ke peeche chhupo", view: { x: 9.0, y: 3.7, a: Math.PI / 2 }, exit: { x: 10.4, y: 3.4, a: Math.PI }, near: { x: 9.6, y: 4.5 }, mask: "curtain" },
+    { id: "crates", floor: "basement", x: 16.5, y: 7.55, label: "Crates ke beech mein chhupo", view: { x: 16.5, y: 7.78, a: -Math.PI / 2 }, exit: { x: 16.5, y: 7.35, a: -Math.PI / 2 }, near: { x: 16.5, y: 6.1 }, mask: "crates" }
 ];
 
 /* ======================================================================
@@ -142,76 +142,76 @@ C.register = function () {
     /* ---------------- GROUND FLOOR ---------------- */
     I({ floor: "ground", x: 13.0, y: 20.95, z: 0.6, r: 1.7, label: frontLabel, use: frontUse });
     I({ floor: "ground", x: 10.5, y: 17.05, z: 0.6, r: 1.5, label: clockLabel, hold: clockHold, use: clockUse });
-    I({ floor: "ground", x: 15.5, y: 17.05, label: "Look at the photographs", use: () => G.think(S.phase >= 6 ? "Every face in every photograph has been scratched away." : "Family photographs. A wedding, a baby, a girl on a swing in the courtyard.") });
-    I({ floor: "ground", x: 8.05, y: 17.5, label: "Look closer", use: () => G.think("Scratched into the plaster, low down, in a child's hand: “we are still here”.") });
-    I({ floor: "ground", x: 1.5, y: 6.7, r: 1.4, label: () => S.flags.phoneState === "ringing" ? "Answer the telephone" : "Read the newspaper", use: phoneUse });
-    I({ floor: "ground", x: 5.5, y: 6.6, r: 1.4, label: () => S.flags.radio && S.flags.radio !== "off" ? "Switch off the radio" : "Look at the radio", use: radioUse });
-    I({ floor: "ground", x: 3.4, y: 8.0, r: 1.4, label: "Look at the rocking chair", use: () => G.think(S.flags.coatOnRocker ? "Papa's coat is draped over the chair now. It's damp, as if someone walked in from the rain." : "A rocking chair with a folded shawl. It's still moving. Barely.") });
-    I({ floor: "ground", x: 3.5, y: 6.05, label: "Look at the clock", use: () => G.think(S.flags.parlorClockStopped ? "The pendulum hangs dead still. It was ticking a moment ago." : "An old wall clock. It says nine minutes past three.") });
-    I({ floor: "ground", x: 1.05, y: 8.5, label: "Look out of the window", use: () => G.think(S.flags.curtainSeen ? "The window is shut tight. There is no draught at all." : "Rain, and the black shapes of trees. The window is latched from inside.") });
-    I({ floor: "ground", x: 6.95, y: 10.5, label: "Look at the photographs", use: () => G.think(S.phase >= 4 ? "The frames are still there. The people in them are not." : "Old photographs of the family. A man in a white kurta, a woman, a little girl with two braids.") });
-    I({ floor: "ground", x: 2.6, y: 13.2, r: 1.3, label: "Lift the dust sheet", use: () => G.think("Under the sheet, a child's cot, folded away. A name is painted on the headboard: MISTY.") });
-    I({ floor: "ground", x: 1.5, y: 20.95, label: "Look at the drawing", use: () => G.readNote("drawing3") });
-    I({ floor: "ground", x: 5.5, y: 17.05, label: "Look at the marks", use: () => G.think("Pencil marks on the wall, one above the other. MISTY 5. MISTY 6. MISTY 7. Nothing after seven.") });
-    I({ floor: "ground", x: 9.5, y: 1.05, label: "Look at the portrait", use: () => G.think(S.phase >= 4 ? "The family portrait. Where the father stood, there is only dark paint now." : "A family portrait: Ravi, Kamla, and Misty between them. Nobody is smiling.") });
-    I({ floor: "ground", x: 16.5, y: 1.05, label: "Look at the portrait", use: () => G.think(S.phase >= 3 ? "R. MEHRA. The man in the painting has his back to the room." : "R. MEHRA. He looks directly at you, wherever you stand.") });
-    I({ floor: "ground", x: 15.5, y: 1.6, r: 1.2, label: "Look at the lantern", use: () => G.think(S.flags.lanternLit ? "Somebody has lit it. There's no match, no smell of smoke." : "A hurricane lantern. Dry. It hasn't been lit in years.") });
-    I({ floor: "ground", x: 22.5, y: 1.05, r: 1.5, label: () => S.notes.includes("pandit") ? "Ring the bell" : "Read the note under the bell", use: () => { if (!S.notes.includes("pandit")) G.readNote("pandit"); else A.bell({ x: 22.5, y: 1.1, floor: "ground" }, 0.7); } });
-    I({ floor: "ground", x: 13.0, y: 11.0, r: 1.6, label: () => S.flags.wellDone ? "Look into the well" : "Turn the crank", hold: wellHold, use: () => G.think("Black water, very far down. Something knocks gently against the stones.") });
-    I({ floor: "ground", x: 0, y: 0, r: 1.4, label: "Look at the wheelchair", spriteId: "wheelchair", use: () => G.think(S.flags.wheelMoved ? "The wheelchair. It was on the other side of the courtyard. The wheels are wet." : "An old wheelchair with a folded blanket. Somebody's Dadi lived here.") });
-    I({ floor: "ground", x: 21.9, y: 8.4, r: 1.9, label: () => !S.notes.includes("diary1") ? "Read the diary page" : "Look at the table", use: diningUse });
-    I({ floor: "ground", x: 23.5, y: 6.05, label: "Look at the photographs", use: () => G.think("In every photograph on the sideboard, the man has turned his face away from the camera.") });
-    I({ floor: "ground", x: 23.6, y: 12.7, r: 1.3, label: "Look at the fallen clock", use: () => { G.flag("sawKitchenClock", true); G.think("The kitchen clock lies face-down on the floor, glass cracked. It stopped at 3:17."); } });
-    I({ floor: "ground", x: 19.5, y: 12.05, label: "Look at the calendar", use: () => G.think("November 1987. The 14th is circled in red. Every day after it is blank.") });
-    I({ floor: "ground", x: 3.5, y: 2.2, r: 1.6, label: "Read the note on the desk", use: () => G.readNote("ravi") });
-    I({ floor: "ground", x: 3.5, y: 1.05, label: "Look at the books", use: () => G.think("Ledgers, land records… and a whole shelf of books about clocks and clockwork.") });
-    I({ floor: "ground", x: 6.95, y: 1.5, label: "Look at the clippings", use: () => G.think("Newspaper clippings pinned to the panelling. Deaths in this house: 1891, 1923, 1952. Each one circled.") });
-    I({ floor: "ground", x: 3.5, y: 4.95, label: () => S.flags.clockSolved ? "Look at the clock" : "Examine the wall clock", use: studyClockUse });
+    I({ floor: "ground", x: 15.5, y: 17.05, label: "Photos dekho", use: () => G.think(S.phase >= 6 ? "Har photo mein har chehra khurach ke mita diya gaya hai." : "Family ki photos. Ek shaadi, ek baby, aangan mein jhoole pe ek ladki.") });
+    I({ floor: "ground", x: 8.05, y: 17.5, label: "Paas se dekho", use: () => G.think("Deewar pe neeche, kisi bachche ke haath se khurach ke likha hai: “hum abhi bhi yahin hain”.") });
+    I({ floor: "ground", x: 1.5, y: 6.7, r: 1.4, label: () => S.flags.phoneState === "ringing" ? "Phone uthao" : "Akhbaar padho", use: phoneUse });
+    I({ floor: "ground", x: 5.5, y: 6.6, r: 1.4, label: () => S.flags.radio && S.flags.radio !== "off" ? "Radio band karo" : "Radio dekho", use: radioUse });
+    I({ floor: "ground", x: 3.4, y: 8.0, r: 1.4, label: "Jhoolne wali kursi dekho", use: () => G.think(S.flags.coatOnRocker ? "Ab kursi pe Papa ka coat pada hai. Geela hai, jaise koi abhi baarish se andar aaya ho." : "Ek jhoolne wali kursi, uspe tah kiya hua shawl. Abhi bhi hil rahi hai. Bas thoda sa.") });
+    I({ floor: "ground", x: 3.5, y: 6.05, label: "Ghadi dekho", use: () => G.think(S.flags.parlorClockStopped ? "Pendulum bilkul ruka hua hai. Abhi ek pal pehle tak tik-tik kar raha tha." : "Ek purani deewar ghadi. Teen baj ke nau minute ho rahe hain.") });
+    I({ floor: "ground", x: 1.05, y: 8.5, label: "Khidki se bahar dekho", use: () => G.think(S.flags.curtainSeen ? "Khidki kas ke band hai. Hawa bilkul nahi aa rahi." : "Baarish, aur pedon ki kaali parchhaiyan. Khidki andar se band hai.") });
+    I({ floor: "ground", x: 6.95, y: 10.5, label: "Photos dekho", use: () => G.think(S.phase >= 4 ? "Frame abhi bhi wahin hain. Unme log nahi hain." : "Family ki purani photos. Safed kurte mein ek aadmi, ek aurat, do choti wali ek chhoti ladki.") });
+    I({ floor: "ground", x: 2.6, y: 13.2, r: 1.3, label: "Chaadar hatao", use: () => G.think("Chaadar ke neeche bachche ka ek palna, mod ke rakha hua. Uspe naam likha hai: MISTY.") });
+    I({ floor: "ground", x: 1.5, y: 20.95, label: "Drawing dekho", use: () => G.readNote("drawing3") });
+    I({ floor: "ground", x: 5.5, y: 17.05, label: "Nishaan dekho", use: () => G.think("Deewar pe pencil ke nishaan, ek ke upar ek. MISTY 5. MISTY 6. MISTY 7. Saat ke baad kuch nahi.") });
+    I({ floor: "ground", x: 9.5, y: 1.05, label: "Tasveer dekho", use: () => G.think(S.phase >= 4 ? "Family ki tasveer. Jahan papa khade the, wahan ab sirf kaala rang hai." : "Family ki tasveer: Ravi, Kamla, aur beech mein Misty. Koi nahi muskura raha.") });
+    I({ floor: "ground", x: 16.5, y: 1.05, label: "Tasveer dekho", use: () => G.think(S.phase >= 3 ? "R. MEHRA. Tasveer wale aadmi ne room ki taraf peeth kar li hai." : "R. MEHRA. Tum kahin bhi khade ho, woh seedha tumhe hi dekhta hai.") });
+    I({ floor: "ground", x: 15.5, y: 1.6, r: 1.2, label: "Laaltain dekho", use: () => G.think(S.flags.lanternLit ? "Kisi ne ise jala diya hai. Na maachis hai, na dhuen ki boo." : "Ek purani laaltain. Sookhi padi hai. Saalon se nahi jali.") });
+    I({ floor: "ground", x: 22.5, y: 1.05, r: 1.5, label: () => S.notes.includes("pandit") ? "Ghanti bajao" : "Ghanti ke neeche ka note padho", use: () => { if (!S.notes.includes("pandit")) G.readNote("pandit"); else A.bell({ x: 22.5, y: 1.1, floor: "ground" }, 0.7); } });
+    I({ floor: "ground", x: 13.0, y: 11.0, r: 1.6, label: () => S.flags.wellDone ? "Kuen mein jhaanko" : "Charkhi ghumao", hold: wellHold, use: () => G.think("Bahut neeche kaala paani. Koi cheez dheere se pattharon pe thak-thak kar rahi hai.") });
+    I({ floor: "ground", x: 0, y: 0, r: 1.4, label: "Wheelchair dekho", spriteId: "wheelchair", use: () => G.think(S.flags.wheelMoved ? "Wheelchair. Yeh toh aangan ki doosri taraf thi. Iske pahiye geele hain." : "Ek purani wheelchair, uspe tah kiya kambal. Yahan kisi ki Dadi rehti thi.") });
+    I({ floor: "ground", x: 21.9, y: 8.4, r: 1.9, label: () => !S.notes.includes("diary1") ? "Diary ka panna padho" : "Table dekho", use: diningUse });
+    I({ floor: "ground", x: 23.5, y: 6.05, label: "Photos dekho", use: () => G.think("Sideboard ki har photo mein us aadmi ne camera se apna muh pher liya hai.") });
+    I({ floor: "ground", x: 23.6, y: 12.7, r: 1.3, label: "Giri hui ghadi dekho", use: () => { G.flag("sawKitchenClock", true); G.think("Kitchen ki ghadi farsh pe ulti padi hai, kaanch toota hua. Yeh 3:17 pe ruki thi."); } });
+    I({ floor: "ground", x: 19.5, y: 12.05, label: "Calendar dekho", use: () => G.think("November 1987. 14 tareekh pe laal gola bana hai. Uske baad ka har din khaali hai.") });
+    I({ floor: "ground", x: 3.5, y: 2.2, r: 1.6, label: "Desk pe pada note padho", use: () => G.readNote("ravi") });
+    I({ floor: "ground", x: 3.5, y: 1.05, label: "Kitaabein dekho", use: () => G.think("Bahi-khaate, zameen ke kaagaz… aur ghadiyon pe kitaabon se bhari ek poori shelf.") });
+    I({ floor: "ground", x: 6.95, y: 1.5, label: "Akhbaar ki katrane dekho", use: () => G.think("Deewar pe akhbaar ki katrane lagi hain. Is ghar mein hui mautein: 1891, 1923, 1952. Har ek pe gola bana hai.") });
+    I({ floor: "ground", x: 3.5, y: 4.95, label: () => S.flags.clockSolved ? "Ghadi dekho" : "Deewar ghadi ko dhyaan se dekho", use: studyClockUse });
 
     /* ---------------- UPSTAIRS ---------------- */
-    I({ floor: "upper", x: 6.5, y: 6.05, label: "Look at the portrait", use: () => G.think(S.flags.portraitsChanged ? "RAVI. The frame holds only an empty dark room now." : "RAVI. The painter caught something in his eyes that the photographs didn't.") });
-    I({ floor: "upper", x: 12.5, y: 6.05, label: "Look at the portrait", use: () => G.think(S.flags.portraitsChanged ? "KAMLA. Her eyes are closed. They were open." : "KAMLA. A gentle face, painted with great care.") });
-    I({ floor: "upper", x: 17.5, y: 6.05, label: "Look at the portrait", use: () => G.think(S.flags.portraitsChanged ? "MISTY. She has turned away, towards the window." : "MISTY. Two braids with red ribbons. She looks about seven.") });
-    I({ floor: "upper", x: 2.5, y: 1.05, label: "Look at the drawing", use: () => { G.readNote("drawing1"); G.flag("visitedNursery", true); } });
-    I({ floor: "upper", x: 6.5, y: 1.05, label: "Look at the drawing", use: () => { G.readNote("drawing2"); G.flag("visitedNursery", true); } });
-    I({ floor: "upper", x: 2.0, y: 1.6, r: 1.4, label: "Look at the bed", use: () => G.think(S.flags.dollMoved ? "The doll is gone from the pillow. There is a small dent where it sat." : "A small bed, the sheet turned down as if someone is expected. A cloth doll sits on the pillow.") });
-    I({ floor: "upper", x: 5.4, y: 1.5, r: 1.4, label: () => S.flags.gotFuse ? "Look in the toy chest" : "Open the toy chest", use: toyChestUse });
-    I({ floor: "upper", x: 9.5, y: 1.05, label: "Look in the mirror", use: () => G.think(S.flags.mirrorDone ? "Just your own face, grey and tired." : "Your own face in the old glass.") });
-    I({ floor: "upper", x: 15.6, y: 1.5, r: 1.8, label: "Read the diary on the bed", use: () => G.readNote("diary2") });
-    I({ floor: "upper", x: 18.2, y: 1.6, r: 1.4, label: () => S.flags.gotCellarKey ? "Look at the coat stand" : "Search the coat", use: coatUse, when: () => !S.flags.coatGone });
-    I({ floor: "upper", x: 12.5, y: 10.95, label: "Look out of the window", use: () => G.think("The courtyard below. The well. The rain. A light is on in a room across the way… then it isn't.") });
-    I({ floor: "upper", x: 12.5, y: 10.35, r: 1.2, label: "Look at the doll", when: () => S.flags.dollMoved, use: () => G.think("The doll from the nursery. It's sitting facing the corridor. Facing you.") });
-    I({ floor: "upper", x: 9.5, y: 6.95, label: "Look at the photographs", use: () => G.think("A school photograph. A girl in the front row has been circled in red crayon.") });
+    I({ floor: "upper", x: 6.5, y: 6.05, label: "Tasveer dekho", use: () => G.think(S.flags.portraitsChanged ? "RAVI. Frame mein ab sirf ek khaali, andhera kamra hai." : "RAVI. Painter ne uski aankhon mein kuch aisa pakda jo photos mein nahi dikhta.") });
+    I({ floor: "upper", x: 12.5, y: 6.05, label: "Tasveer dekho", use: () => G.think(S.flags.portraitsChanged ? "KAMLA. Uski aankhein band hain. Pehle khuli thi." : "KAMLA. Ek pyaara sa chehra, bade pyaar se banaya hua.") });
+    I({ floor: "upper", x: 17.5, y: 6.05, label: "Tasveer dekho", use: () => G.think(S.flags.portraitsChanged ? "MISTY. Woh muh pher ke khidki ki taraf dekh rahi hai." : "MISTY. Laal ribbon wali do chotiyan. Saat saal ki lagti hai.") });
+    I({ floor: "upper", x: 2.5, y: 1.05, label: "Drawing dekho", use: () => { G.readNote("drawing1"); G.flag("visitedNursery", true); } });
+    I({ floor: "upper", x: 6.5, y: 1.05, label: "Drawing dekho", use: () => { G.readNote("drawing2"); G.flag("visitedNursery", true); } });
+    I({ floor: "upper", x: 2.0, y: 1.6, r: 1.4, label: "Bistar dekho", use: () => G.think(S.flags.dollMoved ? "Takiye se gudiya gaayab hai. Jahan woh baithi thi, wahan halka sa gaddha hai." : "Ek chhota bistar, chaadar aise mudi hai jaise kisi ka intezaar ho. Takiye pe kapde ki ek gudiya baithi hai.") });
+    I({ floor: "upper", x: 5.4, y: 1.5, r: 1.4, label: () => S.flags.gotFuse ? "Khilaune ka box dekho" : "Khilaune ka box kholo", use: toyChestUse });
+    I({ floor: "upper", x: 9.5, y: 1.05, label: "Sheeshe mein dekho", use: () => G.think(S.flags.mirrorDone ? "Bas tumhara apna chehra, feeka aur thaka hua." : "Purane sheeshe mein tumhara apna chehra.") });
+    I({ floor: "upper", x: 15.6, y: 1.5, r: 1.8, label: "Bistar pe padi diary padho", use: () => G.readNote("diary2") });
+    I({ floor: "upper", x: 18.2, y: 1.6, r: 1.4, label: () => S.flags.gotCellarKey ? "Coat stand dekho" : "Coat ki talaashi lo", use: coatUse, when: () => !S.flags.coatGone });
+    I({ floor: "upper", x: 12.5, y: 10.95, label: "Khidki se bahar dekho", use: () => G.think("Neeche aangan. Kuan. Baarish. Saamne wale kamre mein ek light jal rahi hai… phir nahi.") });
+    I({ floor: "upper", x: 12.5, y: 10.35, r: 1.2, label: "Gudiya dekho", when: () => S.flags.dollMoved, use: () => G.think("Bachchon ke kamre wali gudiya. Corridor ki taraf muh karke baithi hai. Tumhari taraf.") });
+    I({ floor: "upper", x: 9.5, y: 6.95, label: "Photos dekho", use: () => G.think("School ki ek photo. Aage ki line mein ek ladki ke chaaron taraf laal crayon se gola bana hai.") });
 
     /* ---------------- CELLAR ---------------- */
     I({ floor: "basement", x: 1.05, y: 2.5, r: 1.5, label: fuseLabel, use: fuseUse });
-    I({ floor: "basement", x: 1.05, y: 10.5, r: 1.4, label: () => S.flags.gotKeyring ? null : "Take the key ring", use: takeKeyring });
-    I({ floor: "basement", x: 3.7, y: 11.4, r: 1.2, label: "Look at the bowl", use: () => G.think("Rice and dal in a steel bowl. It's still warm.") });
-    I({ floor: "basement", x: 2.4, y: 12.2, r: 1.5, label: "Look at the cot", use: () => G.think("A rope cot. Chains are bolted to its frame. The blanket is still warm.") });
-    I({ floor: "basement", x: 2.5, y: 9.05, label: "Look at the scratches", use: () => G.think("Hundreds of scratches, in groups of five. Somebody counted days down here.") });
-    I({ floor: "basement", x: 1.05, y: 9.5, label: "Look at the photographs", use: () => G.think("Photographs of the family, pinned up and scratched over and over. Kamla. Misty. Strangers too — travellers, by the look of them.") });
-    I({ floor: "basement", x: 2.5, y: 12.95, r: 1.6, label: "Read the wall", use: () => G.think("“THEY PUT ME BELOW THE LIGHT. NOBODY LEAVES.”") });
-    I({ floor: "basement", x: 4.95, y: 9.5, r: 1.2, label: "Press the switch", use: () => { A.tick(null, true, 0.5); G.think(S.power ? "The switch clicks. The steel door's lock is already green." : "It clicks. Nothing. No power."); } });
+    I({ floor: "basement", x: 1.05, y: 10.5, r: 1.4, label: () => S.flags.gotKeyring ? null : "Chaabi ka guchha uthao", use: takeKeyring });
+    I({ floor: "basement", x: 3.7, y: 11.4, r: 1.2, label: "Katori dekho", use: () => G.think("Steel ki katori mein daal chawal. Abhi bhi garam hai.") });
+    I({ floor: "basement", x: 2.4, y: 12.2, r: 1.5, label: "Khaat dekho", use: () => G.think("Rassi ki khaat. Uske dhaanche pe zanjeerein kasi hui hain. Kambal abhi bhi garam hai.") });
+    I({ floor: "basement", x: 2.5, y: 9.05, label: "Khuraachein dekho", use: () => G.think("Saikdon khuraachein, paanch-paanch ke jhund mein. Yahan neeche koi din gin raha tha.") });
+    I({ floor: "basement", x: 1.05, y: 9.5, label: "Photos dekho", use: () => G.think("Family ki photos, deewar pe lagi aur baar-baar khurachi hui. Kamla. Misty. Kuch anjaan log bhi — dekhne mein musafir lagte hain.") });
+    I({ floor: "basement", x: 2.5, y: 12.95, r: 1.6, label: "Deewar padho", use: () => G.think("“UNHONE MUJHE ROSHNI KE NEECHE DAALA. KOI NAHI JAAYEGA.”") });
+    I({ floor: "basement", x: 4.95, y: 9.5, r: 1.2, label: "Switch dabao", use: () => { A.tick(null, true, 0.5); G.think(S.power ? "Switch click hua. Steel ke darwaze ka lock pehle se hara hai." : "Click hua. Kuch nahi. Bijli nahi hai."); } });
 };
 
 /* ---------------- doors ---------------- */
 function doorLabel(d) {
-    if (d.id === "cupboard") return d.locked ? (S.y < 11.5 ? (S.flags.cupboardCold ? "Push the cupboard" : "Examine the cupboard") : "Push the panel") : null;
-    if (d.id === "boltDoor" && d.locked) return S.x < 7.5 ? "Slide the bolt" : "Open the door";
+    if (d.id === "cupboard") return d.locked ? (S.y < 11.5 ? (S.flags.cupboardCold ? "Almari dhakelo" : "Almari ko dhyaan se dekho") : "Panel dhakelo") : null;
+    if (d.id === "boltDoor" && d.locked) return S.x < 7.5 ? "Kundi kholo" : "Darwaza kholo";
     if (d.mode === "slide" && !d.locked) return null;
-    if (d.locked) return d.key && G.has(d.key) ? "Unlock" : (d.id === "gate" ? "Open the gate" : "Open the door");
-    return d.open > 0.5 ? "Close the door" : "Open the door";
+    if (d.locked) return d.key && G.has(d.key) ? "Taala kholo" : (d.id === "gate" ? "Gate kholo" : "Darwaza kholo");
+    return d.open > 0.5 ? "Darwaza band karo" : "Darwaza kholo";
 }
 C.tryUnlock = function (d) {
     if (d.id === "cupboard") {
-        if (S.y < 11.5 && !S.flags.cupboardCold) { G.flag("cupboardCold", true); G.think("Cold air is coming through the back of this cupboard."); A.whisper({ x: 2.5, y: 12.5, floor: "ground" }, 1.2, 0.25); return true; }
-        d.locked = false; G.openDoor(d, 0.45); G.think(S.y < 11.5 ? "The whole cupboard slides aside. There's a room behind it." : "The panel gives way: the back of a cupboard."); return true;
+        if (S.y < 11.5 && !S.flags.cupboardCold) { G.flag("cupboardCold", true); G.think("Is almari ke peeche se thandi hawa aa rahi hai."); A.whisper({ x: 2.5, y: 12.5, floor: "ground" }, 1.2, 0.25); return true; }
+        d.locked = false; G.openDoor(d, 0.45); G.think(S.y < 11.5 ? "Poori almari khisak ke side ho gayi. Peeche ek kamra hai." : "Panel khul gaya: yeh toh ek almari ka peechla hissa hai."); return true;
     }
     if (d.id === "boltDoor") { if (S.x < 7.5) { d.locked = false; A.unlock(G.doorPos(d)); G.openDoor(d, 1.4); return true; } return false; }
     if (d.key === "never") {
         A.rattle(G.doorPos(d), 0.7);
         G.later(0.9, () => A.knock(G.doorPos(d), 3, 0.9));
-        G.think(S.flags.atticKnocked ? "Locked. Something on the other side knocks back. Three times. Always three." : "Locked. For a moment, something on the other side knocks back.");
+        G.think(S.flags.atticKnocked ? "Band hai. Doosri taraf se koi wapas khatkhatata hai. Teen baar. Hamesha teen baar." : "Band hai. Ek pal ke liye, doosri taraf se koi wapas khatkhatata hai.");
         G.flag("atticKnocked", true);
         return true;
     }
@@ -237,39 +237,39 @@ function onUnlock(id) {
 
 /* ---------------- front door & hall clock ---------------- */
 function frontLabel() {
-    if (S.flags.dawn) return "Step outside";
-    if (!G.has("keyring")) return "Try the door";
-    if (!S.flags.frontUnlocked) return "Unlock the padlock";
-    return "Push the door";
+    if (S.flags.dawn) return "Bahar niklo";
+    if (!G.has("keyring")) return "Darwaza kholne ki koshish karo";
+    if (!S.flags.frontUnlocked) return "Taala kholo";
+    return "Darwaza dhakelo";
 }
 function frontUse() {
     const pos = { x: 13, y: 20.6, floor: "ground" };
     if (S.flags.dawn) { ending(); return; }
     if (!G.has("keyring")) {
         A.rattle(pos, 0.9);
-        G.think(S.t < 40 ? "It won't open. There's a chain across it, on the inside. It wasn't there when I came in." : "Chained from the inside. A heavy padlock hangs from the chain.");
+        G.think(S.t < 40 ? "Yeh khul nahi raha. Andar ki taraf zanjeer lagi hai. Jab main andar aaya tha tab yeh nahi thi." : "Andar se zanjeer lagi hai. Zanjeer pe ek bhaari taala latka hai.");
         return;
     }
     if (!S.flags.frontUnlocked) {
         G.flag("frontUnlocked", true);
         A.unlock(pos); G.later(0.4, () => A.rattle(pos, 1));
         W.setDecal("frontL", { chain: false }); W.setDecal("frontR", { chain: false });
-        G.later(1.2, () => G.think("The chain falls away. The door still won't move — as if something is holding it from the other side."));
-        G.later(5.8, () => G.think(S.flags.readDiary2 ? "“If the big clock stops, the night will not end.” Behind me, the hall clock is silent." : "Behind me, the old hall clock is silent. Its pendulum hangs still."));
+        G.later(1.2, () => G.think("Zanjeer gir gayi. Darwaza phir bhi nahi hil raha — jaise doosri taraf se koi use pakad ke khada ho."));
+        G.later(5.8, () => G.think(S.flags.readDiary2 ? "“Agar badi ghadi ruki, toh yeh raat khatam nahi hogi.” Mere peeche, hall ki ghadi khamosh hai." : "Mere peeche, hall ki purani ghadi khamosh hai. Uska pendulum ruka hua hai."));
         if (!S.flags.finalStarted) G.checkpoint("final");
         return;
     }
     A.thump(pos, 0.7);
-    G.think("It won't move. The night isn't over.");
+    G.think("Yeh nahi hil raha. Raat abhi khatam nahi hui.");
 }
 function clockLabel() {
-    if (S.flags.wound) return "Listen to the clock";
-    if (G.has("keyring")) return `Wind the clock (${(S.flags.windTurns || 0) + 1}/3)`;
-    return "Examine the clock";
+    if (S.flags.wound) return "Ghadi ki awaaz suno";
+    if (G.has("keyring")) return `Ghadi mein chaabi bharo (${(S.flags.windTurns || 0) + 1}/3)`;
+    return "Ghadi ko dhyaan se dekho";
 }
 function clockUse() {
-    if (S.flags.wound) { G.think("Tick. Tock. It's running again."); return; }
-    G.think("The big hall clock. Silent. Its hands stand at 3:17. There's a small keyhole for winding.");
+    if (S.flags.wound) { G.think("Tik. Tik. Yeh phir se chal padi."); return; }
+    G.think("Hall ki badi ghadi. Khamosh. Iski suiyan 3:17 pe ruki hain. Chaabi bharne ke liye ek chhota sa ched hai.");
 }
 function clockHold() {
     if (S.flags.wound || !G.has("keyring")) return null;
@@ -301,7 +301,7 @@ function wellHold() {
             G.flag("wellDone", true);
             A.splash({ x: 13, y: 11, floor: "ground" }, 0.4);
             G.give("studyKey");
-            G.think("Inside the bucket, wrapped in a wet cloth: a small iron key. Long black hair is wound tight around it.", 6);
+            G.think("Baalti ke andar, geele kapde mein lipti: ek chhoti lohe ki chaabi. Uspe lambe kaale baal kas ke lipte hain.", 6);
             S.phase = Math.max(S.phase, 2);
             S.flags.wellAt = S.t;
             G.checkpoint("well");
@@ -316,10 +316,10 @@ function phoneUse() {
         S.flags.phoneState = "answered";
         A.static(0.6, 0.35);
         G.subtitle([
-            ["<i>(static… and breathing, very close to the receiver)</i>", 3.2, () => A.static(2.5, 0.12)],
-            ["<i>(a child's voice)</i> …hello?", 2.6],
-            ["…are you staying for dinner?", 3.4],
-            ["<i>(the line goes dead)</i>", 2.2, () => A.tick(null, true, 0.6)]
+            ["<i>(khar-khar… aur saans ki awaaz, receiver ke bilkul paas)</i>", 3.2, () => A.static(2.5, 0.12)],
+            ["<i>(ek bachche ki awaaz)</i> …hello?", 2.6],
+            ["…tum khaana khaake jaoge na?", 3.4],
+            ["<i>(line kat jaati hai)</i>", 2.2, () => A.tick(null, true, 0.6)]
         ]);
         return;
     }
@@ -339,32 +339,32 @@ function setRadio(state) {
 function radioUse() {
     if (S.flags.radio && S.flags.radio !== "off") {
         setRadio("off"); A.tick(null, true, 0.6); G.flag("radioOffT", S.t);
-        G.think("Silence. Better.");
+        G.think("Sannata. Ab theek hai.");
         return;
     }
-    G.think(S.flags.radioOffT ? "The dial is warm. I switched it off… didn't I?" : "An old valve radio. Battery-powered. Dead, by the look of it.");
+    G.think(S.flags.radioOffT ? "Dial garam hai. Maine toh ise band kiya tha… kiya tha na?" : "Ek purana valve radio. Battery wala. Dekhne mein toh bekaar pada hai.");
 }
 
 /* ---------------- dining ---------------- */
 function diningUse() {
     if (!S.notes.includes("diary1")) { G.readNote("diary1"); return; }
-    if (S.flags.served) G.think("Four thalis, served. Rice, dal, something dark and red on the fourth plate. Papa's coat hangs on the guest's chair.");
-    else G.think("Four plates laid on a clean cloth. One chair pulled out, as if for a guest. The candle is fresh.");
+    if (S.flags.served) G.think("Chaar thaali, khaana parosa hua. Chawal, daal, aur chauthi thaali mein kuch gehra laal sa. Mehmaan ki kursi pe Papa ka coat tanga hai.");
+    else G.think("Saaf kapde pe chaar thaali lagi hain. Ek kursi bahar khinchi hui, jaise kisi mehmaan ke liye. Mombatti nayi hai.");
 }
 
 /* ---------------- study clock puzzle ---------------- */
 function studyClockUse() {
-    if (S.flags.clockSolved) { G.think("The little door under the dial hangs open. Inside, the clock is ticking backwards."); return; }
-    G.openClock(12, 0, "The glass door is jammed shut, but the hands turn when you push them. There's a tiny brass door under the dial with no handle.", (h, m) => {
+    if (S.flags.clockSolved) { G.think("Dial ke neeche ka chhota darwaza khula latka hai. Andar ghadi ulti chal rahi hai."); return; }
+    G.openClock(12, 0, "Kaanch ka darwaza jaam hai, par dhakelne pe suiyan ghoom jaati hain. Dial ke neeche peetal ka ek chhota darwaza hai, bina handle ke.", (h, m) => {
         if (h === 3 && m === 17) solveClock();
         else {
             S.flags.clockTries = (S.flags.clockTries || 0) + 1;
             A.creak({ x: 3.5, y: 4.8, floor: "ground" }, 0.4, 0.5);
             W.setDecal("studyClock", { h: 12, m: 0 });
             const tries = S.flags.clockTries;
-            if (tries >= 4) G.think("Nothing. The hands slowly turn back to twelve. …Every clock in this house stopped at the same minute.");
-            else if (tries >= 2) G.think("The hands crawl back to twelve. When did the house stop breathing?");
-            else G.think("Nothing happens. The hands drift back to twelve on their own.");
+            if (tries >= 4) G.think("Kuch nahi. Suiyan dheere-dheere wapas baarah pe aa gayi. …Is ghar ki har ghadi ek hi minute pe ruki thi.");
+            else if (tries >= 2) G.think("Suiyan rengte hue wapas baarah pe aa gayi. Ghar ki saans kab ruki thi?");
+            else G.think("Kuch nahi hua. Suiyan apne aap wapas baarah pe chali gayi.");
         }
     });
 }
@@ -384,44 +384,44 @@ function solveClock() {
 /* ---------------- upstairs ---------------- */
 function toyChestUse() {
     const sp = W.spriteById.toychest;
-    if (S.flags.gotFuse) { G.think("Wooden blocks, a skipping rope, a tin of crayons. Nothing else."); return; }
+    if (S.flags.gotFuse) { G.think("Lakdi ke blocks, ek rassi, crayons ka dibba. Aur kuch nahi."); return; }
     G.flag("gotFuse", true); G.flag("visitedNursery", true);
     if (sp) sp.spr = "toychest_open";
     A.creak({ x: 5.4, y: 1.5, floor: "upper" }, 0.5, 0.6);
     G.give("fuse");
-    G.think("Under the toys, wrapped in a little handkerchief: an old ceramic fuse.");
+    G.think("Khilaunon ke neeche, ek chhote se rumaal mein lipta: ek purana fuse.");
     // the music box inside starts by itself as you turn away
     G.later(4, () => { if (S.floor === "upper") { musicBoxEm = A.musicBox({ x: 5.4, y: 1.5, floor: "upper" }); G.later(14, () => { if (musicBoxEm) { musicBoxEm.stop(); musicBoxEm = null; } }); } });
 }
 function coatUse() {
-    if (S.flags.gotCellarKey) { G.think("Just a coat on a stand. Just a coat."); return; }
+    if (S.flags.gotCellarKey) { G.think("Bas stand pe ek coat. Bas ek coat."); return; }
     G.flag("gotCellarKey", true);
     G.give("cellarKey");
     A.creak({ x: 18.2, y: 1.6, floor: "upper" }, 0.3, 0.4);
-    G.think("The coat is heavy and damp. In the pocket, an iron key. The lining is still warm.", 5);
+    G.think("Coat bhaari aur geela hai. Jeb mein ek lohe ki chaabi. Andar ka kapda abhi bhi garam hai.", 5);
     S.flags.coatAt = S.t;
 }
 
 /* ---------------- cellar ---------------- */
 function fuseLabel() {
-    if (S.power || S.flags.gotKeyring) return "Look at the fuse box";
-    if (S.flags.fuseIn) return "Pull the lever";
-    if (G.has("fuse")) return "Fit the fuse";
-    return "Look at the fuse box";
+    if (S.power || S.flags.gotKeyring) return "Fuse box dekho";
+    if (S.flags.fuseIn) return "Lever kheencho";
+    if (G.has("fuse")) return "Fuse lagao";
+    return "Fuse box dekho";
 }
 function fuseUse() {
     const pos = { x: 1.05, y: 2.5, floor: "basement" };
-    if (S.power) { G.think("The lever is up. The fuses hum."); return; }
-    if (S.flags.gotKeyring) { G.think("The fuses are black and cracked. It won't come back on."); return; }
+    if (S.power) { G.think("Lever upar hai. Fuse se hum-hum ki awaaz aa rahi hai."); return; }
+    if (S.flags.gotKeyring) { G.think("Fuse kaale pad gaye hain, toote hue. Bijli ab wapas nahi aayegi."); return; }
     if (S.flags.fuseIn) { powerOn(); return; }
     if (G.has("fuse")) {
         G.take("fuse"); G.flag("fuseIn", true);
         W.setDecal("fusebox", { fuse: true });
         A.unlock(pos);
-        G.think("It fits. Now the lever.");
+        G.think("Fit ho gaya. Ab lever.");
         return;
     }
-    G.think("The mains box. One of the three fuses is missing — the empty slot is labelled MAINS.");
+    G.think("Mains ka box. Teen mein se ek fuse gaayab hai — khaali jagah pe likha hai MAINS.");
     G.flag("sawFusebox", true);
 }
 function allBulbs(fn) { for (const f in W.floors) W.floors[f].lights.forEach(L => { if (L.bulb !== undefined) fn(L, f); }); }
@@ -446,7 +446,7 @@ function powerOn() {
     S.flags.served = true; S.flags.coatGone = true; S.flags.coatOnRocker = false;
     const cs = W.spriteById.coatstand; if (cs) cs.spr = "coatstand_empty";
     S.phase = Math.max(S.phase, 4);
-    G.later(2.5, () => G.think("Lights. Somewhere far above, a telephone rings twice and stops."));
+    G.later(2.5, () => G.think("Lights aa gayi. Kahin door upar, ek phone do baar bajta hai aur ruk jaata hai."));
     G.later(6, () => { if (!S.flags.gotKeyring) G.checkpoint("power"); });
 }
 function powerOff() {
@@ -480,7 +480,7 @@ C.onChaseEnd = function () {
     S.flags.chase = false; S.flags.chaseDone = true;
     S.phase = 6;
     G.later(1.5, () => A.whisper({ x: S.x - Math.cos(S.a) * 3, y: S.y - Math.sin(S.a) * 3, floor: S.floor }, 2.2, 0.25));
-    G.later(4.5, () => G.think("…It's gone. For now. The big key on the ring — the front door."));
+    G.later(4.5, () => G.think("…Woh chala gaya. Abhi ke liye. Guchhe ki badi chaabi — main darwaze ki hai."));
     G.later(6, () => { if (!RT.dying && !G.ghost.on) G.checkpoint("afterChase"); });
 };
 C.onPassbyStop = function () {
@@ -513,7 +513,7 @@ function clockRestarted() {
         W.setDecal("frontL", { chain: false, dawn: true }); W.setDecal("frontR", { chain: false, dawn: true });
         A.doorCreak({ x: 13, y: 20.6, floor: "ground" }, 3.2, 0.6);
         const L = W.lightById.dawn; if (L) { L.on = true; L.i = 0; }
-        G.think("Grey light. The door has swung open by itself.", 4);
+        G.think("Halki dhundhli roshni. Darwaza apne aap khul gaya hai.", 4);
     });
 }
 function ending() {
@@ -540,7 +540,7 @@ C.start = function () {
     // the door you came through slams behind you
     G.later(0.6, () => { A.doorSlam({ x: 13, y: 20.8, floor: "ground" }, 1.3); RT.shake = 0.5; A.rattle({ x: 13, y: 20.8, floor: "ground" }, 0.8); });
     G.later(1.2, () => { RT.lightning = 1; G.later(0.7, () => A.thunder(0.9)); });
-    G.later(3.2, () => G.think("The door slammed shut behind me."));
+    G.later(3.2, () => G.think("Mere peeche darwaza zor se band ho gaya."));
     startAudio();
     resetLocal();
 };
@@ -614,7 +614,7 @@ function updateClocks(dt) {
             G.flag("parlorClockStopped", true);
             if (parlorTick) { parlorTick.stop(); parlorTick = null; }
             W.setDecal("parlorClock", { swing: 0.3 });
-            G.later(2.4, () => G.think("…the ticking stopped.", 2.6));
+            G.later(2.4, () => G.think("…tik-tik ruk gayi.", 2.6));
         }
     }
     // study clock runs backwards once opened

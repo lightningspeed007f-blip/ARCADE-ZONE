@@ -1042,10 +1042,10 @@ ART.drawChildArt = function (ctx, n, x, y, w, h, big) {
         crayon("#c90", [[44, 30], [49, 30], [49, 32]]); ctx.fillStyle = "#c90"; ctx.beginPath(); ctx.arc(43, 30, 1.6, 0, Math.PI * 2); ctx.fill();
         crayon("#b33", [[8, 40], [20, 40], [20, 48], [8, 48], [8, 40]]); // small bed
         ctx.fillStyle = "#e9c"; ctx.beginPath(); ctx.arc(11, 38, 2.5, 0, Math.PI * 2); ctx.fill();
-        text("papa's coat", 30, 6, "#333", 4.5);
-        text("it watches me sleep", 4, 56, "#a22", 4.5);
-        text("the cellar key lives", 4, 61, "#333", 4);
-        text("in the pocket", 4, 65.5, "#333", 4);
+        text("papa ka coat", 30, 6, "#333", 4.5);
+        text("sote waqt ghoorta hai", 4, 56, "#a22", 4.5);
+        text("tehkhane ki chaabi", 4, 61, "#333", 4);
+        text("jeb mein rehti hai", 4, 65.5, "#333", 4);
     } else if (n === 2) {
         // toy box with a glowing "light" hidden inside, papa below
         crayon("#753", [[10, 30], [34, 30], [34, 46], [10, 46], [10, 30]]);
@@ -1054,9 +1054,9 @@ ART.drawChildArt = function (ctx, n, x, y, w, h, big) {
         crayon("#fc3", [[22, 31], [22, 29]]); crayon("#fc3", [[15, 38], [13, 38]]); crayon("#fc3", [[29, 38], [31, 38]]);
         crayon("#333", [[2, 50], [66, 50]]);
         ctx.fillStyle = "#111"; ctx.beginPath(); ctx.moveTo(48, 64); ctx.lineTo(52, 54); ctx.lineTo(56, 64); ctx.fill(); ctx.beginPath(); ctx.arc(52, 53, 2.4, 0, Math.PI * 2); ctx.fill();
-        text("i hid papa's light", 4, 9, "#333", 4.8);
-        text("in my toy box", 4, 15, "#333", 4.8);
-        text("so he cant come up", 26, 60, "#a22", 4.2);
+        text("maine papa ki light", 4, 9, "#333", 4.8);
+        text("toy box mein chhupa di", 4, 15, "#333", 4.8);
+        text("wo upar na aa sake", 26, 60, "#a22", 4.2);
     } else if (n === 3) {
         // family: mummy, me, a tall faceless man, and "the guest"
         crayon("#a52", [[6, 26], [34, 8], [62, 26]]); crayon("#a52", [[10, 24], [10, 54], [58, 54], [58, 24]]);
@@ -1065,7 +1065,7 @@ ART.drawChildArt = function (ctx, n, x, y, w, h, big) {
         ctx.fillStyle = "#111"; ctx.fillRect(38, 26, 6, 28); ctx.beginPath(); ctx.arc(41, 25, 3.4, 0, Math.PI * 2); ctx.fill();
         fig(52, "#36a", 13);
         ctx.fillStyle = "#642"; ctx.fillRect(55, 47, 6, 5); crayon("#642", [[57, 47], [57, 45.5], [59, 45.5], [59, 47]]);
-        text("mummy", 13, 62, "#333", 4); text("me", 26, 66, "#333", 4); text("?", 40, 22, "#a22", 6); text("guest", 47, 62, "#333", 4);
+        text("mummy", 13, 62, "#333", 4); text("main", 26, 66, "#333", 4); text("?", 40, 22, "#a22", 6); text("mehmaan", 46, 62, "#333", 4);
     }
     ctx.restore();
 };
