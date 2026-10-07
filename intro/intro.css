@@ -1,0 +1,87 @@
+/* =========================================================
+   GAME ZONE — cinematic intro styles (see intro/intro.js)
+   Layers: .iz-back (z 3) sits between the background video and the
+   hub (.app, z 5), so the REAL cards fly in front of the character.
+   .iz-front (z 25) holds the flash, title and skip button.
+   ========================================================= */
+.iz-back {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 3; pointer-events: none;
+  background: #05060a;
+}
+.iz-back canvas { display: block; width: 100%; height: 100%; }
+
+.iz-front {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 25; pointer-events: none;
+}
+.iz-flash {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: radial-gradient(circle at var(--fx, 50%) var(--fy, 40%),
+    #fff 0%, rgba(255,232,205,0.85) 16%, rgba(255,45,138,0.22) 42%, rgba(5,6,10,0) 72%);
+  opacity: 0;
+}
+.iz-flash.on { animation: izFlash 0.38s ease-out forwards; }
+@keyframes izFlash { 0% { opacity: 0; } 12% { opacity: var(--fpeak, 0.9); } 100% { opacity: 0; } }
+
+.iz-title {
+  position: absolute; left: 0; width: 100%;
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  padding: 0 56px; box-sizing: border-box;
+  text-align: center; white-space: nowrap;
+  font-family: 'Orbitron', sans-serif; font-weight: 900;
+  font-size: clamp(14px, 4.2vw, 28px); letter-spacing: 0.18em;
+  color: #00f0ff;
+  text-shadow: 0 0 14px rgba(0,240,255,0.55), 0 0 30px rgba(255,45,138,0.35);
+  opacity: 0; transform: translateY(-6px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.iz-title.show { opacity: 1; transform: none; }
+@media (max-width: 360px) { .iz-title { letter-spacing: 0.1em; font-size: 13px; } }
+
+.iz-skip {
+  position: absolute;
+  right: calc(14px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  pointer-events: auto; cursor: pointer;
+  font-family: 'Rajdhani', 'Segoe UI', sans-serif; font-weight: 700;
+  font-size: 13px; letter-spacing: 2px;
+  color: rgba(238,244,248,0.75);
+  background: rgba(15,17,30,0.55);
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 30px;
+  padding: 7px 14px;
+  opacity: 0; transition: opacity 0.4s ease;
+}
+.iz-skip.show { opacity: 1; }
+.iz-skip:hover, .iz-skip:focus-visible { color: #fff; border-color: rgba(0,240,255,0.6); outline: none; }
+
+/* While the intro owns the cards: no input on the hub, let cards fly outside the stage */
+body.iz-on .app { pointer-events: none; }
+body.iz-on .stage { overflow: visible; }
+.app > header, .app > .bottom, .app > .ticker { transition: opacity 0.6s ease; }
+body.iz-hide-ui .app > header,
+body.iz-hide-ui .app > .bottom,
+body.iz-hide-ui .app > .ticker { opacity: 0; transition: none; }
+
+body.iz-shake .app, body.iz-shake .iz-back { animation: izShake 0.32s linear; }
+body.iz-bump .app { animation: izBump 0.2s ease-out; }
+@keyframes izShake {
+  0% { transform: translate(0, 0); }
+  15% { transform: translate(-5px, 3px); }
+  30% { transform: translate(4px, -4px); }
+  45% { transform: translate(-3px, 2px); }
+  60% { transform: translate(3px, 1px); }
+  80% { transform: translate(-1px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes izBump { 0% { transform: translateY(0); } 35% { transform: translateY(4px); } 100% { transform: translateY(0); } }
+
+/* Replay button: mirrors the sound button, top-left */
+.sound-btn.iz-replay { left: 14px; right: auto; width: 38px; height: 38px; top: 18px; opacity: 0.7; }
+.sound-btn.iz-replay:hover, .sound-btn.iz-replay:focus-visible { opacity: 1; }
+.sound-btn.iz-replay svg { width: 18px; height: 18px; }
+body.iz-on .iz-replay { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .iz-replay { display: none !important; }
+}
