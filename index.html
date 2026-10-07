@@ -171,6 +171,7 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 }
 @keyframes tickerRL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 </style>
+<link rel="stylesheet" href="intro/intro.css">
 </head>
 <body>
 
@@ -216,6 +217,7 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   </div>
 </div>
 
+<script src="intro/intro.js"></script>
 <script>
 /* ===================== SETTINGS ===================== */
 var VIDEO_MODE = "fit";            // "fit" = whole video, sharp   |   "fill" = covers full screen (zoomed)
@@ -303,6 +305,7 @@ var pos = target;                                                    // where th
 var cardW = 180, cardH = 248, radius = 140;
 var launching = false, launchT = 0;
 var lastInteract = Date.now();
+var introHold = false;   // true while the cinematic intro (intro/intro.js) is moving the cards
 
 /* ===================== SOUND ===================== */
 var muted = getStore("localStorage", "gz_muted") === "1";
@@ -312,7 +315,7 @@ var actx = null;
 function setSoundIcon() { document.getElementById("soundBtn").innerHTML = muted ? ICONS.soundOff : ICONS.soundOn; }
 setSoundIcon();
 function startMusic() {
-  if (muted || launching) return;
+  if (muted || launching || introHold) return;
   music.volume = 0.5;
   var p = music.play(); if (p && p.catch) p.catch(function () {});
 }
@@ -394,24 +397,33 @@ function layout() {
 
 function activeIndex() { return ((Math.round(target) % N) + N) % N; }
 
+/* Where card i sits on the cylinder when the cylinder is turned to p */
+function cardPose(i, p) {
+  var rel = i - p;
+  rel = ((rel % N) + N) % N;
+  if (rel > N / 2) rel -= N;
+  var ang = rel * STEP, th = ang * Math.PI / 180;
+  var depth = Math.cos(th);                           // 1 = front, -1 = back
+  return {
+    x: Math.sin(th) * radius,
+    s: 0.62 + 0.38 * (depth + 1) / 2,
+    ry: ang * 0.55,
+    o: depth >= 0 ? 0.45 + 0.55 * depth * depth : Math.max(0, 0.45 + 1.3 * depth),
+    z: Math.round((depth + 1) * 50)
+  };
+}
+
 /* Draw every card at its place on the cylinder */
 function drawCards() {
   var a = activeIndex();
   for (var i = 0; i < N; i++) {
-    var rel = i - pos;
-    rel = ((rel % N) + N) % N;
-    if (rel > N / 2) rel -= N;
-    var ang = rel * STEP, th = ang * Math.PI / 180;
-    var x = Math.sin(th) * radius;
-    var depth = Math.cos(th);                         // 1 = front, -1 = back
-    var s = 0.62 + 0.38 * (depth + 1) / 2;
+    var q = cardPose(i, pos), s = q.s;
     if (launching && i === a) s *= 1 + launchT * 0.6;
-    var o = depth >= 0 ? 0.45 + 0.55 * depth * depth : Math.max(0, 0.45 + 1.3 * depth);
     var c = cards[i];
-    c.style.transform = "translateX(" + x.toFixed(1) + "px) scale(" + s.toFixed(3) + ") perspective(900px) rotateY(" + (ang * 0.55).toFixed(1) + "deg)";
-    c.style.opacity = o.toFixed(3);
-    c.style.zIndex = Math.round((depth + 1) * 50);
-    c.style.visibility = o < 0.02 ? "hidden" : "visible";
+    c.style.transform = "translateX(" + q.x.toFixed(1) + "px) scale(" + s.toFixed(3) + ") perspective(900px) rotateY(" + q.ry.toFixed(1) + "deg)";
+    c.style.opacity = q.o.toFixed(3);
+    c.style.zIndex = q.z;
+    c.style.visibility = q.o < 0.02 ? "hidden" : "visible";
   }
 }
 
@@ -498,6 +510,7 @@ window.addEventListener("mousemove", function (e) { moveTo(e.clientX); });
 window.addEventListener("mouseup", up);
 window.addEventListener("keydown", function (e) {
   if (splashOpen) { enter(); return; }
+  if (introHold) return;
   lastInteract = Date.now();
   if (e.key === "ArrowLeft")  { target = Math.round(target) - 1; updateInfo(); }
   if (e.key === "ArrowRight") { target = Math.round(target) + 1; updateInfo(); }
@@ -506,7 +519,7 @@ window.addEventListener("keydown", function (e) {
 
 /* Show mode: nobody touches for 10 s → cards turn by themselves */
 setInterval(function () {
-  if (!splashOpen && !pressing && !launching && Date.now() - lastInteract > 10000) {
+  if (!splashOpen && !pressing && !launching && !introHold && Date.now() - lastInteract > 10000) {
     target = Math.round(target) + 1;
     shownIndex = activeIndex();
     updateInfo();
@@ -537,6 +550,7 @@ function enter() {
   setStore("sessionStorage", "gz_entered", "1");
   lastInteract = Date.now();
   startVideo();
+  if (window.ArcadeIntro && ArcadeIntro.autoPlay()) return;   // first visit: cinematic intro, music starts after it
   startMusic();
   blip(440, 0.25, 0.1, "triangle");
   setTimeout(function () { blip(660, 0.3, 0.08, "triangle"); }, 120);
@@ -604,7 +618,7 @@ function loop() {
     if (Math.abs(target - pos) < 0.001) pos = target;
   }
   if (launching) launchT = Math.min(1, launchT + 0.05);
-  drawCards();
+  if (!introHold) drawCards();
   if (!document.hidden) drawSparks();
   requestAnimationFrame(loop);
 }
@@ -614,6 +628,24 @@ layout();
 sizeSparks();
 updateInfo();
 loop();
+
+/* ===================== CINEMATIC INTRO (intro/intro.js) ===================== */
+/* The intro moves these same five cards, then hands them back here. */
+if (window.ArcadeIntro) {
+  ArcadeIntro.init({
+    cards: cards,
+    stage: stage,
+    restPose: function (i) { return cardPose(i, target); },
+    hold: function (on) {
+      introHold = on;
+      if (!on) { pos = target; drawCards(); lastInteract = Date.now(); }
+    },
+    isMuted: function () { return muted; },
+    canPlay: function () { return !launching; },
+    onStart: function () { music.pause(); },
+    onEnd: function () { lastInteract = Date.now(); startMusic(); }
+  });
+}
 </script>
 </body>
 </html>
