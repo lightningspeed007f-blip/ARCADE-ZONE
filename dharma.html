@@ -848,7 +848,7 @@
     // How likely the audience / friend point to the right answer, by question number (1..7)
     const audienceTrust = n => Math.max(0.4, 0.92 - 0.08 * (n - 1));   // 92% → 44%
     const friendTrust   = n => Math.max(0.35, 0.85 - 0.08 * (n - 1));  // 85% → 37%
-    const timeFor = n => n <= 5 ? 60 : n <= 10 ? 45 : 60;
+    const timeFor = n => n <= 8 ? 60 : 90;
 
     /* =====================================================================
        AUDIO
