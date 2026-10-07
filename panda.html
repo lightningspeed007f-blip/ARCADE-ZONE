@@ -257,9 +257,12 @@ const MILESTONE_TEXT = { 5:'NICE! 5x', 10:'ON FIRE! 2x POINTS', 15:'UNSTOPPABLE!
 const EMOJI = { panda:'🐼', gold:'🐼', bomb:'💣', ice:'❄️', heart:'❤️' };
 const KEYS = ['q','w','e','a','s','d','z','x','c'];
 const BOARD_ROWS = 10;
-// OPTIONAL — shared online scoreboard for every phone (see bottom of this file for setup).
-// Leave empty to keep the scoreboard on this phone only.
-const ONLINE_DB_URL = '';   // e.g. 'https://your-project-default-rtdb.firebaseio.com'
+// Shared live scoreboard for every phone — same Firebase project as Jais Express.
+// Clear apiKey to keep the scoreboard on this phone only.
+const FIREBASE = { apiKey: 'AIzaSyCki1mqUIMVZORNGCUqFwhmY22KSge9RpA', projectId: 'game-zone-1192f' };
+const COLLECTION = 'panda_scores';
+const ONLINE = !!(FIREBASE.apiKey && FIREBASE.projectId);
+const POLL_MS = 5000;       // how often the live board refreshes
 
 /* ================= SETUP ================= */
 const $ = id => document.getElementById(id);
@@ -284,7 +287,7 @@ let bestStreak = store.get('tp_bestStreak', 0);
 let muted = store.get('tp_muted', false);
 let playerName = store.get('tp_name', '');
 let boardLocal = store.get('tp_board', []);   // [{n:name, s:score, k:topStreak, t:time}]
-let boardOnline = null;                        // same shape, from the online scoreboard
+let boardOnline = null;                        // { today:[...], all:[...] } same shape, from the online scoreboard
 let boardTab = 'today';
 let lastRank = 0;
 
@@ -500,9 +503,11 @@ function hud(){
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const cleanName = n => String(n || '').replace(/\s+/g, ' ').trim().slice(0, 14);
 function startOfToday(){ const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function today(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
 function boardEntries(){
-  let list = (ONLINE_DB_URL && boardOnline) ? boardOnline : boardLocal;
+  if (ONLINE && boardOnline) return boardOnline[boardTab].slice();
+  let list = boardLocal;
   if (boardTab === 'today') { const t0 = startOfToday(); list = list.filter(e => e.t >= t0); }
   return list.slice();
 }
@@ -521,7 +526,7 @@ function renderBoard(){
   const ol = $('boardList'), note = $('boardNote');
   if (!list.length) {
     ol.innerHTML = '<div class="empty">No scores yet — be the first!</div>';
-    note.textContent = ONLINE_DB_URL ? 'Online scoreboard' : 'Scores saved on this phone';
+    note.textContent = ONLINE ? (boardOnline ? 'Live scoreboard · all players' : 'Connecting to live scoreboard…') : 'Scores saved on this phone';
     return;
   }
   const myIdx = live ? list.indexOf(live) : -1;
@@ -542,8 +547,8 @@ function renderBoard(){
       ? `<b>${ahead.s - score + 1}</b> more to pass ${esc(ahead.n)}`
       : (list.length > 1 ? '<b>You are #1!</b> Keep going' : 'Set the first score!');
   } else {
-    note.textContent = ONLINE_DB_URL
-      ? (boardOnline ? 'Online scoreboard · updates live' : 'Connecting to online scoreboard…')
+    note.textContent = ONLINE
+      ? (boardOnline ? 'Live scoreboard · all players · updates live' : 'Connecting to live scoreboard…')
       : 'Scores saved on this phone';
   }
 }
@@ -553,38 +558,50 @@ function saveScore(entry){
   boardLocal.sort((a, b) => b.s - a.s);
   boardLocal = boardLocal.slice(0, 100);
   store.set('tp_board', boardLocal);
-  if (ONLINE_DB_URL) {
-    if (boardOnline) boardOnline.push(entry);
-    fetch(ONLINE_DB_URL + '/panda/scores.json', { method:'POST', body: JSON.stringify(entry) })
-      .then(() => fetch(ONLINE_DB_URL + '/panda/last.json', { method:'PUT', body: JSON.stringify(Date.now()) }))
-      .catch(() => {});
+  if (ONLINE) {
+    if (boardOnline) { boardOnline.today.push(entry); boardOnline.all.push(entry); }
+    const body = { fields: {
+      name: { stringValue: entry.n }, score: { integerValue: String(entry.s) },
+      streak: { integerValue: String(entry.k) }, day: { stringValue: today() },
+      createdAt: { timestampValue: new Date(entry.t).toISOString() } } };
+    fetch(fsUrl('/' + COLLECTION), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) })
+      .then(loadOnline).catch(() => {});
   }
 }
 // Rank of a finished score on the board shown now (1 = top)
 function rankOf(entry){ return boardEntries().filter(e => e !== entry && e.s > entry.s).length + 1; }
 
-function loadOnline(){
-  if (!ONLINE_DB_URL) return;
-  fetch(ONLINE_DB_URL + '/panda/scores.json?orderBy=%22s%22&limitToLast=200')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => {
-      boardOnline = Object.values(data || {})
-        .filter(e => e && typeof e.s === 'number' && typeof e.t === 'number')
-        .map(e => ({ n: cleanName(e.n) || 'Player', s: Math.max(0, e.s | 0), k: e.k | 0, t: e.t }));
-      renderBoard();
-    })
-    .catch(() => {});
+/* ---- Firestore (REST) ---- */
+function fsUrl(path){ return 'https://firestore.googleapis.com/v1/projects/' + FIREBASE.projectId + '/databases/(default)/documents' + path + '?key=' + FIREBASE.apiKey; }
+function parseDoc(f){
+  const v = x => !x ? undefined : (x.stringValue !== undefined ? x.stringValue : x.integerValue !== undefined ? Number(x.integerValue) : x.timestampValue !== undefined ? Date.parse(x.timestampValue) : x.doubleValue);
+  return { n: cleanName(v(f.name)) || 'Player', s: Math.max(0, Number(v(f.score)) | 0), k: Number(v(f.streak)) | 0, t: Number(v(f.createdAt)) || 0 };
+}
+async function fsQuery(q){
+  const r = await fetch(fsUrl(':runQuery'), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ structuredQuery: q }) });
+  if (!r.ok) throw new Error('query failed');
+  const data = await r.json();
+  return data.filter(d => d.document).map(d => parseDoc(d.document.fields || {}));
+}
+let loading = false;
+async function loadOnline(){
+  if (!ONLINE || loading) return;
+  loading = true;
+  try {
+    const [t, a] = await Promise.all([
+      fsQuery({ from: [{ collectionId: COLLECTION }], where: { fieldFilter: { field: { fieldPath: 'day' }, op: 'EQUAL', value: { stringValue: today() } } }, limit: 300 }),
+      fsQuery({ from: [{ collectionId: COLLECTION }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 50 })
+    ]);
+    boardOnline = { today: t.sort((x, y) => y.s - x.s), all: a };
+    renderBoard();
+  } catch (e) {}
+  loading = false;
 }
 function connectOnline(){
-  if (!ONLINE_DB_URL) return;
+  if (!ONLINE) return;
   loadOnline();
-  // Firebase streams a message whenever anyone posts a score → refresh the board
-  if (window.EventSource) {
-    const es = new EventSource(ONLINE_DB_URL + '/panda/last.json');
-    es.addEventListener('put', loadOnline);
-    es.onerror = () => {};
-  }
-  setInterval(loadOnline, 30000);   // safety net if the stream drops
+  // Poll so other players' scores show up while you play
+  setInterval(() => { if (!document.hidden) loadOnline(); }, POLL_MS);
 }
 
 // Same-phone live updates (e.g. a second tab showing the board)
@@ -725,20 +742,11 @@ hud();
 startScreen();
 connectOnline();
 
-/* ================= ONLINE SCOREBOARD SETUP (optional) =================
-   Without this, each phone keeps its own scoreboard.
-   For one shared live board across every phone:
-   1. Go to console.firebase.google.com → Add project (free).
-   2. Build → Realtime Database → Create database → start in locked mode.
-   3. Rules tab → paste and Publish:
-      { "rules": { "panda": {
-          ".read": true,
-          "scores": { ".indexOn": ["s"], "$id": { ".write": "!data.exists()",
-            ".validate": "newData.child('s').isNumber() && newData.child('s').val() >= 0 && newData.child('s').val() < 100000 && newData.child('n').isString() && newData.child('n').val().length <= 14 && newData.child('t').isNumber()" } },
-          "last": { ".write": true, ".validate": "newData.isNumber()" } } } }
-   4. Copy the database URL (https://….firebaseio.com or …firebasedatabase.app)
-      into ONLINE_DB_URL at the top of this script.
-   ===================================================================== */
+/* ================= LIVE SCOREBOARD =================
+   Scores go to the Firestore collection 'panda_scores' in the same Firebase
+   project as Jais Express. The security rules for it are in firestore.rules
+   (paste into Firebase console → Firestore Database → Rules → Publish).
+   ===================================================== */
 </script>
 </body>
 </html>
