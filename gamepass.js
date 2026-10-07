@@ -13,8 +13,8 @@
    ========================================================= */
 (function () {
   var CONFIG = {
-    ORGANIZER_PIN: '2580',               // PIN for organizer.html
-    SECRET: 'MKG-gamepass-change-this',  // change to any random words before uploading
+    ORGANIZER_PIN: '241176',             // PIN for organizer.html
+    SECRET: 'MKG-30d5ae327473d2e3911a2bdd',  // random words that make codes impossible to guess
     CODE_VALID_MIN: 10                   // a code works for about this many minutes
   };
   var GAMES = {
