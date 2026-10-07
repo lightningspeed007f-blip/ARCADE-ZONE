@@ -71,19 +71,55 @@
     var u = usedCodes(); u.unshift(code);
     set('localStorage', 'gz_used_codes', JSON.stringify(u.slice(0, 300)));
   }
+  /* ---------- staff PIN guard ----------
+     Wrong PINs lock the PIN box: 5 wrong → wait 1 min, then 2, 4, 8… (max 30 min).
+     The count is kept even if the page is reloaded. */
+  var PIN_KEY = 'gz_pin_guard';
+  function pinGuard() { try { return JSON.parse(get('localStorage', PIN_KEY) || '{}'); } catch (e) { return {}; } }
+  function pinWaitSec() { return Math.max(0, Math.ceil(((pinGuard().until || 0) - Date.now()) / 1000)); }
+  // returns { ok:true } or { ok:false, msg:'…' }
+  function checkPin(value) {
+    var wait = pinWaitSec();
+    if (wait > 0) return { ok: false, msg: 'Too many wrong PINs. Try again in ' + fmtWait(wait) + '.' };
+    var g = pinGuard();
+    if (String(value) === CONFIG.ORGANIZER_PIN) { del('localStorage', PIN_KEY); set('sessionStorage', 'gz_org_ok', '1'); return { ok: true }; }
+    g.fails = (g.fails || 0) + 1;
+    if (g.fails >= 5) {
+      var mins = Math.min(30, Math.pow(2, g.fails - 5));
+      g.until = Date.now() + mins * 60000;
+      set('localStorage', PIN_KEY, JSON.stringify(g));
+      return { ok: false, msg: 'Too many wrong PINs. Locked for ' + mins + ' min.' };
+    }
+    set('localStorage', PIN_KEY, JSON.stringify(g));
+    var left = 5 - g.fails;
+    return { ok: false, msg: 'Wrong PIN. ' + left + (left === 1 ? ' try' : ' tries') + ' left.' };
+  }
+  function fmtWait(s) { return s >= 60 ? Math.ceil(s / 60) + ' min' : s + ' sec'; }
+  function staffOk() { return get('sessionStorage', 'gz_org_ok') === '1'; }
+  function staffLogout() { del('sessionStorage', 'gz_org_ok'); }
+  // Staff screens lock themselves after this long with no taps
+  function autoLock(onLock, minutes) {
+    var t = null, ms = (minutes || 5) * 60000;
+    function reset() { clearTimeout(t); t = setTimeout(function () { staffLogout(); onLock(); }, ms); }
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, reset, true); });
+    reset();
+  }
+
   function hasPass(game) { return get('sessionStorage', 'gz_pass_' + game) === '1'; }
   function endAllPasses() { for (var g in GAMES) del('sessionStorage', 'gz_pass_' + g); }
 
   window.GamePass = {
     CONFIG: CONFIG, GAMES: GAMES, makeCode: makeCode, checkCode: checkCode,
-    deviceId: deviceId, hasPass: hasPass, endAllPasses: endAllPasses, locked: false
+    deviceId: deviceId, hasPass: hasPass, endAllPasses: endAllPasses, locked: false,
+    checkPin: checkPin, staffOk: staffOk, staffLogout: staffLogout, autoLock: autoLock
   };
 
   /* ---------- the lock screen ---------- */
   var me = document.currentScript;
   var game = me && me.getAttribute('data-game');
   if (!game || !GAMES[game]) return;
-  if (game === 'spin' && /[?&]organizer/.test(location.search)) return;  // staff panel stays reachable
+  // Staff who unlocked the Staff page can open the Spin organizer without a player code
+  if (game === 'spin' && /[?&]organizer/.test(location.search) && staffOk()) return;
 
   var gate = null;
   var realPlay = HTMLMediaElement.prototype.play;

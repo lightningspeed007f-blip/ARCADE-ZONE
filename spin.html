@@ -962,12 +962,19 @@ function openOrg(){
   openOv('orgOverlay');
 }
 function tryPin(){
-  if($('pinInput').value === CONFIG.ORGANIZER_PIN){ orgUnlocked = true; openOrg(); }
-  else { $('pinErr').textContent = 'Wrong PIN.'; $('pinInput').value = ''; }
+  // Shared guard: wrong PINs lock the box for a while (see gamepass.js)
+  const r = window.GamePass ? GamePass.checkPin($('pinInput').value)
+                            : { ok: $('pinInput').value === CONFIG.ORGANIZER_PIN, msg: 'Wrong PIN.' };
+  $('pinInput').value = '';
+  if(r.ok){ orgUnlocked = true; $('pinErr').textContent = ''; openOrg(); }
+  else $('pinErr').textContent = r.msg;
 }
 $('pinBtn').addEventListener('click', tryPin);
 $('pinInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryPin(); });
-$('orgLockBtn').addEventListener('click', () => { orgUnlocked = false; closeOv('orgOverlay'); });
+function lockOrg(){ orgUnlocked = false; if(window.GamePass) GamePass.staffLogout(); closeOv('orgOverlay'); }
+$('orgLockBtn').addEventListener('click', lockOrg);
+// Organizer panel locks itself after 5 minutes without a tap
+if(window.GamePass) GamePass.autoLock(() => { if(orgUnlocked) lockOrg(); }, 5);
  
 (function buildCounts(){
   const box = $('counts');
@@ -1100,6 +1107,7 @@ renderWheel();
 updateUI();
  
 if(new URLSearchParams(location.search).has('organizer')){
+  if(window.GamePass && GamePass.staffOk()) orgUnlocked = true;   // already unlocked on the Staff page
   startScreen.classList.add('hidden');
   openOrg();
 }

@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Security rules for the Jais Express online scoreboard (Firebase project game-zone-1192f).
+// Paste this into: Firebase console → Firestore Database → Rules → Publish.
+//
+// What it allows:  anyone can READ the scoreboard and ADD one new score.
+// What it blocks:  editing or deleting scores, fake names/huge scores,
+//                  and touching any other data in the database.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /jais_scores/{id} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['name', 'score', 'distance', 'coins', 'day', 'ghost', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.matches('^[A-Z0-9 ]{2,12}$')
+                    && request.resource.data.score is int
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score < 5000000
+                    && request.resource.data.distance is int
+                    && request.resource.data.distance >= 0
+                    && request.resource.data.coins is int
+                    && request.resource.data.coins >= 0
+                    && request.resource.data.day is string
+                    && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                    && request.resource.data.ghost is string
+                    && request.resource.data.ghost.size() < 20000
+                    && request.resource.data.createdAt is timestamp;
+
+      allow update, delete: if false;
+    }
+
+    // Everything else is closed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
