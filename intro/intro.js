@@ -1,14 +1,11 @@
 /* =========================================================
    GAME ZONE — CINEMATIC INTRO (isolated module)
    ---------------------------------------------------------
-   A ~6 s intro: a 3D zombie lurches in (intro/zombie3d.js, loaded
-   on demand), raises a claw and snaps, the hub's REAL five game
-   cards appear around it, it flings them at the camera and they
-   land in their real places on the card cylinder. No fake cards:
-   this module only moves the existing .card elements and hands
-   them back to index.html.
-   Without WebGL, on Save-Data, or if the 3D files are slow or fail,
-   the drawn carnival trickster plays the same scene instead.
+   A ~6 s intro: a rugged carnival trickster walks in, snaps his
+   fingers, the hub's REAL five game cards appear around him, he
+   flicks them at the camera and they land in their real places
+   on the card cylinder. No fake cards: this module only moves the
+   existing .card elements and hands them back to index.html.
 
    index.html calls:
      ArcadeIntro.init(hooks)   once, after the cards exist
@@ -19,7 +16,6 @@
      ArcadeIntro.reset()       forget "already watched" (plays again on next entry)
    or open  index.html?intro=reset   (same as reset, also shows the splash again)
    Force a performance level:  index.html?introperf=low | mid | high
-   Force 3D on/off:            index.html?intro3d=1 | 0
    ========================================================= */
 (function () {
   "use strict";
@@ -33,12 +29,12 @@
     CHARACTER_IMAGE: "",
     /* Where the snapping hand is inside that image (0..1 of width / height) */
     CHARACTER_HAND: { x: 0.8, y: 0.1 },
-    /* 3D zombie (three.js build + rigged model). If WebGL is missing, the
-       download fails or takes too long, the drawn character plays instead. */
-    MODEL_3D_SCRIPT: "intro/zombie3d.js",
-    MODEL_3D: "intro/models/zombie.glb",
-    MODEL_3D_HEIGHT: 1.8,        // metres; matched to the drawn character's height
-    MODEL_3D_WAIT: 3000          // ms the dark opening may wait for the download
+    /* Intro video. Upload it as  intro/intro.mp4  (H.264 MP4). It plays
+       full screen first, then the trickster snaps and throws the cards.
+       If the file is missing or can't play, the normal drawn intro runs. */
+    VIDEO: "intro/intro.mp4",
+    /* Longest wait for the video to start before falling back (ms) */
+    VIDEO_WAIT: 4000
   };
 
   /* Moments on the timeline (ms) */
@@ -60,7 +56,6 @@
   /* ---------- URL test switches (run before index.html reads the splash state) ---------- */
   var query = location.search || "";
   var forcedTier = (/[?&]introperf=(low|mid|high)\b/.exec(query) || [])[1] || null;
-  var forced3d = (/[?&]intro3d=(0|1)\b/.exec(query) || [])[1] || null;
   if (/[?&]intro=reset\b/.test(query)) {
     lsDel(CONFIG.STORAGE_KEY);
     ssDel("gz_entered");
@@ -84,33 +79,6 @@
     if (cores <= 2 || mem <= 2) return "low";
     if (/Android|Mobile/i.test(ua)) return (cores <= 4 || mem < 4) ? "low" : "mid";
     return cores >= 6 ? "high" : "mid";
-  }
-
-  /* ---------- 3D zombie: support check + lazy loading ---------- */
-  var load3d = { state: "idle" };          // idle | loading | ready | failed
-  function can3d() {
-    if (forced3d === "0") return false;
-    if (forced3d === "1") return true;
-    if (navigator.connection && navigator.connection.saveData) return false;
-    try {
-      var t = document.createElement("canvas");
-      return !!(window.WebGLRenderingContext && (t.getContext("webgl2") || t.getContext("webgl")));
-    } catch (e) { return false; }
-  }
-  function start3dLoad() {
-    if (load3d.state !== "idle" || !CONFIG.MODEL_3D_SCRIPT || !can3d()) return;
-    load3d.state = "loading";
-    function fail() { load3d.state = "failed"; }
-    function go() {
-      window.ArcadeZombie3D.load(CONFIG.MODEL_3D).then(function () { load3d.state = "ready"; }, fail);
-    }
-    if (window.ArcadeZombie3D) { go(); return; }
-    var s = document.createElement("script");
-    s.src = CONFIG.MODEL_3D_SCRIPT;
-    s.async = true;
-    s.onload = function () { if (window.ArcadeZombie3D) go(); else fail(); };
-    s.onerror = fail;
-    document.head.appendChild(s);
   }
 
   /* ---------- math ---------- */
@@ -249,8 +217,8 @@
   var fanScale = 0.4, fanRx = 100, fanRy = 100, spreadX = 100, peakMax = 1.3;
   var bg = null, vig = null, sprites = null, bulbs = [], dust = [], parts = [];
   var cardSlot = [], cardOrder = [], landed = [], hand = null, charImg = null;
+  var videoEl = null, videoTimer = 0, startAt = 0;
   var events = [], perfLog = [], classTimers = [];
-  var glCv = null, fxCv = null, fxc = null, z3 = null, z3out = null, use3d = false, decided3d = false, waited3d = 0;
 
   /* ---------- glow sprites (drawn once, then just stamped) ---------- */
   function sprite(rgb) {
@@ -266,7 +234,7 @@
   function makeSprites() {
     if (sprites) return;
     sprites = { warm: sprite("255,190,90"), pink: sprite("255,45,138"), cyan: sprite("0,240,255"),
-                white: sprite("255,248,235"), amber: sprite("255,160,50"), red: sprite("255,50,30") };
+                white: sprite("255,248,235"), amber: sprite("255,160,50") };
   }
 
   /* seeded random so the scenery doesn't reshuffle on resize */
@@ -308,8 +276,6 @@
     if (!cv) return;
     dpr = Math.min(tier.dpr, window.devicePixelRatio || 1);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    if (fxCv) { fxCv.width = cv.width; fxCv.height = cv.height; }
-    if (z3) { try { z3.setQuality(tier.name); } catch (e) {} }
   }
 
   /* Static scenery: carnival tent, dark arcade cabinets, neon floor */
@@ -503,7 +469,6 @@
   }
 
   function handScreen(T) {
-    if (use3d && z3out) return { x: z3out.hand.x, y: z3out.hand.y };
     var P = poseAt(T);
     if (charImg) {
       var iw = 100 * charImg.width / charImg.height;
@@ -711,13 +676,7 @@
     c.drawImage(bg, -W * 0.2 + par, 0, W * 1.4, H);
 
     /* spotlight cone + pool of light on the floor */
-    if (use3d) {
-      try {
-        z3out = z3.update(T, { W: W, H: H, fx: W / 2, fy: focal.y + (footY - focal.y) * cam,
-                               k: charH * cam / CONFIG.MODEL_3D_HEIGHT });
-      } catch (e) { warn3d(e); drop3d(); }
-    }
-    var cx = use3d && z3out ? focal.x + (z3out.feetX - focal.x) / cam : W / 2 + P.x, spotRgb = lit ? mixRgb([190, 230, 255], [255, 200, 140], prog(T, T_SNAP, 300)) : "190,230,255";
+    var cx = W / 2 + P.x, spotRgb = lit ? mixRgb([190, 230, 255], [255, 200, 140], prog(T, T_SNAP, 300)) : "190,230,255";
     if (spot > 0) {
       c.globalAlpha = spot * (lit ? 1 : 0.8);
       var g = c.createLinearGradient(0, 0, 0, footY);
@@ -771,24 +730,7 @@
     }
 
     c.globalAlpha = 1;
-    if (use3d && z3out) {
-      /* 3D zombie: floor shadow here, the model on its own WebGL layer,
-         everything after it (flash, sparks, eyes, vignette) on the layer above */
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      c.globalAlpha = 0.6 * P.alpha;
-      c.fillStyle = "#000";
-      oval(c, z3out.feetX, z3out.feetY + 2, charH * cam * 0.2, charH * cam * 0.032); c.fill();
-      glCv.style.opacity = P.alpha.toFixed(3);
-      try { z3.render(); } catch (e) { warn3d(e); drop3d(); }
-    }
-    if (use3d) {
-      c = fxc;
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      c.clearRect(0, 0, W, H);
-      if (z3) drawEyes(c, T, P);
-    } else {
-      drawCharacter(c, T, P);
-    }
+    drawCharacter(c, T, P);
 
     /* the snap: magenta lighting hit + glow on the hand */
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -821,48 +763,6 @@
     var dark = eInOut(prog(T, T_UI, 500)) * 0.9;                 // everything sinks into darkness
     if (dark > 0) { c.globalAlpha = dark; c.fillStyle = "#05060a"; c.fillRect(0, 0, W, H); }
     c.globalAlpha = 1;
-  }
-
-  /* glowing zombie eyes: they outlast the body in the fade, like the 2D ones */
-  function drawEyes(c, T, P) {
-    var ea = P.eyes * P.eyeAlpha;
-    if (ea < 0.01 || !z3out) return;
-    var r = Math.max(2, z3out.eyeR) * (T >= T_SNAP ? 1.25 : 1) * (1 + 0.08 * Math.sin(T * 0.02));
-    for (var i = 0; i < 2; i++) {
-      var e = z3out.eyes[i];
-      if (tier.glow) { c.globalAlpha = ea * 0.8; c.drawImage(sprites.red, e.x - r * 2, e.y - r * 2, r * 4, r * 4); }
-      c.globalAlpha = ea;
-      c.fillStyle = tier.glow ? "#ffd9b0" : "#ff5a36"; oval(c, e.x, e.y, Math.max(1.2, r * 0.32), Math.max(0.9, r * 0.2)); c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-
-  /* pick the 3D zombie (if it is loaded and the GPU says yes) or the drawn character */
-  function decide3d() {
-    decided3d = true;
-    if (load3d.state !== "ready" || !window.ArcadeZombie3D) return;
-    try {
-      glCv = document.createElement("canvas");
-      glCv.className = "iz-gl";
-      fxCv = document.createElement("canvas");
-      fxCv.className = "iz-fx";
-      back.appendChild(glCv);
-      back.appendChild(fxCv);
-      fxc = fxCv.getContext("2d");
-      z3 = window.ArcadeZombie3D.create(glCv, tier.name);
-      use3d = true;
-      sizeCanvas();
-      hand = null;
-    } catch (e) { warn3d(e); drop3d(); }
-  }
-  function warn3d(e) { try { console.warn("intro: 3D zombie off, using the drawn character", e); } catch (x) {} }
-  function drop3d() {
-    use3d = false; z3out = null;
-    if (z3) { try { z3.destroy(); } catch (e) {} }
-    z3 = null;
-    if (glCv && glCv.parentNode) glCv.parentNode.removeChild(glCv);
-    if (fxCv && fxCv.parentNode) fxCv.parentNode.removeChild(fxCv);
-    glCv = fxCv = fxc = null;
   }
 
   function burst(x, y, n, speed) {
@@ -1014,27 +914,13 @@
     var dt = lastNow ? now - lastNow : 16;
     if (dt > 250 || dt < 0) dt = 16;                             // tab was hidden: resume where it left off
     lastNow = now;
-    if (!decided3d) {
-      /* hold the dark opening while the 3D zombie finishes downloading */
-      if (load3d.state === "loading" && waited3d < CONFIG.MODEL_3D_WAIT) {
-        waited3d += dt;
-        T = Math.min(T + dt, 100);
-        drawScene(T, dt);
-        raf = requestAnimationFrame(frame);
-        return;
-      }
-      decide3d();
-    }
     T += dt;
 
-    if (T > 300 && T < 1600 && (tier.name !== "low" || z3)) {    // automatic performance fallback
+    if (T > 300 && T < 1600 && tier.name !== "low") {            // automatic performance fallback
       perfLog.push(dt);
       if (perfLog.length >= 24) {
         var sum = 0; for (var i = 0; i < perfLog.length; i++) sum += perfLog[i];
-        if (sum / perfLog.length > 24) {
-          if (tier.name !== "low") setTier(tier.name === "high" ? "mid" : "low");
-          else if (z3) { try { z3.setQuality("min"); } catch (e) {} }   // last step: render the zombie at lower resolution
-        }
+        if (sum / perfLog.length > 24) setTier(tier.name === "high" ? "mid" : "low");
         perfLog = [];
       }
     }
@@ -1042,7 +928,8 @@
     while (events.length && events[0].t <= T) events.shift().fn();
     drawScene(T, dt);
     if (!handedOff) updateCards(T);
-    back.style.opacity = (1 - eInOut(prog(T, 5400, T_END - 5400))).toFixed(3);
+    back.style.opacity = ((1 - eInOut(prog(T, 5400, T_END - 5400))) *
+                          (startAt ? eOutQ(prog(T, startAt, 350)) : 1)).toFixed(3);   // fade in after the video
 
     if (T >= T_END) { finish(); return; }
     raf = requestAnimationFrame(frame);
@@ -1061,7 +948,6 @@
     if (hooks.canPlay && !hooks.canPlay()) return false;
     Sfx.unlock();                                                // inside the tap → audio allowed
     makeSprites();
-    start3dLoad();
     if (hooks.onStart) hooks.onStart();
     hooks.hold(true);
 
@@ -1072,7 +958,7 @@
     back.appendChild(cv);
     front = document.createElement("div");
     front.className = "iz-front";
-    front.innerHTML = '<div class="iz-flash"></div><div class="iz-title"></div>' +
+    front.innerHTML = '<video class="iz-video" playsinline preload="auto"></video><div class="iz-flash"></div><div class="iz-title"></div>' +
                       '<button type="button" class="iz-skip">SKIP INTRO &rsaquo;</button>';
     flashEl = front.querySelector(".iz-flash");
     flashEl.style.setProperty("--fpeak", tier.flash);
@@ -1086,14 +972,71 @@
     document.body.classList.add("iz-on", "iz-hide-ui");
 
     running = true; handedOff = false; T = 0; lastNow = 0; parts = []; perfLog = [];
-    use3d = false; decided3d = false; waited3d = 0; z3out = null;
     measure();
     prepCards();
-    events = buildEvents();
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
-    raf = requestAnimationFrame(frame);
+    videoEl = front.querySelector(".iz-video");
+    if (CONFIG.VIDEO) playVideo();
+    else startTimeline(0);
     return true;
+  }
+
+  /* Start the drawn scene at time `from` (0 = full intro; after the video
+     it starts with the trickster already standing, just before the snap) */
+  function startTimeline(from) {
+    if (!running) return;
+    T = startAt = from; lastNow = 0;
+    events = buildEvents().filter(function (ev) { return ev.t >= from; });
+    if (from > 0) {
+      skipEl.classList.add("show");
+      events.unshift({ t: from, fn: function () { Sfx.droneOn(); } });
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function removeVideo() {
+    clearTimeout(videoTimer);
+    if (!videoEl) return;
+    var v = videoEl;
+    videoEl = null;
+    v.onended = v.onerror = v.onplaying = null;
+    try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {}
+    if (v.parentNode) v.parentNode.removeChild(v);
+  }
+
+  function playVideo() {
+    var v = videoEl, started = false;
+    function fallback() {                                        // no video → the full drawn intro
+      if (started || videoEl !== v) return;
+      removeVideo();
+      startTimeline(0);
+    }
+    v.muted = !!(hooks.isMuted && hooks.isMuted());
+    v.onplaying = function () {
+      if (started) return;
+      started = true;
+      clearTimeout(videoTimer);
+      v.classList.add("show");
+      skipEl.classList.add("show");
+    };
+    v.onerror = fallback;
+    v.onended = function () {
+      if (videoEl !== v) return;
+      v.classList.remove("show");                                // fade out, then the card throw
+      videoTimer = setTimeout(function () { removeVideo(); startTimeline(T_RAISE - 50); }, 400);
+    };
+    videoTimer = setTimeout(fallback, CONFIG.VIDEO_WAIT);
+    v.src = CONFIG.VIDEO;
+    try {
+      var pr = v.play();
+      if (pr && pr.catch) pr.catch(function (e) {
+        if (e && e.name === "NotAllowedError" && !v.muted) {     // sound blocked: play muted instead
+          v.muted = true;
+          v.play().catch(fallback);
+        } else if (e && e.name !== "AbortError") fallback();
+      });
+    } catch (e) { fallback(); }
   }
 
   function finish() {
@@ -1103,9 +1046,9 @@
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("resize", onResize);
     classTimers.forEach(clearTimeout); classTimers = [];
+    removeVideo();
     Sfx.stop();
     handOff();
-    drop3d();
     document.body.classList.remove("iz-on", "iz-hide-ui", "iz-shake", "iz-bump");
     if (back && back.parentNode) back.parentNode.removeChild(back);
     if (front && front.parentNode) front.parentNode.removeChild(front);
@@ -1124,10 +1067,6 @@
       im.onload = function () { charImg = im; };
       im.src = CONFIG.CHARACTER_IMAGE;
     }
-    /* First visit: fetch the 3D zombie in the background so it's ready
-       when the visitor taps to enter. Returning visitors fetch it only
-       when they press replay. */
-    if (!lsGet(CONFIG.STORAGE_KEY) && !reducedMotion()) start3dLoad();
     replayBtn = document.createElement("button");
     replayBtn.type = "button";
     replayBtn.className = "sound-btn iz-replay";
@@ -1151,7 +1090,6 @@
     isPlaying: function () { return running; },
     setPerformance: setTier,
     performance: function () { return tier.name; },
-    is3d: function () { return use3d; },
     config: CONFIG
   };
 })();
