@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Security rules for the Jais Express online scoreboard (Firebase project game-zone-1192f).
+// Security rules for the Jais Express and Smash the Panda online scoreboards (Firebase project game-zone-1192f).
 // Paste this into: Firebase console → Firestore Database → Rules → Publish.
 //
 // What it allows:  anyone can READ the scoreboard and ADD one new score.
@@ -27,6 +27,26 @@ service cloud.firestore {
                     && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
                     && request.resource.data.ghost is string
                     && request.resource.data.ghost.size() < 20000
+                    && request.resource.data.createdAt is timestamp;
+
+      allow update, delete: if false;
+    }
+
+    match /panda_scores/{id} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['name', 'score', 'streak', 'day', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 14
+                    && request.resource.data.score is int
+                    && request.resource.data.score > 0
+                    && request.resource.data.score < 100000
+                    && request.resource.data.streak is int
+                    && request.resource.data.streak >= 0
+                    && request.resource.data.day is string
+                    && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
                     && request.resource.data.createdAt is timestamp;
 
       allow update, delete: if false;
