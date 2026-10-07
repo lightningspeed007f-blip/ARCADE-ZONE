@@ -18,7 +18,7 @@ service cloud.firestore {
                     && request.resource.data.name.matches('^[A-Z0-9 ]{2,12}$')
                     && request.resource.data.score is int
                     && request.resource.data.score >= 0
-                    && request.resource.data.score < 5000000
+                    && request.resource.data.score < 500000
                     && request.resource.data.distance is int
                     && request.resource.data.distance >= 0
                     && request.resource.data.coins is int
