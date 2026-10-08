@@ -10,7 +10,7 @@ export class Input {
     this.fire = false; this.aim = false; this.sprint = false; this.crouch = false;
     this.pressed = new Set();
     this.touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.settings = Object.assign({ sens: 1, touchSens: 1, invertY: false, btnScale: 1, leftHanded: false, bob: true, quality: 'auto' }, store('jls_settings') || {});
+    this.settings = Object.assign({ sens: 1, touchSens: 1, invertY: false, btnScale: 1, leftHanded: false, bob: true, minimap: true, quality: 'auto' }, store('jls_settings') || {});
     this.enabled = false;
     this.editMode = false;
     this._joy = null; this._lookTouch = null; this._fireTouch = null;
