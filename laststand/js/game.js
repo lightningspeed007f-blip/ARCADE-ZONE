@@ -14,6 +14,7 @@ import { LightPool } from './lights.js';
 import { loadUserAssets } from './assets.js';
 import { buildDisplays, animateDisplays } from './displays.js';
 import { TownMap } from './minimap.js';
+import { buildSecret, prepareMaterials, Secret } from './secret.js';
 import { ROADS, ZONES, RAIL, KAMAKHYA, roadInfo, BOUNDS } from './layout.js';
 import { makeRng, clamp, store } from './util.js';
 import { Physics } from './physics.js';
@@ -42,7 +43,7 @@ export class Game {
     this.mobile = touch && Math.min(screen.width, screen.height) < 900;
     const saved = store('jls_settings') || {};
     this.quality = saved.quality && saved.quality !== 'auto' ? saved.quality : this.mobile ? 'med' : 'high';
-    const R = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: this.quality === 'high', powerPreference: 'high-performance' });
+    const R = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: this.quality === 'high', powerPreference: 'high-performance', stencil: true });
     this.maxDpr = this.quality === 'high' ? Math.min(devicePixelRatio, 1.75) : this.quality === 'med' ? Math.min(devicePixelRatio, 1.4) : 1;
     this.dpr = this.maxDpr;
     R.setPixelRatio(this.dpr);
@@ -64,9 +65,11 @@ export class Game {
     await tick();
     const W = this.W = createWorldContext();
     buildWorld(W);
+    buildSecret(W);
     const signTex = W.signs.finish();
     this.physics = W.P;
     const mats = this.mats = this.makeMaterials(tex, signTex);
+    prepareMaterials(mats);
     progress(0.4, 'सड़कें, खंभे, तार… props');
     await tick();
     this.doors = this.buildDoors();
@@ -108,6 +111,8 @@ export class Game {
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
+    this.secret = new Secret(this);
+    this.secret.build();
     // cached lists
     this.enterables = W.buildings.filter((b) => b.tpl);
     this.stairs = this.collectStairs();
@@ -362,6 +367,7 @@ export class Game {
     this.playerLit = false;
     this.broadcastI = 0; this.broadcastT = 2;
     this.hint('', '');
+    this.secret.reset();
     this.state = 'play';
     this.input.resetState();
     this.input.enabled = true;
@@ -571,6 +577,7 @@ export class Game {
     consider(S.well, 2.6, { type: 'well' });
     consider(S.bell, 2.6, { type: 'bell' });
     consider(S.signalPanel, 2.4, { type: 'signal' });
+    this.secret.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
       const x = clamp(P.pos.x, this.train.x + 2, this.train.x + this.rescue.userData.len - 2);
@@ -611,6 +618,7 @@ export class Game {
       case 'radio': return [t.r.on ? 'OFF' : 'ON', 'रेडियो'];
       case 'signal': return this.obj.signal ? ['—', 'सिग्नल हरा है'] : this.obj.fuse ? ['SET SIGNAL', 'फ्यूज़ लगाएं'] : ['NO FUSE', 'फ्यूज़ चाहिए'];
       case 'board': return ['BOARD', 'ट्रेन में चढ़ें'];
+      case 'secret': return this.secret.prompt();
     }
     return null;
   }
@@ -666,6 +674,7 @@ export class Game {
         return;
       }
       case 'board': return this.win();
+      case 'secret': return this.secret.use();
     }
   }
 
@@ -776,6 +785,7 @@ export class Game {
   }
 
   menuCam(dt) {
+    if (this.secret && this.secret.mode) this.secret.setMode(false);
     this.time += dt;
     const t = this.time * 0.05;
     const T = KAMAKHYA.temple;
@@ -844,6 +854,7 @@ export class Game {
     this.updateDoors(dt);
     this.updateWorld(dt);
     this.updateTrains(dt);
+    this.secret.update(dt);
     this.updateHud();
     this.drawMinimap(dt);
     if (P.dead && this.state === 'play') this.gameOver('');
@@ -886,7 +897,7 @@ export class Game {
       this.playerLit = lit;
       this.vis = lit ? 0.8 : inside ? 0.22 : 0.38;
     }
-    this.audio.setListener(this.camera, !!this.inside);
+    this.audio.setListener(this.camera, !!this.inside || this.secret.underground);
     // start-house broadcast
     if (this.obj.phase === 'radio') {
       this.broadcastT -= dt;
@@ -909,6 +920,7 @@ export class Game {
     }
     // ambience: dogs, distant screams, gunfire, train horn
     this.ambT -= dt;
+    if (this.ambT <= 0 && this.secret.mode) this.ambT = 5; // the valley is silent but for its own sounds
     if (this.ambT <= 0) {
       this.ambT = 6 + Math.random() * 12;
       const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 60;
@@ -1089,6 +1101,8 @@ export class Game {
   drawMinimap(dt) {
     const c = $('minimap');
     if (!c || !this.input.settings.minimap) return;
+    c.style.visibility = this.secret.mode ? 'hidden' : '';
+    if (this.secret.mode) return;
     this._mmT = (this._mmT || 0) - dt;
     if (this._mmT > 0) return;
     this._mmT = 0.066;

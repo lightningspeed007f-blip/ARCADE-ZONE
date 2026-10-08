@@ -87,6 +87,8 @@ export class Physics {
   groundAt(x, z, r, maxY) {
     const list = this.query(x - r, z - r, x + r, z + r, this._tmp || (this._tmp = []));
     let g = 0;
+    // inside a hole (stairwell, tunnel) only real floors hold you up
+    if (this.holes) for (const h of this.holes) if (x > h.x0 && x < h.x1 && z > h.z0 && z < h.z1 && maxY - 0.45 < h.maxY) { g = -1e9; break; }
     for (const b of list) {
       if (b.maxY > maxY || b.maxY <= g) continue;
       if (Physics.circleOverlaps(b, x, z, r)) g = b.maxY;
