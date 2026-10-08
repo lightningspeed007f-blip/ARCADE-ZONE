@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#06080c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>JAIS: Last Stand</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2306080c'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%23e8b04a' stroke-width='3'/%3E%3Cpath d='M32 8v14M32 42v14M8 32h14M42 32h14' stroke='%23e8b04a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --gold: #e8b04a; --red: #e0453a; --text: #eef0f4; --muted: #9aa2b4; --panel: rgba(10, 12, 18, 0.82); --line: rgba(255,255,255,0.12); --btn: 1; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #06080c; color: var(--text); font-family: 'Rajdhani', 'Noto Sans Devanagari', system-ui, sans-serif; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+button { font-family: inherit; cursor: pointer; border: none; color: inherit; background: none; }
+.hidden { display: none !important; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.hi { font-family: 'Noto Sans Devanagari', sans-serif; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; display: none; }
+body.playing #hud { display: block; }
+#cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 6px; }
+#cross i { position: absolute; background: rgba(255,255,255,0.85); box-shadow: 0 0 2px #000; }
+#cross i:nth-child(1) { width: 2px; height: 7px; left: -1px; top: calc(-1 * var(--gap) - 7px); }
+#cross i:nth-child(2) { width: 2px; height: 7px; left: -1px; top: var(--gap); }
+#cross i:nth-child(3) { width: 7px; height: 2px; top: -1px; left: calc(-1 * var(--gap) - 7px); }
+#cross i:nth-child(4) { width: 7px; height: 2px; top: -1px; left: var(--gap); }
+#cross b { position: absolute; width: 2px; height: 2px; left: -1px; top: -1px; background: #fff; border-radius: 50%; }
+#cross.ads i { opacity: 0; }
+#hitm { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%,-50%) rotate(45deg); opacity: 0; }
+#hitm::before, #hitm::after { content: ''; position: absolute; background: #fff; }
+#hitm::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; clip-path: polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%); }
+#hitm::after { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; clip-path: polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%); }
+#hitm.head::before, #hitm.head::after { background: #ffcf50; }
+#hitm.kill::before, #hitm.kill::after { background: #ff3b30; }
+#hitm.show { animation: hm 0.28s ease-out; }
+@keyframes hm { from { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1.3); } to { opacity: 0; transform: translate(-50%,-50%) rotate(45deg) scale(1); } }
+
+#prompt { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); font-size: 14px; letter-spacing: .5px; color: #fff; text-shadow: 0 1px 3px #000; opacity: 0; transition: opacity .15s; white-space: nowrap; font-family: 'Rajdhani','Noto Sans Devanagari',sans-serif; }
+#prompt b { color: var(--gold); margin-right: 6px; font-weight: 700; }
+#prompt.show { opacity: 0.95; }
+#searchRing { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px; border-radius: 50%; --p: 0; background: conic-gradient(var(--gold) calc(var(--p) * 1%), transparent 0); -webkit-mask: radial-gradient(circle, transparent 17px, #000 18px); mask: radial-gradient(circle, transparent 17px, #000 18px); opacity: 0; }
+#searchRing.show { opacity: .9; }
+
+#hp { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: 16px; width: 170px; }
+#hp .bar { height: 5px; background: rgba(255,255,255,0.14); border-radius: 3px; overflow: hidden; }
+#hpFill { height: 100%; width: 100%; background: linear-gradient(90deg, #d9d2c4, #fff); transition: width .25s; }
+#hp.low #hpFill { background: linear-gradient(90deg, #8a1010, #e0453a); }
+#hp .row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; text-shadow: 0 1px 3px #000; }
+#hpNum { font-size: 22px; font-weight: 700; }
+#hp small { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+#stamWrap { height: 2px; margin-top: 4px; background: rgba(255,255,255,0.08); opacity: 0; transition: opacity .4s; }
+#stamWrap.show { opacity: 1; }
+#stam { height: 100%; background: #8fb3d9; width: 100%; }
+#weapon { position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: 16px; text-align: right; text-shadow: 0 1px 3px #000; }
+#ammoNum { font-size: 26px; font-weight: 700; line-height: 1; }
+#ammoNum small { font-size: 15px; color: var(--muted); }
+#wName { font-size: 13px; color: #d8d8d8; font-family: 'Noto Sans Devanagari', sans-serif; }
+
+#objective { position: absolute; left: calc(18px + env(safe-area-inset-left)); top: 14px; max-width: 46vw; opacity: 0; transition: opacity .6s; text-shadow: 0 1px 3px #000; }
+#objective.show { opacity: 1; }
+#objHi { display: block; font-family: 'Noto Sans Devanagari'; font-size: 14px; font-weight: 700; color: #fff; }
+#objEn { display: block; font-size: 12px; color: var(--muted); }
+#hints { margin-top: 3px; font-size: 11px; color: #c9b07a; font-family: 'Noto Sans Devanagari'; line-height: 1.35; }
+#area { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; opacity: 0; text-shadow: 0 2px 6px #000; pointer-events: none; }
+#area.show { animation: area 4.5s ease; }
+@keyframes area { 0% { opacity: 0; letter-spacing: 6px; } 15%, 70% { opacity: 1; letter-spacing: 3px; } 100% { opacity: 0; letter-spacing: 3px; } }
+#areaHi { display: block; font-family: 'Noto Sans Devanagari'; font-size: 26px; font-weight: 800; color: #f2e6cc; }
+#areaEn { display: block; font-size: 12px; letter-spacing: 4px; color: #c9b07a; }
+#toast { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); text-align: center; opacity: 0; text-shadow: 0 1px 4px #000; }
+#toast.show { animation: toast 3.5s ease; }
+@keyframes toast { 0% { opacity: 0; } 10%, 75% { opacity: 1; } 100% { opacity: 0; } }
+#toast b { display: block; font-family: 'Noto Sans Devanagari'; font-size: 17px; }
+#toast span { font-size: 13px; color: #ccc; }
+#subtitle { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); width: min(80vw, 720px); text-align: center; background: rgba(0,0,0,0.45); padding: 6px 12px; border-radius: 6px; opacity: 0; transition: opacity .4s; }
+#subtitle.show { opacity: 1; }
+#subtitle b { display: block; font-family: 'Noto Sans Devanagari'; font-size: 15px; font-weight: 600; }
+#subtitle span { font-size: 12px; color: #c8c8c8; font-style: italic; }
+#feed { position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: 74px; text-align: right; font-family: 'Noto Sans Devanagari'; font-size: 13px; text-shadow: 0 1px 3px #000; }
+#feed div { transition: opacity .7s; }
+#feed div.out { opacity: 0; }
+#vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(140,0,0,0.55) 100%); opacity: 0; }
+#vignette.hit { animation: vig .6s ease-out; }
+@keyframes vig { from { opacity: 1; } to { opacity: 0; } }
+#lowhp { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 60%, rgba(90,0,0,0.5) 100%); opacity: 0; transition: opacity 1s; }
+#hp.low ~ #lowhp { opacity: 1; }
+#hurtDir { position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; transform: translate(-50%,-50%); opacity: 0; }
+#hurtDir::before { content: ''; position: absolute; left: 50%; top: 0; width: 46px; height: 12px; margin-left: -23px; background: radial-gradient(ellipse at center, rgba(255,40,30,.95), transparent 70%); }
+#hurtDir.show { animation: vig 1s ease-out; }
+#fps { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); font-size: 11px; color: #9f9; text-shadow: 0 1px 2px #000; }
+
+/* ---------- touch controls ---------- */
+#touch { position: fixed; inset: 0; z-index: 6; display: none; }
+body.playing.touch #touch { display: block; }
+#touchZone { position: absolute; inset: 0; }
+#joy { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.05); opacity: 0; pointer-events: none; transition: opacity .15s; left: 120px; top: 70%; }
+#joy.on { opacity: 1; }
+#joyKnob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.28); transform: translate(-50%,-50%); }
+#touch .tb { position: absolute; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.88); font-weight: 700; font-size: calc(11px * var(--btn)); letter-spacing: .5px; display: flex; align-items: center; justify-content: center; text-align: center; width: calc(52px * var(--btn)); height: calc(52px * var(--btn)); line-height: 1.05; touch-action: none; }
+#touch .tb.down { background: rgba(255,255,255,0.25); }
+#touch .tb.big { width: calc(78px * var(--btn)); height: calc(78px * var(--btn)); font-size: calc(13px * var(--btn)); border-color: rgba(232,176,74,0.6); }
+#touch .tb.ready { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 12px rgba(232,176,74,0.45); }
+#touch .tb.on { background: rgba(232,176,74,0.3); }
+#touch .tb.dim { opacity: .4; }
+#touch .tb small { display: block; font-size: 10px; opacity: .8; }
+[data-act=fire] { right: calc(26px + env(safe-area-inset-right)); bottom: 70px; }
+[data-act=aim] { right: calc(116px + env(safe-area-inset-right)); bottom: 40px; }
+[data-act=reload] { right: calc(124px + env(safe-area-inset-right)); bottom: 108px; }
+[data-act=use] { right: calc(40px + env(safe-area-inset-right)); bottom: 170px; }
+[data-act=crouch] { right: calc(186px + env(safe-area-inset-right)); bottom: 22px; }
+[data-act=sprint] { left: calc(22px + env(safe-area-inset-left)); top: 196px; }
+[data-act=swap] { right: calc(26px + env(safe-area-inset-right)); bottom: 238px; }
+[data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
+[data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
+[data-act=map] { right: calc(70px + env(safe-area-inset-right)); top: 12px; width: calc(42px * var(--btn)) !important; height: calc(42px * var(--btn)) !important; }
+#pauseBtn { position: absolute; right: calc(18px + env(safe-area-inset-right)); top: 12px; width: 42px; height: 42px; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; font-weight: 700; }
+body.editing #touch { display: block; }
+body.editing #touch .tb { outline: 2px dashed var(--gold); }
+#editBar { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 30; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; }
+#editBar button { background: var(--gold); color: #111; padding: 6px 14px; border-radius: 6px; font-weight: 700; }
+
+/* ---------- screens ---------- */
+.screen { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; }
+#loading { background: #05070a; flex-direction: column; gap: 14px; }
+#loading .t { font-size: 34px; font-weight: 700; letter-spacing: 6px; }
+#loading .bar { width: min(60vw, 360px); height: 3px; background: rgba(255,255,255,.1); }
+#loadFill { height: 100%; width: 0; background: var(--gold); transition: width .2s; }
+#loadText { font-size: 13px; color: var(--muted); font-family: 'Noto Sans Devanagari'; }
+#menu { background: linear-gradient(90deg, rgba(4,6,10,0.92) 0%, rgba(4,6,10,0.55) 45%, rgba(4,6,10,0.05) 100%); justify-content: flex-start; padding-left: calc(7vw + env(safe-area-inset-left)); }
+.title { line-height: .95; }
+.title .a { font-size: clamp(28px, min(8vw, 13vh), 84px); font-weight: 700; letter-spacing: 8px; color: #f3ead6; text-shadow: 0 4px 30px rgba(0,0,0,.8); }
+.title .b { font-size: clamp(24px, min(6.4vw, 10vh), 66px); font-weight: 700; letter-spacing: 10px; color: var(--gold); }
+.title .c { font-family: 'Noto Sans Devanagari'; font-size: clamp(13px, min(2.4vw, 4.5vh), 20px); color: #c9b07a; margin-top: 6px; letter-spacing: 2px; }
+.menu-btns { margin-top: min(26px, 4vh); display: flex; flex-direction: column; gap: min(6px, 1vh); align-items: flex-start; }
+.menu-btns button { font-size: clamp(16px, min(3vw, 5.5vh), 24px); font-weight: 700; letter-spacing: 4px; padding: min(6px, 1vh) 0; color: #ddd; transition: color .15s, padding .15s; }
+.menu-btns button:hover, .menu-btns button:active { color: var(--gold); padding-left: 8px; }
+.menu-btns button.primary { color: #fff; font-size: clamp(20px, min(3.6vw, 7vh), 30px); }
+#assetNote { margin-top: min(18px, 2vh); font-size: 12px; color: var(--muted); max-width: 46ch; }
+.view { position: fixed; inset: 0; z-index: 25; background: rgba(4,6,10,0.94); overflow: auto; padding: calc(24px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 24px calc(24px + env(safe-area-inset-left)); }
+.view h2 { font-size: 26px; letter-spacing: 4px; margin-bottom: 14px; color: var(--gold); }
+.view .close { position: fixed; top: 14px; right: 18px; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.05); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; max-width: 980px; }
+.cols h3 { font-size: 15px; letter-spacing: 2px; color: #fff; margin-bottom: 6px; }
+.cols p, .cols li { font-size: 14px; color: #c8ccd6; line-height: 1.5; }
+.cols ul { list-style: none; }
+kbd { display: inline-block; min-width: 22px; padding: 0 5px; border: 1px solid #555; border-radius: 4px; text-align: center; font-family: inherit; font-size: 12px; color: #fff; margin-right: 6px; }
+.set { display: grid; grid-template-columns: 180px 1fr; gap: 10px 14px; align-items: center; max-width: 560px; font-size: 15px; }
+.set input[type=range] { width: 100%; accent-color: var(--gold); }
+.set select { background: #111; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px; }
+.set button { justify-self: start; border: 1px solid var(--gold); color: var(--gold); padding: 6px 12px; border-radius: 6px; font-weight: 700; letter-spacing: 1px; }
+#pause, #over { background: rgba(4,6,10,0.78); flex-direction: column; text-align: center; gap: 10px; }
+#pause .menu-btns, #over .menu-btns { align-items: center; }
+#pObj b { display: block; font-family: 'Noto Sans Devanagari'; font-size: 17px; }
+#pObj span { color: var(--muted); font-size: 14px; }
+#pHints { font-family: 'Noto Sans Devanagari'; font-size: 12px; color: #c9b07a; line-height: 1.6; max-width: 80vw; }
+#overTitle { font-size: clamp(40px, 9vw, 86px); font-weight: 700; letter-spacing: 10px; color: var(--red); text-shadow: 0 0 30px rgba(224,69,58,.4); }
+#over.won #overTitle { color: var(--gold); font-size: clamp(30px, 6vw, 60px); }
+#overSub { font-family: 'Noto Sans Devanagari'; color: #ccc; font-size: 15px; max-width: 80vw; }
+.stats { display: grid; grid-template-columns: auto auto; gap: 4px 22px; margin: 10px auto 4px; font-size: 16px; text-align: left; }
+.stats span { color: var(--muted); letter-spacing: 1px; }
+.stats b { font-family: 'Noto Sans Devanagari'; }
+#mapView { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#mapCanvas { border-radius: 4px; box-shadow: 0 10px 40px #000; }
+#rotate { position: fixed; inset: 0; z-index: 50; background: #05070a; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; font-size: 18px; letter-spacing: 2px; }
+#rotate svg { width: 70px; height: 70px; animation: rot 1.8s ease-in-out infinite; }
+@keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) and (max-width: 900px) { body.touch #rotate { display: flex; } }
+a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; color: var(--muted); text-decoration: none; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="cross"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="hitm"></div>
+  <div id="searchRing"></div>
+  <div id="prompt"></div>
+  <div id="vignette"></div>
+  <div id="hurtDir"></div>
+  <div id="objective"><span id="objHi"></span><span id="objEn"></span><div id="hints"><div id="hintKey"></div><div id="hintFuse"></div></div></div>
+  <div id="area"><span id="areaHi"></span><span id="areaEn"></span></div>
+  <div id="toast"></div>
+  <div id="subtitle"></div>
+  <div id="feed"></div>
+  <div id="hp"><div class="row"><span id="hpNum">100</span><small>HEALTH</small></div><div class="bar"><div id="hpFill"></div></div><div id="stamWrap"><div id="stam"></div></div></div>
+  <div id="lowhp"></div>
+  <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div></div>
+  <div id="fps" class="hidden"></div>
+</div>
+
+<div id="touch">
+  <div id="touchZone"></div>
+  <div id="joy"><div id="joyKnob"></div></div>
+  <button class="tb big" data-act="fire">FIRE</button>
+  <button class="tb" data-act="aim">AIM</button>
+  <button class="tb" data-act="reload">RELOAD</button>
+  <button class="tb" data-act="use" id="btnUse">USE</button>
+  <button class="tb" data-act="crouch">CROUCH</button>
+  <button class="tb" data-act="sprint">RUN</button>
+  <button class="tb" data-act="swap">SWAP</button>
+  <button class="tb" data-act="eat" id="btnEat">EAT<small id="foodCount">0</small></button>
+  <button class="tb" data-act="torch" id="torchBtn">TORCH</button>
+  <button class="tb" data-act="map">MAP</button>
+  <button id="pauseBtn">II</button>
+</div>
+<div id="editBar" class="hidden">Drag buttons to move them <button id="editDone">DONE</button></div>
+
+<div id="loading" class="screen"><div class="t">JAIS: LAST STAND</div><div class="bar"><div id="loadFill"></div></div><div id="loadText">लोड हो रहा है…</div></div>
+
+<div id="menu" class="screen hidden">
+  <a class="back" href="index.html">← GAME ZONE</a>
+  <div>
+    <div class="title"><div class="a">JAIS:</div><div class="b">LAST STAND</div><div class="c">जायस · आख़िरी मोर्चा</div></div>
+    <div class="menu-btns">
+      <button class="primary" id="btnPlay">PLAY</button>
+      <button id="btnControls">CONTROLS</button>
+      <button id="btnSettings">SETTINGS</button>
+      <button id="btnCredits">CREDITS</button>
+    </div>
+    <div id="assetNote"></div>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div style="font-size:28px;letter-spacing:8px;font-weight:700">PAUSED</div>
+  <div id="pObj"></div>
+  <div id="pHints"></div>
+  <div class="menu-btns">
+    <button class="primary" id="pResume">RESUME</button>
+    <button id="pMap">MAP</button>
+    <button id="pSettings">SETTINGS</button>
+    <button id="pQuit">QUIT TO MENU</button>
+  </div>
+</div>
+
+<div id="mapView" class="view hidden"><canvas id="mapCanvas"></canvas><button class="close" id="mapClose" style="position:static">BACK</button></div>
+
+<div id="over" class="screen hidden">
+  <div id="overTitle">YOU DIED</div>
+  <div id="overSub"></div>
+  <div class="stats">
+    <span>AREA REACHED</span><b id="stArea"></b>
+    <span>KILLS</span><b id="stKills"></b>
+    <span>TIME SURVIVED</span><b id="stTime"></b>
+    <span>SUPPLIES COLLECTED</span><b id="stSup"></b>
+  </div>
+  <div class="menu-btns"><button class="primary" id="btnRestart">RESTART</button><button id="btnMenu">MENU</button></div>
+</div>
+
+<div id="controlsView" class="view hidden">
+  <button class="close" data-close>CLOSE</button>
+  <h2>CONTROLS</h2>
+  <div class="cols">
+    <div><h3>PHONE (LANDSCAPE)</h3><ul>
+      <li>Left side — touch &amp; drag to walk. Push all the way up to run.</li>
+      <li>Right side — drag to look around.</li>
+      <li>FIRE — hold to shoot; drag on it to aim while firing.</li>
+      <li>AIM · RELOAD · USE · CROUCH · RUN · SWAP</li>
+      <li>EAT — eats food from your bag (the only way to heal).</li>
+      <li>TORCH — flashlight (people can see you from further away).</li>
+      <li>Settings → EDIT BUTTON LAYOUT to move buttons.</li></ul></div>
+    <div><h3>KEYBOARD &amp; MOUSE</h3><ul>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · mouse look</li>
+      <li><kbd>LMB</kbd> fire · <kbd>RMB</kbd> aim</li>
+      <li><kbd>R</kbd> reload · <kbd>E</kbd> open / take / search</li>
+      <li><kbd>Shift</kbd> sprint · <kbd>C</kbd> crouch</li>
+      <li><kbd>F</kbd> torch · <kbd>H</kbd> eat · <kbd>Q</kbd>/wheel switch weapon</li>
+      <li><kbd>1</kbd>–<kbd>4</kbd> weapon slots · <kbd>V</kbd> lathi</li>
+      <li><kbd>M</kbd> map · <kbd>Esc</kbd> pause</li></ul></div>
+    <div><h3>SURVIVAL</h3><ul>
+      <li>One life. No health regeneration.</li>
+      <li>Gunshots carry far — zombies and looters come to the sound.</li>
+      <li>Headshots matter. Ammo is scarce.</li>
+      <li>Locked doors can be kicked in (loud). Zombies can break doors too.</li>
+      <li>Zombies will not enter the Maa Kamakhya Mandir compound. Looters will.</li></ul></div>
+  </div>
+</div>
+
+<div id="creditsView" class="view hidden">
+  <button class="close" data-close>CLOSE</button>
+  <h2>CREDITS</h2>
+  <div class="cols"><div>
+    <p><b>JAIS: LAST STAND</b> — a fictional survival game set in a playable, imagined version of Jais, Uttar Pradesh: Wahabganj, Naugazi Tiraha, Alia Market, Maa Kamakhya Mandir, the bus adda, Jais City (formerly Kasimpur Halt) and Guru Gorakhnath Dham station.</p><br>
+    <p>All buildings, textures, signboards and sounds are generated in code for this game. No map imagery was copied. Shop names are invented. Places are inspired by the real town; the layout is a game version, not a survey map.</p><br>
+    <p>Built with three.js (MIT licence). Photos, banners, music and the Shivji and Maa Kamakhya images belong to their owners and are supplied by the game zone.</p>
+  </div></div>
+</div>
+
+<div id="settingsView" class="view hidden">
+  <button class="close" data-close>CLOSE</button>
+  <h2>SETTINGS</h2>
+  <div class="set">
+    <label>Mouse sensitivity</label><input type="range" id="sSens" min="0.3" max="2.5" step="0.05">
+    <label>Touch look speed</label><input type="range" id="sTouch" min="0.3" max="2.5" step="0.05">
+    <label>Button size</label><input type="range" id="sBtn" min="0.75" max="1.4" step="0.05">
+    <label>Invert look up/down</label><input type="checkbox" id="sInvert">
+    <label>Left-handed buttons</label><input type="checkbox" id="sLefty">
+    <label>Head bob</label><input type="checkbox" id="sBob">
+    <label>Graphics</label><div><select id="sQuality"><option value="auto">Auto</option><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select> <small id="qNote" style="color:var(--muted)"></small></div>
+    <label>Show FPS</label><input type="checkbox" id="sFps">
+    <label>Touch layout</label><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="sEdit">EDIT BUTTON LAYOUT</button><button id="sReset">RESET</button></div>
+  </div>
+</div>
+
+<div id="rotate"><svg viewBox="0 0 64 64" fill="none" stroke="#e8b04a" stroke-width="3"><rect x="20" y="6" width="24" height="52" rx="4"/><circle cx="32" cy="51" r="2"/></svg>फ़ोन घुमाएँ · ROTATE YOUR PHONE</div>
+
+<script>
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+</script>
+<script type="importmap">{ "imports": { "three": "./laststand/lib/three.module.min.js" } }</script>
+<script type="module" src="laststand/js/main.js"></script>
+</body>
+</html>
