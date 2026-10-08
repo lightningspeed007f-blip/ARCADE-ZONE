@@ -237,6 +237,11 @@ var ICONS = {
     '<path d="M21 56v-8a5 5 0 0 1 10 0v8"/>' +
     '<rect x="17" y="34" width="5" height="5"/><rect x="30" y="34" width="5" height="5"/>' +
     '<path d="M44 40l4-3 4 3M48 37v19"/>'),
+  /* crosshair over a temple spire */
+  sight: svg(
+    '<circle cx="32" cy="32" r="18"/>' +
+    '<path d="M32 6v12M32 46v12M6 32h12M46 32h12"/>' +
+    '<path d="M26 40l6-14 6 14z"/><path d="M32 22v4"/>'),
   /* auto-rickshaw with speed lines */
   auto: svg(
     '<path d="M12 42V22q0-8 9-8h17q8 0 12 11l3 17"/>' +
@@ -277,6 +282,8 @@ var ICONS = {
 var GAMES = [
   { href: "horror.html", locked: true,       img: "card_horror.jpg", icon: ICONS.horror, name: "The Last Night", tag: "Horror", color: "#ff3b5c",
     desc: "One night in a house that belongs to the dead. Find a way out before morning." },
+  { href: "laststand.html",    img: "card_laststand.jpg", icon: ICONS.sight, name: "Jais: Last Stand", tag: "Survival", color: "#e8b04a",
+    desc: "One life in Jais at night. Find the key and fuse, reach Guru Gorakhnath Dham." },
   { href: "jais_express.html", img: "card_jais.jpg",   icon: ICONS.auto,   name: "Jais Express",   tag: "Racing", color: "#ff9a1f",
     desc: "Drive your auto through Jais. Dodge traffic, grab coins." },
   { href: "spin.html", locked: true,         img: "card_spin.jpg",   icon: ICONS.wheel,  name: "Spin The Wheel", tag: "Luck",   color: "#ffcf3f",
