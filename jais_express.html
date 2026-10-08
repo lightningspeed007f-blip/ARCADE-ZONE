@@ -515,6 +515,47 @@ function buildCity() {
 }
 
 /* =====================================================================
+   TIME-OF-DAY / SEASON SYSTEM  (visual only - reads `score`, never writes game state)
+   Change ENV_STEP to change how many points each phase lasts.
+   ===================================================================== */
+const ENV_STEP = 5000;
+const SEASONS = ["night", "dawn", "morning", "day", "sunset", "evening"].map((name, i) => ({ name, minScore: i * ENV_STEP }));
+// After the last phase (evening) the cycle returns to night and repeats.
+function seasonIndexFor(sc) { return Math.floor(Math.max(0, sc) / ENV_STEP) % SEASONS.length; }
+const ENV_BLEND_MS = 1600;       // smoothing time constant: a full transition takes roughly 4-6 seconds
+// colours are [r,g,b], rgba are [r,g,b,a]
+const ENV_PRESETS = {
+  night:   { top: [11,7,24],    bot: [51,24,79],    vt: [11,7,24,0.25],   vb: [30,12,48,0.92],  photo: 0.5,  stars: 1,    orb: { x: 0.8,  y: 0.3,  r: 15, c: [233,221,255], g: [185,140,255], ga: 0.35, gs: 1 },   bld: [8,6,15],    win: 1,    hz: [0,0,0,0],        road: [0,0,0,0],        fog: [0,0,0,0],        cloud: [90,70,130,0],    lamp: 1 },
+  dawn:    { top: [70,60,120],  bot: [255,150,110], vt: [60,40,90,0.15],  vb: [120,60,90,0.55], photo: 0.4,  stars: 0.25, orb: { x: 0.25, y: 0.86, r: 16, c: [255,214,160], g: [255,160,100], ga: 0.5,  gs: 1.6 }, bld: [40,28,52], win: 0.6,  hz: [255,140,90,0.35], road: [255,150,120,0.1], fog: [255,170,140,0.18], cloud: [255,180,160,0.3], lamp: 0.7 },
+  morning: { top: [110,160,230],bot: [255,214,170], vt: [140,180,230,0.05],vb: [255,225,190,0.3], photo: 0.45, stars: 0,    orb: { x: 0.3,  y: 0.5,  r: 17, c: [255,240,200], g: [255,220,150], ga: 0.5,  gs: 1.2 }, bld: [70,70,100],win: 0.15, hz: [255,200,140,0.25],road: [255,235,200,0.16],fog: [255,225,190,0.22],cloud: [255,240,225,0.5], lamp: 0.25 },
+  day:     { top: [40,120,230], bot: [150,205,250], vt: [120,180,240,0.0],vb: [170,215,250,0.25],photo: 0.5,  stars: 0,    orb: { x: 0.5,  y: 0.18, r: 18, c: [255,252,225], g: [255,244,180], ga: 0.55, gs: 1.2 }, bld: [60,76,110],win: 0,    hz: [255,255,255,0.18],road: [210,225,255,0.2], fog: [200,225,255,0.2], cloud: [255,255,255,0.7], lamp: 0 },
+  sunset:  { top: [90,50,120],  bot: [255,120,50],  vt: [90,40,90,0.1],   vb: [150,60,60,0.5],  photo: 0.4,  stars: 0.05, orb: { x: 0.75, y: 0.8,  r: 22, c: [255,190,90],  g: [255,120,40],  ga: 0.7,  gs: 1.8 }, bld: [50,25,45], win: 0.45, hz: [255,120,50,0.4], road: [255,140,80,0.14], fog: [255,130,70,0.2], cloud: [255,150,100,0.5], lamp: 0.6 },
+  evening: { top: [20,14,50],   bot: [90,40,110],   vt: [15,10,40,0.2],   vb: [40,18,70,0.8],   photo: 0.45, stars: 0.6,  orb: { x: 0.85, y: 0.5,  r: 15, c: [225,215,255], g: [170,130,255], ga: 0.3,  gs: 1 },   bld: [14,10,26], win: 0.9,  hz: [160,70,150,0.25],road: [80,60,140,0.05],  fog: [80,50,120,0.1],   cloud: [130,90,170,0.25], lamp: 0.9 }
+};
+function envClone(o) { return JSON.parse(JSON.stringify(o)); }
+function envLerp(cur, tgt, k) {
+  for (const key in tgt) {
+    const t = tgt[key];
+    if (typeof t === "number") cur[key] += (t - cur[key]) * k;
+    else if (Array.isArray(t)) for (let i = 0; i < t.length; i++) cur[key][i] += (t[i] - cur[key][i]) * k;
+    else envLerp(cur[key], t, k);
+  }
+}
+const env = envClone(ENV_PRESETS.night);
+let envName = "night", envClock = 0;
+function envSnap() { Object.assign(env, envClone(ENV_PRESETS.night)); envName = "night"; }
+function envUpdate(dt) {
+  envClock += dt;
+  envName = SEASONS[seasonIndexFor(score)].name;
+  envLerp(env, ENV_PRESETS[envName], 1 - Math.exp(-dt / ENV_BLEND_MS));
+}
+const rgb = c => "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
+const rgba = (c, a) => "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + (a === undefined ? c[3] : a).toFixed(3) + ")";
+// fixed star field and cloud layout (built once, nothing allocated per frame)
+const STARS = (() => { const a = []; let sd = 7; const r = () => { sd = (sd * 9301 + 49297) % 233280; return sd / 233280; }; for (let i = 0; i < 46; i++) a.push({ x: r(), y: r() * 0.85, s: 0.6 + r() * 1.1, p: r() * 6.28 }); return a; })();
+const CLOUDS = [{ x: 0.1, y: 0.2, w: 70, s: 0.0035 }, { x: 0.45, y: 0.35, w: 90, s: 0.0025 }, { x: 0.75, y: 0.15, w: 60, s: 0.004 }, { x: 0.3, y: 0.55, w: 80, s: 0.003 }];
+
+/* =====================================================================
    GAME STATE
    ===================================================================== */
 let state = "menu";              // menu | count | play | pause | over
@@ -528,6 +569,7 @@ function resetRun() {
   chain = 0; combo = 1; comboT = 0; nitro = 0; nitroT = 0; inv = 0; shake = 0; curve = 0;
   obstacles = []; pickups = []; banners = []; runT = 0; ghostRec = []; lastRecT = 0;
   stationAbs = 0; lap = 0; nearMisses = 0; bannerDone = {}; skyImg = stationImg(0); ghostDone = false;
+  if (typeof envSnap === "function") envSnap();
 }
 resetRun();
 
@@ -744,24 +786,58 @@ function rr(x, y, w, h, r, fill) { ctx.beginPath(); if (ctx.roundRect) ctx.round
 
 function drawSky() {
   const g = ctx.createLinearGradient(0, 0, 0, HZ);
-  g.addColorStop(0, "#0b0718"); g.addColorStop(1, "#33184f");
+  g.addColorStop(0, rgb(env.top)); g.addColorStop(1, rgb(env.bot));
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, HZ + 2);
   if (skyImg && skyImg.ok) {
     const ir = skyImg.width / skyImg.height, sr = W / HZ;
     let sw, sh, sx, sy;
     if (ir > sr) { sh = skyImg.height; sw = sh * sr; sx = (skyImg.width - sw) / 2; sy = 0; }
     else { sw = skyImg.width; sh = sw / sr; sx = 0; sy = (skyImg.height - sh) / 2; }
-    ctx.globalAlpha = 0.5; ctx.drawImage(skyImg, sx, sy, sw, sh, 0, 0, W, HZ); ctx.globalAlpha = 1;
+    ctx.globalAlpha = env.photo; ctx.drawImage(skyImg, sx, sy, sw, sh, 0, 0, W, HZ); ctx.globalAlpha = 1;
     const v = ctx.createLinearGradient(0, 0, 0, HZ);
-    v.addColorStop(0, "rgba(11,7,24,0.25)"); v.addColorStop(1, "rgba(30,12,48,0.92)");
+    v.addColorStop(0, rgba(env.vt)); v.addColorStop(1, rgba(env.vb));
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, HZ);
   }
-  glow(W * 0.8, HZ * 0.3, 46 * K, "185,140,255", 0.35);
-  ctx.fillStyle = "#e9ddff"; ctx.beginPath(); ctx.arc(W * 0.8, HZ * 0.3, 15 * K, 0, 6.2832); ctx.fill();
+  // horizon glow (dawn / sunset warmth)
+  if (env.hz[3] > 0.01) {
+    const hg = ctx.createLinearGradient(0, HZ * 0.35, 0, HZ);
+    hg.addColorStop(0, rgba(env.hz, 0)); hg.addColorStop(1, rgba(env.hz));
+    ctx.fillStyle = hg; ctx.fillRect(0, HZ * 0.35, W, HZ * 0.65 + 2);
+  }
+  // stars
+  if (env.stars > 0.01) {
+    ctx.fillStyle = "#fff";
+    for (const st of STARS) {
+      ctx.globalAlpha = env.stars * (0.55 + 0.45 * Math.sin(envClock * 0.002 + st.p)) * (1 - st.y * 0.6);
+      ctx.fillRect(st.x * W, st.y * HZ, st.s * K, st.s * K);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // sun / moon
+  const o = env.orb, ox = W * o.x, oy = HZ * o.y;
+  glow(ox, oy, 46 * K * o.gs, (o.g[0] | 0) + "," + (o.g[1] | 0) + "," + (o.g[2] | 0), o.ga);
+  ctx.fillStyle = rgb(o.c); ctx.beginPath(); ctx.arc(ox, oy, o.r * K, 0, 6.2832); ctx.fill();
+  // drifting clouds
+  if (env.cloud[3] > 0.01) {
+    ctx.fillStyle = rgba(env.cloud);
+    for (const c of CLOUDS) {
+      const cw = c.w * K, cx = ((c.x + envClock * c.s * 0.003) % 1.4 - 0.2) * W, cy = c.y * HZ * 0.8;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, cw * 0.5, cw * 0.12, 0, 0, 6.2832);
+      ctx.ellipse(cx - cw * 0.2, cy - cw * 0.07, cw * 0.25, cw * 0.11, 0, 0, 6.2832);
+      ctx.ellipse(cx + cw * 0.15, cy - cw * 0.09, cw * 0.3, cw * 0.13, 0, 0, 6.2832);
+      ctx.fill();
+    }
+  }
   const off = curve * 18 * K;
+  const bc = rgb(env.bld);
   for (const b of city) {
-    ctx.fillStyle = "#08060f"; ctx.fillRect(b.x + off, HZ - b.h, b.w, b.h);
-    for (const w of b.win) { ctx.fillStyle = w.c; ctx.fillRect(b.x + off + w.x, HZ - b.h + w.y, 2.5 * K, 3.5 * K); }
+    ctx.fillStyle = bc; ctx.fillRect(b.x + off, HZ - b.h, b.w, b.h);
+  }
+  if (env.win > 0.02) {
+    ctx.globalAlpha = env.win;
+    for (const b of city) for (const w of b.win) { ctx.fillStyle = w.c; ctx.fillRect(b.x + off + w.x, HZ - b.h + w.y, 2.5 * K, 3.5 * K); }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -791,6 +867,13 @@ function drawRoad() {
   const hg = ctx.createLinearGradient(0, HZ - 12, 0, HZ + 34);
   hg.addColorStop(0, "rgba(255,45,138,0)"); hg.addColorStop(0.4, "rgba(255,45,138,0.28)"); hg.addColorStop(1, "rgba(255,45,138,0)");
   ctx.fillStyle = hg; ctx.fillRect(0, HZ - 12, W, 46);
+  // daylight tint over the road and distance fog (no-ops at night)
+  if (env.road[3] > 0.005) { ctx.fillStyle = rgba(env.road); ctx.fillRect(0, HZ, W, H - HZ); }
+  if (env.fog[3] > 0.005) {
+    const fg = ctx.createLinearGradient(0, HZ, 0, HZ + (H - HZ) * 0.45);
+    fg.addColorStop(0, rgba(env.fog)); fg.addColorStop(1, rgba(env.fog, 0));
+    ctx.fillStyle = fg; ctx.fillRect(0, HZ, W, (H - HZ) * 0.45);
+  }
 }
 
 function drawPosts() {
@@ -803,7 +886,7 @@ function drawPosts() {
       ctx.fillStyle = "#232838"; ctx.fillRect(p.x - w / 2, p.y - h, w, h);
       const lx = p.x - Math.sign(side) * 12 * p.s;
       ctx.fillRect(Math.min(lx, p.x), p.y - h, Math.abs(lx - p.x), Math.max(1, 2 * p.s));
-      glow(lx, p.y - h + 2 * p.s, 22 * p.s, "255,207,63", 0.45);
+      if (env.lamp > 0.02) glow(lx, p.y - h + 2 * p.s, 22 * p.s, "255,207,63", 0.45 * env.lamp);
       ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(lx, p.y - h + 2 * p.s, Math.max(1.2, 3.5 * p.s), 0, 6.2832); ctx.fill();
     }
   }
@@ -1096,6 +1179,7 @@ function frame(now) {
   lastFrame = now;
   if (state === "play") update(dt);
   else if (state === "menu" || state === "count") idle(dt);
+  envUpdate(dt);
   draw();
   if (state === "play") updateHud(now);
   requestAnimationFrame(frame);
