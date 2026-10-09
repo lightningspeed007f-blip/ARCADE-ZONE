@@ -240,7 +240,8 @@ export class Arsenal {
     if (w.melee || this.reloadT > 0 || this.mag[this.cur] >= w.mag || this.reserve[w.ammo] <= 0) return false;
     this.reloadT = w.reload;
     this.reloadPhase = 0;
-    this.audio.play('clank', { vol: 0.5, delay: 0.1 });
+    if (this.cur === 'rifle' && this.audio.has('rifle_reload_out')) this.audio.play('rifle_reload_out', { vol: 0.9, vary: 0, verbAmt: 0.3 });
+    else this.audio.play('clank', { vol: 0.5, delay: 0.1 });
     return true;
   }
 
@@ -256,12 +257,15 @@ export class Arsenal {
     if (this.reloadT > 0) {
       const before = this.reloadT;
       this.reloadT -= dt;
-      if (before > w.reload * 0.45 && this.reloadT <= w.reload * 0.45) this.audio.play(w.mag > 2 ? 'clank' : 'click', { vol: 0.6 });
+      if (before > w.reload * 0.45 && this.reloadT <= w.reload * 0.45) {
+        if (this.cur === 'rifle' && this.audio.has('rifle_reload_in')) this.audio.play('rifle_reload_in', { vol: 0.9, vary: 0, verbAmt: 0.3 });
+        else this.audio.play(w.mag > 2 ? 'clank' : 'click', { vol: 0.6 });
+      }
       if (this.reloadT <= 0) {
         const need = w.mag - this.mag[this.cur];
         const take = Math.min(need, this.reserve[w.ammo]);
         this.mag[this.cur] += take; this.reserve[w.ammo] -= take;
-        this.audio.play(this.cur === 'pistol' || this.cur === 'rifle' ? 'slide' : 'click', { vol: 0.6 });
+        if (!(this.cur === 'rifle' && this.audio.has('rifle_reload_in'))) this.audio.play(this.cur === 'pistol' || this.cur === 'rifle' ? 'slide' : 'click', { vol: 0.6 });
       }
     }
     // fire

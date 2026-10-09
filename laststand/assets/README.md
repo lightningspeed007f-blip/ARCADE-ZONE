@@ -66,7 +66,8 @@ Gupta General Store, the courtyard haveli, the three-floor house, the east-lane 
 on Salon road and Baba Dhaba. A missing song plays radio static instead. Players can switch a radio off
 (it's loud).
 
-## Gun fire sounds (4) — `sounds/pistol.mp3`, `revolver.mp3`, `dunali.mp3`, `rifle.mp3`
-Short one-shot clips (`.mp3`, `.wav` or `.ogg`), ideally under 2 seconds. Each file plays every time
-that gun fires (the rifle replays it per shot). A missing file keeps the built-in generated sound.
-The katta keeps its generated sound.
+## Gun fire sounds — `sounds/`
+Trimmed one-shot clips (`.mp3`, `.wav` or `.ogg`; the loader tries them in that order, so keep one format per name):
+`pistol`, `revolver`, `dunali` (one shot each), `rifle` (a single ~0.1 s shot, so it can repeat at 600 rpm),
+plus `rifle_reload_out` (magazine out, at reload start) and `rifle_reload_in` (magazine in, mid-reload).
+A missing file keeps the built-in generated sound. The katta keeps its generated sound.
