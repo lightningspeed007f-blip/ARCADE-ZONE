@@ -205,8 +205,8 @@ export class Audio {
     const BIG = 1.5e6;
     for (const [key, spec] of Object.entries(MANIFEST.userAudio)) {
       (async () => {
-        for (const name of spec.names) for (const ext of MANIFEST.userAudioExts) {
-          const url = ASSET_ROOT + spec.dir + encodeURIComponent(name) + ext;
+        for (const dir of spec.dirs) for (const name of spec.names) for (const ext of MANIFEST.userAudioExts) {
+          const url = ASSET_ROOT + dir + encodeURIComponent(name) + ext;
           try {
             const head = await fetch(url, { method: 'HEAD' });
             if (!head.ok) continue;

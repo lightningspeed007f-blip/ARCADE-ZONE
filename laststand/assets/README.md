@@ -13,8 +13,8 @@ laststand/assets/
   banners/banner01.jpg … banner05.jpg
   music/song01.mp3 … song06.mp3
   sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3   ← gun fire sounds
-  sounds/zombiechase.mp3  "zombie bye bye.mp3"  "zombie scream.mp3"   ← zombie sounds
-  music/"Shiv Ji background music.mp3"                       ← the Shivdham reveal music
+  music/zombiechase.mp3  zombiebye.mp3  zombiescream.mp3     ← zombie sounds
+  music/shivjibackground.mp3                                 ← the Shivdham reveal music
 ```
 
 ## Shivji (`shivji.png`)
@@ -75,13 +75,13 @@ plus `rifle_reload_out` (magazine out, at reload start) and `rifle_reload_in` (m
 A missing file keeps the built-in generated sound. The katta keeps its generated sound.
 
 ## Zombie sounds and the Shivji music
-Any of `.mp3`, `.m4a`, `.wav`, `.ogg` works (mp3 is safest on iPhone). Spaces in the names are fine.
+Put them in `music/` (or `sounds/`). Any of `.mp3`, `.m4a`, `.wav`, `.ogg` works (mp3 is safest on iPhone).
 
 | File | When it plays |
 |------|---------------|
-| `sounds/zombiechase` (also `zombie chase`, `zombie_chase`) | Loops while zombies are chasing you close by; louder as they close in, fades out a few seconds after the chase ends. |
-| `sounds/zombie bye bye` (also `zombiebyebye`, `zombie_bye_bye`) | Once, when a zombie kills you (not for falls, the train or thieves). |
-| `sounds/zombie scream` (also `zombiescream`, `zombie_scream`) | Now and then, from a zombie 45–110 m away: a distant warning, at most about once a minute, never during a chase. |
-| `music/Shiv Ji background music` (also `shiv ji background music`, `shivji_music`) | Swells in slowly (about 9 s) when you round the blind corner halfway through the hidden tunnel and Shivji comes into view; dips under a chase, fades out if you go back. |
+| `zombiechase` (also `zombie chase`, `zombie_chase`) | Loops while zombies are chasing you close by; louder as they close in, fades out a few seconds after the chase ends. |
+| `zombiebye` (also `zombie bye bye`, `zombiebyebye`) | Once, when a zombie kills you (not for falls, the train or thieves). |
+| `zombiescream` (also `zombie scream`, `zombie_scream`) | Now and then, from a zombie 45–110 m away: a distant warning, at most about once a minute, never during a chase. |
+| `shivjibackground` (also `Shiv Ji background music`, `shivji_music`) | Swells in slowly (about 9 s) when you round the blind corner halfway through the hidden tunnel and Shivji comes into view; dips under a chase, fades out if you go back. |
 
 A missing file keeps the game's built-in sound (or silence for the death sound and the music).
