@@ -363,6 +363,7 @@ export class Game {
     this.freight.visible = false; this.rescue.visible = false;
     this.nextFreight = 70 + r() * 60; this.train = null; this.trainLight.on = false;
     // misc
+    this.chaseOn = false; this._chaseHold = 0;
     this.ambT = 5; this.zoneT = 0; this.curZone = null; this.inside = null; this.searchJob = null;
     this.spawnT = 20; this.flowT = 0; this.visT = 0; this.vis = 0.4;
     this.playerLit = false;
@@ -665,10 +666,40 @@ export class Game {
       el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     }
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
-    if (P.dead) this.gameOver(from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+    if (P.dead) {
+      this.gameOver(from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+      if (from && !from.human) this.audio.play('zombieByeBye', { vol: 1, vary: 0, verbAmt: 0.3 });   // only a zombie's kill
+    }
   }
 
   noise(pos, radius, kind) { this.enemies.hear(pos, radius, kind); }
+
+  // Zombies on the player's heels: the chase track comes in while any zombie is chasing close by,
+  // rises as they close the gap, and fades out a few seconds after the last one gives up or dies.
+  updateChaseAudio(dt) {
+    const P = this.player;
+    let near = Infinity;
+    if (!P.dead) for (const e of this.enemies.list) {
+      if (e.dead || e.human || (e.state !== 'CHASE' && e.state !== 'ATTACK') || !(e.dist < 32) || Math.abs(e.pos.y - P.pos.y) > 4) continue;
+      near = Math.min(near, e.dist);
+    }
+    if (near < Infinity) { this._chaseHold = 3; this._chaseNear = near; } else this._chaseHold = Math.max(0, (this._chaseHold || 0) - dt);
+    this.chaseOn = this._chaseHold > 0;
+    const vol = this.chaseOn ? Math.round((0.4 + 0.4 * clamp(1 - this._chaseNear / 32, 0, 1)) * 10) / 10 : 0;
+    this.audio.fade('zombieChase', vol, vol > 0 ? 0.8 : 2.5);
+  }
+
+  // A zombie screaming far away: a warning, never close. With the user's scream it comes from a real
+  // zombie 45-110 m off (or a random far point), at most every ~35-60 s and never over a chase.
+  distantScream(pos) {
+    if (!this.audio.has('zombieScream')) { this.audio.play('scream', { pos, vol: 0.35, rate: 0.8 }); return; }
+    if (this.chaseOn || this.time < (this._screamAt || 0)) return;
+    const P = this.player;
+    const far = this.enemies.list.filter((e) => !e.dead && !e.human && e.dist > 45 && e.dist < 110 && Math.abs(e.pos.y - P.pos.y) < 8);
+    if (far.length) { const e = far[(Math.random() * far.length) | 0]; pos = [e.pos.x, e.pos.y + 1.6, e.pos.z]; }
+    this._screamAt = this.time + 35 + Math.random() * 25;
+    this.audio.play('zombieScream', { pos, vol: 0.8, ref: 12, far: 30, verbAmt: 1, max: 160, vary: 0.04 });
+  }
 
   enemyMuzzle(p) {
     this.flashSrc = this.flashSrc || [];
@@ -1045,6 +1076,7 @@ export class Game {
       this.vis = lit ? 0.8 : inside ? 0.22 : 0.38;
     }
     this.audio.setListener(this.camera, !!this.inside || this.secret.underground);
+    this.updateChaseAudio(dt);
     // start-house broadcast
     if (this.obj.phase === 'radio') {
       this.broadcastT -= dt;
@@ -1074,7 +1106,7 @@ export class Game {
       const pos = [P.pos.x + Math.cos(a) * d, 2, P.pos.z + Math.sin(a) * d];
       const roll = Math.random();
       if (roll < 0.45) this.audio.play('bark', { pos, vol: 0.7, far: 20 });
-      else if (roll < 0.6) this.audio.play('scream', { pos, vol: 0.35, rate: 0.8 });
+      else if (roll < 0.6) this.distantScream(pos);
       else if (roll < 0.72) { this.audio.play(Math.random() < 0.5 ? 'rifle' : 'pistol', { pos, vol: 0.5, far: 8 }); this.noise({ x: pos[0], z: pos[2] }, 60, 'gun'); }
       else if (roll < 0.82) this.audio.play('growl', { pos, vol: 0.5, rate: 0.8 });
     }
@@ -1225,6 +1257,7 @@ export class Game {
     $('pObj').innerHTML = `<b>${hi}</b><span>${en}</span>`;
     $('pHints').innerHTML = (this.obj.key ? '' : '<div>चाबी: जायस सिटी स्टेशन मास्टर ऑफिस · बस अड्डा पूछताछ · नौगजी पुलिस चौकी</div>') + (this.obj.fuse ? '' : '<div>फ्यूज़: वहाबगंज बिजली घर · आलिया मार्केट की दुकान · तीन मंज़िला मकान की छत</div>');
     for (const r of this.radios) if (r.el) r.el.pause();
+    this.audio.pauseTracks();
     this.audio.ctx?.suspend();
   }
 
@@ -1233,6 +1266,7 @@ export class Game {
     this.state = 'play'; this.input.enabled = true; this.input.resetState();
     this.audio.resume();
     for (const r of this.radios) if (r.playing && r.el && !r.failed) r.el.play().catch(() => {});
+    this.audio.resumeTracks();
     if (!this.input.touch) this.canvas.requestPointerLock?.();
   }
 
@@ -1264,6 +1298,8 @@ export class Game {
     document.exitPointerLock?.();
     document.body.classList.remove('playing');
     this.audio.stopAll();
+    this.chaseOn = false; this._chaseHold = 0;
+    if (this.secret.drone && this.secret.drone.gain) this.secret.drone.gain.gain.value = 0;
     if (this.signalAlarm) { this.signalAlarm = null; }
     if (this.train) { this.train.g.visible = false; this.train = null; }
     $('overTitle').textContent = 'YOU DIED';

@@ -9,6 +9,7 @@
 // corner, so the walk feels continuous.
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
+import { WEAPONS, AMMO } from './weapons.js';
 
 // ---------- fixed geometry ----------
 const SX = -134, TOPZ = 26, STEPS = 24, RUN = 0.3, RISE = 0.25;   // stairs under the temple
@@ -19,7 +20,7 @@ const C2 = { x0: -144.2, x1: -135.1, z0: 9.8, z1: 12.0 };         // west corrid
 const C3 = { x0: -144.2, x1: -142.0 };                            // last corridor, toward the valley
 const TRIG_A = -139.5, TRIG_B = -138.5;                           // hysteresis on x inside C2
 const X0 = (C3.x0 + C3.x1) / 2 + O.x;                             // valley centre line
-const STATUE = { x: X0, z: -208, h: 116 };                        // ~116 m, twice the original 58 m, set further back so the whole figure still fits the view
+const STATUE = { x: X0, z: -208, h: 260 };                        // ~260 m (2.25x the earlier 116 m): from the tunnel mouth his head is ~51° up, from the ghat ~67° — you have to look up to see his face
 const LAKE = { z0: -108, z1: -152, y: -0.65 };
 const CH = 3.2;                                                   // corridor height
 
@@ -418,6 +419,7 @@ export class Secret {
     this.g = game;
     this.mode = false; this.revealed = false; this.glowK = 0.2; this.underground = false;
     this.opened = false; this.lidT = 0;
+    this.armed = false; this.lastZ = null;
   }
 
   build() {
@@ -490,7 +492,7 @@ export class Secret {
     this.layers.push([glit, 0.28]);
     // half moon, up and to the left of Shivji
     const moon = this.halfMoon = new THREE.Sprite(new THREE.SpriteMaterial({ map: halfMoonTexture(), fog: false, depthWrite: false, toneMapped: false, color: 0xe8eeff }));
-    moon.position.set(X - 230, 300, -560); moon.scale.setScalar(70); moon.renderOrder = 0;
+    moon.position.set(X - 300, 560, -600); moon.scale.setScalar(90); moon.renderOrder = 0;   // raised (and pushed back) to stay clear of the colossus, inside the 900 m sky dome
     scene.add(moon);
     this.setLayers(this.glowK);
     this.drone = null;
@@ -500,6 +502,8 @@ export class Secret {
 
   reset() {
     this.opened = false; this.lidT = 0; this.revealed = false; this.glowK = 0.2;
+    this.armed = false; this.lastZ = null; this._musicIn = false;
+    this.g.audio.fade('shivMusic', 0, 0);
     this.lid.rotation.z = 0; this.leak.visible = true; this.lidBox.enabled = true;
     this.setLayers(this.glowK);
     this.setMode(false);
@@ -547,7 +551,14 @@ export class Secret {
     const inB = p.x < -600;
     this.underground = (p.y < -1 && p.x > -150 && p.x < -128 && p.z > 6 && p.z < 27) || (inB && p.z > -0.5 && p.z < 20);
     this.setMode(inB);
-    if (inB && !this.revealed && p.z < -2.5) this.reveal();
+    // first time at the foot of the stairs, on the tunnel floor: the tunnel arms you (once per run)
+    if (!this.armed && p.y < FLOOR_A + 1 && p.y > FLOOR_A - 1 && p.x > C1.x0 - 0.2 && p.x < C1.x1 + 0.2 && p.z < C1.z1 + 0.4 && p.z > C1.z0) this.arm();
+    // the reveal: round the blind corner (about halfway through) and walking down the last
+    // corridor toward the valley, Shivji's golden glow fills the mouth ahead
+    const towardValley = this.lastZ !== null && p.z < this.lastZ - 1e-4;
+    this.lastZ = p.z;
+    if (inB && !this.revealed && p.x > C3.x0 + O.x - 0.3 && p.x < C3.x1 + O.x + 0.3 && (p.z < 6 || (p.z < C2.z0 - 0.8 && towardValley))) this.reveal();
+    if (inB && !this.revealed && p.z < -2.5) this.reveal();   // (safety net: already out in the valley)
     if (this.revealed && this.glowK < 1) { this.glowK = Math.min(1, this.glowK + dt / 5); this.setLayers(this.glowK * this.glowK * (3 - 2 * this.glowK)); }
     if (this.mode) {
       // keep the colossus turned toward the visitor (he never shows his edge)
@@ -557,8 +568,13 @@ export class Secret {
       this.rays.rotation.z += dt * 0.012;
       const t = g.time;
       this.layers[0][0].material.opacity = 0.72 * this.glowK * (0.94 + Math.sin(t * 0.7) * 0.06);
-      if (this.drone && this.drone.gain) this.drone.gain.gain.value = 0.4;
+      // with the Shivji music loaded the drone sits underneath it; otherwise it carries the scene alone
+      if (this.drone && this.drone.gain) this.drone.gain.gain.value = g.audio.hasTrack('shivMusic') ? 0.14 : 0.4;
     } else if (this.drone && this.drone.gain) this.drone.gain.gain.value = 0;
+    // Shivji music: slow swell after the reveal, dips under a chase, fades out when you go back
+    const music = this.mode && this.revealed && !P.dead ? (g.chaseOn ? 0.28 : 0.62) : 0;
+    g.audio.fade('shivMusic', music, music > 0 ? (this._musicIn ? 2.5 : 9) : 3);
+    if (music > 0) this._musicIn = true; else if (!this.mode) this._musicIn = false;
   }
 
   shift(dir) {
@@ -576,6 +592,19 @@ export class Secret {
     P.pos.x += O.x * dir; P.pos.y += O.y * dir; P.pos.z += O.z * dir;
     P.smoothY += O.y * dir; P.state.peak = (P.state.peak ?? P.pos.y) + O.y * dir;
     this.g.camera.position.x += O.x * dir; this.g.camera.position.y += O.y * dir; this.g.camera.position.z += O.z * dir;
+  }
+
+  // The tunnel's gift: a rifle with spare magazines, given through the normal arsenal (once per run).
+  arm() {
+    this.armed = true;
+    const g = this.g, A = g.arsenal, id = 'rifle', w = WEAPONS[id], extra = 60;
+    const fresh = A.give(id);
+    A.reserve[w.ammo] += extra;
+    A.equip(id);
+    g.feed(fresh ? '+ ' + w.name : `+${w.mag} ${AMMO[w.ammo]}`);
+    g.feed(`+${extra} ${AMMO[w.ammo]}`);
+    g.toast('सुरंग में राइफल मिली', `A ${w.en.toLowerCase()} and ${extra} spare rounds lie at the foot of the stairs.`);
+    g.updateHud(true);
   }
 
   reveal() {

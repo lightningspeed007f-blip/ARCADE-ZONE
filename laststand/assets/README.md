@@ -13,6 +13,8 @@ laststand/assets/
   banners/banner01.jpg … banner05.jpg
   music/song01.mp3 … song06.mp3
   sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3   ← gun fire sounds
+  sounds/zombiechase.mp3  "zombie bye bye.mp3"  "zombie scream.mp3"   ← zombie sounds
+  music/"Shiv Ji background music.mp3"                       ← the Shivdham reveal music
 ```
 
 ## Shivji (`shivji.png`)
@@ -71,3 +73,15 @@ Trimmed one-shot clips (`.mp3`, `.wav` or `.ogg`; the loader tries them in that 
 `pistol`, `revolver`, `dunali` (one shot each), `rifle` (a single ~0.1 s shot, so it can repeat at 600 rpm),
 plus `rifle_reload_out` (magazine out, at reload start) and `rifle_reload_in` (magazine in, mid-reload).
 A missing file keeps the built-in generated sound. The katta keeps its generated sound.
+
+## Zombie sounds and the Shivji music
+Any of `.mp3`, `.m4a`, `.wav`, `.ogg` works (mp3 is safest on iPhone). Spaces in the names are fine.
+
+| File | When it plays |
+|------|---------------|
+| `sounds/zombiechase` (also `zombie chase`, `zombie_chase`) | Loops while zombies are chasing you close by; louder as they close in, fades out a few seconds after the chase ends. |
+| `sounds/zombie bye bye` (also `zombiebyebye`, `zombie_bye_bye`) | Once, when a zombie kills you (not for falls, the train or thieves). |
+| `sounds/zombie scream` (also `zombiescream`, `zombie_scream`) | Now and then, from a zombie 45–110 m away: a distant warning, at most about once a minute, never during a chase. |
+| `music/Shiv Ji background music` (also `shiv ji background music`, `shivji_music`) | Swells in slowly (about 9 s) when you round the blind corner halfway through the hidden tunnel and Shivji comes into view; dips under a chase, fades out if you go back. |
+
+A missing file keeps the game's built-in sound (or silence for the death sound and the music).
