@@ -8,7 +8,7 @@ import { Player } from './player.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
 import { Enemies } from './enemies.js';
-import { Loot, FOOD, rollFood, rollAmmo, rollWeapon, containerLoot } from './loot.js';
+import { Loot, FOOD, AMMO_PICK, rollFood, rollAmmo, rollWeapon, containerLoot } from './loot.js';
 import { Audio } from './audio.js';
 import { LightPool } from './lights.js';
 import { loadUserAssets } from './assets.js';
@@ -357,6 +357,7 @@ export class Game {
       const rad = this.audio.makeRadio(slot.p, isStart ? null : songs[si++ % 6]);
       if (rad) { rad.building = slot.building; rad.start_ = isStart; this.radios.push(rad); }
     }
+    if (this.townMap.revealed) this.townMap.build();
     this.audio.startAmbience(this.displays.shivPos);
     // trains
     this.freight.visible = false; this.rescue.visible = false;
@@ -403,11 +404,133 @@ export class Game {
       else if (kind === 'ammo') { const a = rollAmmo(r, null); L.add({ kind: 'ammo', id: a.t, n: a.n, p: pos }); }
       else if (kind === 'weapon') { if (r.chance(0.55)) L.add({ kind: 'weapon', id: rollWeapon(r), p: pos }); else { const a = rollAmmo(r, null); L.add({ kind: 'ammo', id: a.t, n: a.n, p: pos }); } }
     }
+    this.placeHouseLoot(r, spots);
     // objective items: one key spot, one fuse spot per run
     const ks = r.pick(W.keySpots), fs = r.pick(W.fuseSpots);
+    this.keySpot = ks; this.fuseSpot = fs;
     this.keyItem = L.add({ kind: 'key', id: 'key', p: [ks.p[0] + 0.15, ks.p[1], ks.p[2]] });
     this.fuseItem = L.add({ kind: 'fuse', id: 'fuse', p: [fs.p[0] - 0.1, fs.p[1], fs.p[2] + 0.1] });
     this.keyWhere = ks.label; this.fuseWhere = fs.label;
+  }
+
+  // Every enterable house rolls a "personality" so exploring pays off but is never certain:
+  // some hide a weapon, a few an arsenal, some only ammo or food, some nothing at all.
+  placeHouseLoot(r, spots) {
+    const W = this.W, L = this.loot;
+    this.houseLoot = {};
+    for (const b of W.enterables || []) {
+      if (b.name === 'start') continue;
+      const mine = spots.filter((s) => {
+        if (s.tag || s.kind === 'water') return false;
+        const [lx, lz] = b.F.toLocal(s.p[0], s.p[2]);
+        return Math.abs(lx) < b.w / 2 - 0.3 && lz > 0.3 && lz < b.d - 0.3 && s.p[1] < 1.4;
+      });
+      if (!mine.length) continue;
+      let roll = r();
+      if (b.locked || (b.name || '').startsWith('abandoned')) roll *= 0.7;   // hard-to-enter houses pay better
+      const tier = roll < 0.22 ? 'armed' : roll < 0.3 ? 'arsenal' : roll < 0.5 ? 'ammo' : roll < 0.7 ? 'supplies' : 'empty';
+      this.houseLoot[b.name] = tier;
+      const slots = r.shuffle(mine.slice());
+      let n = 0;
+      const put = (item) => {
+        const s = slots[n++ % slots.length];
+        const j = n > slots.length ? 0.35 : 0.12;
+        L.add({ ...item, p: [s.p[0] + (r() - 0.5) * j, s.p[1], s.p[2] + (r() - 0.5) * j] });
+      };
+      const gunWithAmmo = (id) => { put({ kind: 'weapon', id }); const t = WEAPONS[id].ammo, [a, c] = AMMO_PICK[t]; put({ kind: 'ammo', id: t, n: r.int(a, c) }); };
+      if (tier === 'armed') gunWithAmmo(rollWeapon(r));
+      else if (tier === 'arsenal') { gunWithAmmo(r.pick(['rifle', 'dunali', 'revolver'])); put({ kind: 'food', id: rollFood(r) }); const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); }
+      else if (tier === 'ammo') { const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); if (r.chance(0.4)) { const c = rollAmmo(r, null); put({ kind: 'ammo', id: c.t, n: c.n }); } }
+      else if (tier === 'supplies') { put({ kind: 'food', id: rollFood(r) }); put({ kind: 'food', id: rollFood(r) }); if (r.chance(0.5)) { const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); } }
+    }
+  }
+
+  // Find a walkable ground point near (cx, cz); null if none.
+  freeSpot(cx, cz, rad, minFromPlayer = 0) {
+    const r = Math.random, P = this.player.pos;
+    for (let k = 0; k < 24; k++) {
+      const a = r() * 6.283, d = k === 0 ? 0 : r() * rad;
+      const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+      if (!this.nav.free(x, z) || this.inSanctuary(x, z)) continue;
+      if (Math.hypot(x - P.x, z - P.z) < minFromPlayer) continue;
+      return [x, z];
+    }
+    return null;
+  }
+
+  // A pack of zombies standing around a point until the player gets close or fires a gun.
+  spawnPack(r, cx, cz, n, rad, extra = {}) {
+    const zone = extra.zone || ('z' + cx + ',' + cz);
+    let made = 0;
+    for (let i = 0; i < n; i++) {
+      const p = this.freeSpot(cx, cz, rad, 30);
+      if (!p) continue;
+      const roll = r();
+      this.enemies.spawn(roll < (extra.runners ?? 0.12) ? 'runner' : roll < (extra.runners ?? 0.12) + (extra.brutes ?? 0.08) ? 'brute' : 'walker', p[0], 0, p[1], { zone, hold: true });
+      made++;
+    }
+    return made;
+  }
+
+  spawnThieves(r) {
+    const W = this.W, E = this.enemies, sp = this.player.pos;
+    const mob = this.lite;
+    // 1) waiting inside houses (they wake when you walk in)
+    for (const b of W.enterables || []) {
+      if (b.name === 'start') continue;
+      const aband = (b.name || '').startsWith('abandoned');
+      if (!r.chance(aband ? 0.8 : 0.3)) continue;
+      for (let k = 0; k < 8; k++) {
+        const [x, , z] = b.F.world(r.range(-b.w / 2 + 1, b.w / 2 - 1), 0, r.range(b.d * 0.3, b.d * 0.8));
+        if (!this.nav.free(x, z) || Math.hypot(x - sp.x, z - sp.z) < 20) continue;
+        E.spawn('thief', x, 0, z, { wait: true, inside: true, frozen: true, yaw: b.F.yaw + Math.PI });
+        break;
+      }
+    }
+    // 2) guarding the key and the fuse
+    for (const spot of [this.keySpot, this.fuseSpot]) {
+      if (!spot || !r.chance(0.55)) continue;
+      const p = this.freeSpot(spot.p[0], spot.p[2], 3, 15);
+      if (p) E.spawn('thief', p[0], 0, p[1], { wait: true, frozen: true });
+    }
+    // 3) patrolling the lanes: two-way routes along a road
+    const roads = r.shuffle(Object.values(ROADS).filter((q) => q.s === 'lane' || q.w < 9));
+    let patrols = mob ? 4 : 6;
+    for (const road of roads) {
+      if (patrols <= 0) break;
+      const i = roadInfo(road), t0 = r.range(8, Math.max(9, i.len - 40)), len = Math.min(i.len - t0 - 2, r.range(18, 34));
+      const pt = (t) => [road.a[0] + i.ux * t + i.nx * (r() - 0.5) * road.w * 0.5, road.a[1] + i.uz * t + i.nz * (r() - 0.5) * road.w * 0.5];
+      const route = [pt(t0), pt(t0 + len * 0.5), pt(t0 + len), pt(t0 + len * 0.5)];
+      if (route.some((q) => !this.nav.free(q[0], q[1]) || this.inSanctuary(q[0], q[1])) || Math.hypot(route[0][0] - sp.x, route[0][1] - sp.z) < 40) continue;
+      E.spawn('thief', route[0][0], 0, route[0][1], { route });
+      patrols--;
+    }
+    // 4) loiterers near Alia market and the temple approaches
+    for (const [x, z] of [[-140, 52], [-100, 14], [-155, 42]]) {
+      if (mob && r.chance(0.5)) continue;
+      const p = this.freeSpot(x, z, 6, 30);
+      if (p) E.spawn('thief', p[0], 0, p[1], {});
+    }
+  }
+
+  // Dark corridor under the Maa Kamakhya Mandir: one tunnel exists twice (under the town and
+  // at the valley), so each copy gets its own pair. Enemies are carried across the blind corner
+  // together with the player (see Secret.shift).
+  spawnTunnelEnemies() {
+    const E = this.enemies, o = { tunnel: true, frozen: true, inside: true };
+    E.spawn('walker', -138.4, -5.95, 10.9, { ...o, hold: true, yaw: Math.PI / 2 });          // round the first turn
+    E.spawn('thief', -133.9, -5.95, 13.6, { ...o, wait: true, yaw: Math.PI });              // in the shadow beside the torch-less stretch
+    E.spawn('walker', -1043.5, 0, 3.8, { ...o, hold: true, yaw: 0 });                        // the last stretch before the valley
+    E.spawn('thief', -1042.7, 0, 7.4, { ...o, wait: true, yaw: Math.PI });
+  }
+
+  dropFromThief(e) {
+    const p = [e.pos.x + 0.3, e.pos.y + 0.05, e.pos.z + 0.3];
+    if (e.loot) this.loot.drop({ kind: 'food', id: e.loot, p });
+    const r = Math.random();
+    if (r < 0.4) { const a = rollAmmo(this.rng, null); this.loot.drop({ kind: 'ammo', id: a.t, n: a.n, p: [p[0] - 0.5, p[1], p[2]] }); }
+    else if (r < 0.65) this.loot.drop({ kind: 'food', id: rollFood(this.rng), p: [p[0] - 0.4, p[1], p[2] - 0.3] });
+    if (Math.random() < 0.18) this.loot.drop({ kind: 'weapon', id: 'katta', p: [p[0], p[1], p[2] - 0.6] });
   }
 
   spawnEnemies(r) {
@@ -418,8 +541,28 @@ export class Game {
       if (Math.hypot(p[0] - sp.x, p[2] - sp.z) < 18) continue;
       if (r.chance(0.42)) E.spawn(r.chance(0.12) ? 'runner' : r.chance(0.08) ? 'brute' : 'walker', p[0], p[1], p[2], { inside: true, frozen: true });
     }
-    // zombies on the streets
-    for (let i = 0; i < 34; i++) this.spawnStreetZombie(r, 35);
+    // wandering zombies on the streets (fewer on phones)
+    const lite = this.lite = this.liteMode();
+    for (let i = 0; i < (lite ? 40 : 52); i++) this.spawnStreetZombie(r, 35);
+    // stationary ambush packs: stand still until you come close or fire a shot, then rush together
+    const packs = [
+      ['WAHAB', 0.3, 5], ['E2', 0.45, 5], ['E1', 0.4, 4], ['L2', 0.75, 5], ['SE', 0.4, 4], ['L1', 0.7, 4], ['SW', 0.55, 5], ['L3', 0.45, 4], ['STN', 0.5, 4],
+      // the approaches to the Maa Kamakhya Mandir (the secret staircase is in its courtyard)
+      ['ALIA', 0.12, 4], ['ALIA', 0.82, 4], ['WELLST', 0.4, 4], ['L2', 0.18, 4],
+    ];
+    for (const [name, t, n] of r.shuffle(packs.slice(0, 9)).slice(0, lite ? 5 : 9).concat(packs.slice(9))) {
+      const road = ROADS[name], i = roadInfo(road);
+      this.spawnPack(r, road.a[0] + i.ux * i.len * t, road.a[1] + i.uz * i.len * t, lite ? Math.max(3, n - 1) : n, 3.5);
+    }
+    // a few roaming mobs that drift slowly together (they chase as one when one of them sees you)
+    for (let i = 0; i < (lite ? 2 : 3); i++) {
+      const p = this.spawnStreetZombie(r, 60);
+      if (!p) continue;
+      for (let k = 0; k < 3; k++) { const q = this.freeSpot(p.pos.x, p.pos.z, 3, 40); if (q) this.enemies.spawn('walker', q[0], 0, q[1], { zone: 'mob' + i }); }
+      p.zone = 'mob' + i;
+    }
+    this.spawnThieves(r);
+    this.spawnTunnelEnemies();
     // human looter groups at a few landmarks
     const sites = r.shuffle([
       { c: [134, -140], route: [[118, -138], [150, -138], [150, -128], [118, -130]] },          // GGD forecourt
@@ -452,6 +595,8 @@ export class Game {
     }
     return null;
   }
+
+  liteMode() { try { return matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 600; } catch (e) { return false; } }
 
   inSanctuary(x, z) {
     for (const s of this.W.sanctuary) {
@@ -520,7 +665,7 @@ export class Game {
       el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     }
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
-    if (P.dead) this.gameOver(from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+    if (P.dead) this.gameOver(from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
   }
 
   noise(pos, radius, kind) { this.enemies.hear(pos, radius, kind); }
@@ -851,6 +996,7 @@ export class Game {
     this.flowT -= dt;
     if (this.flowT <= 0) { this.flowT = 0.35; this.nav.build(P.pos.x, P.pos.z); }
     this.enemies.update(dt, this.camera);
+    this.loot.update(this.time);
     this.updateDoors(dt);
     this.updateWorld(dt);
     this.updateTrains(dt);
@@ -895,6 +1041,7 @@ export class Game {
         if (Math.hypot(l.x - P.pos.x, l.z - P.pos.z) < l.dist * 0.5) { lit = true; break; }
       }
       this.playerLit = lit;
+      if (!this.secret.mode) this.townMap.discover(P.pos.x, P.pos.z);
       this.vis = lit ? 0.8 : inside ? 0.22 : 0.38;
     }
     this.audio.setListener(this.camera, !!this.inside || this.secret.underground);
@@ -935,8 +1082,8 @@ export class Game {
     this.spawnT -= dt;
     if (this.spawnT <= 0) {
       this.spawnT = this.obj.signal ? 2.5 : 9;
-      const alive = this.enemies.list.filter((e) => !e.dead && !e.human).length;
-      const target = Math.min(58, 34 + Math.floor(this.stats.t / 60) * 2 + (this.obj.signal ? 14 : 0));
+      const alive = this.enemies.list.filter((e) => !e.dead && !e.human && !e.zone && !e.tunnel).length;
+      const target = Math.min(this.lite ? 56 : 70, (this.lite ? 38 : 48) + Math.floor(this.stats.t / 60) * 2 + (this.obj.signal ? 14 : 0));
       if (alive < target) {
         const e = this.obj.signal
           ? this.spawnNear(110, -160, 35, 70)
@@ -944,7 +1091,7 @@ export class Game {
         if (e && this.obj.signal) { e.state = 'ALERT'; e.investigate = { x: 150, z: -160 }; }
       }
       // forget zombies that wandered very far away
-      for (const e of this.enemies.list) if (!e.dead && !e.human && e.dist > 150 && e.state === 'IDLE') e.dead = true, e.deathT = 41;
+      for (const e of this.enemies.list) if (!e.dead && !e.human && !e.zone && !e.tunnel && e.dist > 150 && e.state === 'IDLE') e.dead = true, e.deathT = 41;
     }
     // ceiling fans, flag, displays, lamp glows
     if (this.props.fans) {

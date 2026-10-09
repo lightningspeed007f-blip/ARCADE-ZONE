@@ -45,13 +45,39 @@ export class Loot {
     this.mat = mat;
     this.items = [];
     this.meshes = {};
+    this.beacon = null; this.nb = 0;
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._s = new THREE.Vector3(); this._v = new THREE.Vector3(); this._c = new THREE.Color();
   }
 
   clear() {
     for (const k in this.meshes) { this.scene.remove(this.meshes[k]); this.meshes[k].dispose(); }
     this.meshes = {}; this.items = [];
+    this.nb = 0;
+    if (this.beacon) { this.beacon.geometry.attributes.position.array.fill(-9999); this.beacon.geometry.attributes.position.needsUpdate = true; }
   }
+
+  // Weapons are small and dark, so each one gets a soft golden spark above it (one Points draw call
+  // for all of them). It is hidden by walls, so it only shows once you can actually see the gun.
+  _beaconFor(it) {
+    if (it.kind !== 'weapon') return;
+    if (!this.beacon) {
+      const N = 160, c = document.createElement('canvas'); c.width = c.height = 64;
+      const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,240,190,1)'); g.addColorStop(0.25, 'rgba(255,200,90,0.55)'); g.addColorStop(1, 'rgba(255,170,60,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3).fill(-9999), 3));
+      const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), size: 0.7, sizeAttenuation: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      this.beacon = new THREE.Points(geo, mat); this.beacon.frustumCulled = false; this.beacon.renderOrder = 5;
+      this.scene.add(this.beacon);
+    }
+    const pos = this.beacon.geometry.attributes.position;
+    if (this.nb >= pos.count) return;
+    it.bi = this.nb++;
+    pos.setXYZ(it.bi, it.p[0], it.p[1] + 0.32, it.p[2]);
+    pos.needsUpdate = true;
+  }
+
+  update(t) { if (this.beacon) this.beacon.material.opacity = 0.62 + 0.28 * Math.sin(t * 3.2); }
 
   // kind: 'food' | 'ammo' | 'weapon' | 'key' | 'fuse'
   add(it) {
@@ -60,6 +86,7 @@ export class Loot {
     it.color = it.kind === 'food' ? FOOD[it.id].color : it.kind === 'ammo' ? AMMO_COL[it.id] : 0xffffff;
     it.yaw = it.yaw ?? Math.random() * 6.28;
     this.items.push(it);
+    this._beaconFor(it);
     return it;
   }
 
@@ -77,7 +104,7 @@ export class Loot {
   }
 
   _set(it) {
-    const s = it.taken ? 0.0001 : 1;
+    const s = it.taken ? 0.0001 : it.kind === 'weapon' ? 1.7 : 1;
     this._v.set(it.p[0], it.p[1], it.p[2]); this._q.setFromEuler(new THREE.Euler(0, it.yaw, 0)); this._s.set(s, s, s);
     this._m.compose(this._v, this._q, this._s);
     it.im.setMatrixAt(it.ii, this._m);
@@ -86,6 +113,7 @@ export class Loot {
 
   take(it) {
     it.taken = true;
+    if (it.bi !== undefined && this.beacon) { this.beacon.geometry.attributes.position.setXYZ(it.bi, -9999, -9999, -9999); this.beacon.geometry.attributes.position.needsUpdate = true; }
     this._set(it);
     it.im.instanceMatrix.needsUpdate = true;
   }
