@@ -192,6 +192,8 @@ export class Audio {
     }
   }
 
+  has(name) { return !!(this.b[name] && this.b[name].length); }
+
   // Play a one-shot. pos = [x,y,z] for 3D, otherwise 2D.
   play(name, o = {}) {
     if (!this.ctx || !this.b[name]) return null;
