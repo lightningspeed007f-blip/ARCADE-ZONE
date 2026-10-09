@@ -33,6 +33,28 @@ export class Physics {
       (this.cells[id] || (this.cells[id] = [])).push(b);
     }
   }
+  _remove(b) {
+    const x0 = this._cx(b.minX), x1 = this._cx(b.maxX), z0 = this._cz(b.minZ), z1 = this._cz(b.maxZ);
+    for (let i = x0; i <= x1; i++) for (let k = z0; k <= z1; k++) {
+      const list = this.cells[k * this.nx + i];
+      if (!list) continue;
+      const j = list.indexOf(b);
+      if (j >= 0) list.splice(j, 1);
+    }
+  }
+
+  // Move an existing box (vehicles, the shrine crate). Only a few boxes ever move, so a remove +
+  // re-insert in the grid is cheap enough.
+  update(b, cx, cy, cz, yaw = 0) {
+    this._remove(b);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const ex = Math.abs(c) * b.hx + Math.abs(s) * b.hz, ez = Math.abs(s) * b.hx + Math.abs(c) * b.hz;
+    b.cx = cx; b.cy = cy; b.cz = cz; b.c = c; b.s = s;
+    b.minX = cx - ex; b.maxX = cx + ex; b.minZ = cz - ez; b.maxZ = cz + ez; b.minY = cy - b.hy; b.maxY = cy + b.hy;
+    this._insert(b);
+    return b;
+  }
+
   _cx(x) { return Math.max(0, Math.min(this.nx - 1, Math.floor((x - this.minX) / CELL))); }
   _cz(z) { return Math.max(0, Math.min(this.nz - 1, Math.floor((z - this.minZ) / CELL))); }
 

@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
 import { WEAPONS, AMMO } from './weapons.js';
+import { FIRE } from './explosives.js';
 
 // ---------- fixed geometry ----------
 const SX = -134, TOPZ = 26, STEPS = 24, RUN = 0.3, RISE = 0.25;   // stairs under the temple
@@ -413,6 +414,18 @@ function valley(W) {
   W.special.secret = { X0, statue: STATUE, lake: LAKE };
 }
 
+// The divine crate: a wooden chest bound in brass with a glowing ॐ, lid on a back hinge.
+function omTexture() {
+  const [c, x] = canvas(256, 256);
+  x.fillStyle = '#5a3418'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? '30,16,6' : '120,80,40'},0.25)`; x.fillRect(0, Math.random() * 256, 256, 1 + Math.random() * 3); }
+  x.strokeStyle = '#d8a030'; x.lineWidth = 10; x.strokeRect(10, 10, 236, 236);
+  x.fillStyle = '#ffd060'; x.shadowColor = '#ffb030'; x.shadowBlur = 24;
+  x.font = 'bold 150px "Noto Sans Devanagari", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('ॐ', 128, 140);
+  return tex(c);
+}
+
 // ====================== live part ======================
 export class Secret {
   constructor(game) {
@@ -420,6 +433,9 @@ export class Secret {
     this.mode = false; this.revealed = false; this.glowK = 0.2; this.underground = false;
     this.opened = false; this.lidT = 0;
     this.armed = false; this.lastZ = null;
+    this.magicK = 0; this.magic = null; this.triggered = false;
+    this.revealU = { value: 0 };
+    this.crate = null;
   }
 
   build() {
@@ -472,11 +488,26 @@ export class Secret {
     // the night haze (fog) still settles on it with distance
     const ft = T(sc.c); ft.anisotropy = 8;
     const statueMat = new THREE.MeshBasicMaterial({ map: ft, transparent: true, alphaTest: 0.03, depthWrite: true, toneMapped: false, color: 0xf2f0ec });
+    // "out of thin air": the figure is drawn in by light from his feet up to his crown. uReveal 0 = not
+    // there at all, 1 = whole. A grain of noise breaks the line and its edge burns gold.
+    const RU = this.revealU;
+    statueMat.onBeforeCompile = (sh) => {
+      sh.uniforms.uReveal = RU;
+      sh.fragmentShader = 'uniform float uReveal;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+        float rn = fract(sin(dot(floor(vMapUv * vec2(70.0, 120.0)), vec2(12.9898, 78.233))) * 43758.5453);
+        float rv = vMapUv.y * 0.82 + rn * 0.18;
+        float rth = uReveal * 1.25 - 0.1;
+        if (rv > rth) discard;
+        float redge = smoothstep(rth - 0.07, rth, rv) * step(uReveal, 0.999);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.7, 1.25, 0.55), redge);`);
+    };
+    statueMat.customProgramCacheKey = () => 'shivReveal';
     const fig = add(new THREE.Mesh(reliefGeometry(Wd, H, sc.depth, 2.6 * H / 58), statueMat), 0, baseY + H / 2, 3);
     // mist in front of the base and across the lake
     const M1 = add(new THREE.Mesh(new THREE.PlaneGeometry(90 * k * 0.7, 16 * k * 0.7), additive(bandTexture(255, 190, 110), 0xffffff, 0.55)), 8, 5, 4);
     const M2 = add(new THREE.Mesh(new THREE.PlaneGeometry(240, 26), additive(bandTexture(120, 140, 200), 0xffffff, 0.16)), 40, 6, 4);
-    this.layers = [[L1, 0.72], [L2, 0.46], [L3, 0.11], [L4, 0.22], [M1, 0.55], [M2, 0.16]];
+    // [mesh, opacity, belongs to the statue (hidden until he appears)]
+    this.layers = [[L1, 0.72, true], [L2, 0.46, true], [L3, 0.11, true], [L4, 0.22, true], [M1, 0.55], [M2, 0.16]];
     this.rays = L2; this.fig = fig;
     // far golden horizon behind everything, lighting the back cliffs
     const hor = new THREE.Mesh(new THREE.PlaneGeometry(560, 170), additive(bandTexture(255, 170, 70), 0xffffff, 0.3));
@@ -494,15 +525,49 @@ export class Secret {
     const moon = this.halfMoon = new THREE.Sprite(new THREE.SpriteMaterial({ map: halfMoonTexture(), fog: false, depthWrite: false, toneMapped: false, color: 0xe8eeff }));
     moon.position.set(X - 300, 560, -600); moon.scale.setScalar(90); moon.renderOrder = 0;   // raised (and pushed back) to stay clear of the colossus, inside the 900 m sky dome
     scene.add(moon);
+    // the appearance: a pillar of light and a blinding flash at the statue
+    this.pillar = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 24, 1, true), additive(columnTexture(), 0xffd890, 0));
+    this.pillar.material.side = THREE.DoubleSide; this.pillar.position.set(X, 0, S.z + 4); this.pillar.renderOrder = 5; this.pillar.visible = false; scene.add(this.pillar);
+    this.burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: g.tex.glow, color: 0xffe8b0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false, transparent: true, opacity: 0 }));
+    this.burst.position.set(X, H * 0.45, S.z + 10); this.burst.visible = false; this.burst.renderOrder = 6; scene.add(this.burst);
+    this.statueH = H; this.statueW = Wd;
+    this.buildCrate();
     this.setLayers(this.glowK);
     this.drone = null;
   }
 
-  setLayers(k) { for (const [m, o] of this.layers) m.material.opacity = o * k; }
+  buildCrate() {
+    const g = this.g, grp = new THREE.Group();
+    const wood = new THREE.MeshLambertMaterial({ map: g.tex.wood, color: 0x9a6a40 }), brass = new THREE.MeshPhongMaterial({ color: 0xd4a020, emissive: 0x3a2800, shininess: 80 });
+    const om = new THREE.MeshLambertMaterial({ map: omTexture(), emissive: 0xffb040, emissiveIntensity: 0.35, emissiveMap: null });
+    const W = 1.5, H = 0.8, D = 1.0;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), [wood, wood, wood, wood, om, om]); body.position.y = H / 2; grp.add(body);
+    for (const x of [-W / 2 + 0.12, W / 2 - 0.12]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, H + 0.02, D + 0.02), brass); b.position.set(x, H / 2, 0); grp.add(b); }
+    const lid = this.crateLid = new THREE.Group(); lid.position.set(0, H, -D / 2); grp.add(lid);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.14, D + 0.04), [wood, wood, om, wood, wood, wood]); top.position.set(0, 0.07, D / 2); lid.add(top);
+    for (const x of [-W / 2 + 0.12, W / 2 - 0.12]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, D + 0.06), brass); b.position.set(x, 0.07, D / 2); lid.add(b); }
+    // the glow inside, seen when the lid opens
+    const inner = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.1, D - 0.1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffd070, toneMapped: false }));
+    inner.position.y = H - 0.02; grp.add(inner);
+    this.crateGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: g.tex.glow, color: 0xffc860, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, transparent: true }));
+    this.crateGlow.scale.setScalar(4); this.crateGlow.position.y = 0.7; grp.add(this.crateGlow);
+    grp.visible = false;
+    g.scene.add(grp);
+    this.crate = grp;
+    this.crateBox = g.physics.add(-2000, -50, 0, W / 2, H / 2, D / 2, 0, 'crate'); this.crateBox.enabled = false;
+    this.crateLight = { x: 0, y: 1.6, z: 0, color: 0xffc060, intensity: 7, dist: 12, on: false, phase: 0, dynamic: true, major: true };
+    g.W.lights.push(this.crateLight);
+  }
+
+  setLayers(k) { for (const [m, o, statue] of this.layers) m.material.opacity = o * k * (statue ? this.magicK : 1); }
 
   reset() {
     this.opened = false; this.lidT = 0; this.revealed = false; this.glowK = 0.2;
     this.armed = false; this.lastZ = null; this._musicIn = false;
+    // the valley is empty again until he appears
+    this.triggered = false; this.magic = null; this.magicK = 0; this.revealU.value = 0;
+    this.fig.visible = false; this.pillar.visible = false; this.burst.visible = false;
+    this.crateState = 'none'; this.crate.visible = false; this.crateBox.enabled = false; this.crateLight.on = false; this.crateLid.rotation.x = 0;
     this.g.audio.fade('shivMusic', 0, 0);
     this.lid.rotation.z = 0; this.leak.visible = true; this.lidBox.enabled = true;
     this.setLayers(this.glowK);
@@ -512,12 +577,14 @@ export class Secret {
 
   // ---- interaction with the trapdoor ----
   consider(fn) {
+    if (this.crateState === 'landed') { const c = this.crate.position; fn([c.x, 0.8, c.z], 2.8, { type: 'secret', what: 'crate' }); }
     if (this.opened) return;
     const m = this.g.W.stairMask, P = this.g.player.pos;
     fn([C1.x0 + 1.1, 0.15, clamp(P.z, m.z0 + 0.4, m.z1 - 0.4)], 2.6, { type: 'secret' });
   }
-  prompt() { return ['OPEN', 'पुराना तख़्ता · old trapdoor']; }
-  use() {
+  prompt(t) { return t && t.what === 'crate' ? ['OPEN', 'दिव्य शस्त्र-पेटी · divine weapons crate'] : ['OPEN', 'पुराना तख़्ता · old trapdoor']; }
+  use(t) {
+    if (t && t.what === 'crate') return this.openCrate();
     if (this.opened) return;
     this.opened = true; this.lidBox.enabled = false; this.leak.visible = false;
     const a = this.g.audio;
@@ -555,10 +622,11 @@ export class Secret {
     if (!this.armed && p.y < FLOOR_A + 1 && p.y > FLOOR_A - 1 && p.x > C1.x0 - 0.2 && p.x < C1.x1 + 0.2 && p.z < C1.z1 + 0.4 && p.z > C1.z0) this.arm();
     // the reveal: round the blind corner (about halfway through) and walking down the last
     // corridor toward the valley, Shivji's golden glow fills the mouth ahead
-    const towardValley = this.lastZ !== null && p.z < this.lastZ - 1e-4;
     this.lastZ = p.z;
-    if (inB && !this.revealed && p.x > C3.x0 + O.x - 0.3 && p.x < C3.x1 + O.x + 0.3 && (p.z < 6 || (p.z < C2.z0 - 0.8 && towardValley))) this.reveal();
-    if (inB && !this.revealed && p.z < -2.5) this.reveal();   // (safety net: already out in the valley)
+    // the valley is empty when you walk out of the tunnel; a few steps onto the path and he appears
+    if (inB && !this.triggered && p.z < -3.2) { this.triggered = true; this.magic = { t: 0, flashed: false, crate: false }; this.g.audio.play('magic', { vol: 0.9, verbAmt: 1.3 }); this.g.audio.play('bell', { vol: 0.35, rate: 0.5, verbAmt: 1.4 }); }
+    if (this.magic) this.appear(dt);
+    this.crateUpdate(dt);
     if (this.revealed && this.glowK < 1) { this.glowK = Math.min(1, this.glowK + dt / 5); this.setLayers(this.glowK * this.glowK * (3 - 2 * this.glowK)); }
     if (this.mode) {
       // keep the colossus turned toward the visitor (he never shows his edge)
@@ -567,7 +635,7 @@ export class Secret {
       sg.rotation.y += (yaw - sg.rotation.y) * Math.min(1, dt * 2);
       this.rays.rotation.z += dt * 0.012;
       const t = g.time;
-      this.layers[0][0].material.opacity = 0.72 * this.glowK * (0.94 + Math.sin(t * 0.7) * 0.06);
+      this.layers[0][0].material.opacity = 0.72 * this.glowK * this.magicK * (0.94 + Math.sin(t * 0.7) * 0.06);
       // with the Shivji music loaded the drone sits underneath it; otherwise it carries the scene alone
       if (this.drone && this.drone.gain) this.drone.gain.gain.value = g.audio.hasTrack('shivMusic') ? 0.14 : 0.4;
     } else if (this.drone && this.drone.gain) this.drone.gain.gain.value = 0;
@@ -607,11 +675,124 @@ export class Secret {
     g.updateHud(true);
   }
 
-  reveal() {
-    this.revealed = true;
-    const a = this.g.audio;
-    a.play('bell', { vol: 0.7, rate: 0.5, verbAmt: 1.4 });
-    a.play('bell', { vol: 0.4, rate: 0.75, verbAmt: 1.4, delay: 1.6 });
-    if (!this.drone) this.drone = a.loop('drone', 0.4, a.sfx);
+  // ---- the appearance, out of thin air ----
+  appear(dt) {
+    const g = this.g, m = this.magic, X = g.explosives, S = STATUE, P = g.player.pos, H = this.statueH;
+    m.t += dt;
+    const t = m.t;
+    // 1) gathering: golden motes swirl in toward the empty spot and a pillar of light grows (0 - 3 s)
+    if (t < 3.6) {
+      const n = Math.floor((m.acc = (m.acc || 0) + dt * 70)); m.acc -= n;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, r = 25 + Math.random() * 55, y = Math.random() * 60;
+        const x = X0 + Math.cos(a) * r, z = S.z + 8 + Math.sin(a) * r * 0.6;
+        X.fire.emit(x, y, z, -Math.cos(a) * r * 0.3 - Math.sin(a) * 9, 5 + Math.random() * 9, -Math.sin(a) * r * 0.18 + Math.cos(a) * 6, 2.4 + Math.random(), 3 + Math.random() * 3, 0.8, FIRE.gold, FIRE.white, 0.9, 1, 0.3);
+      }
+      // and a few right around the player, drifting toward him
+      if (Math.random() < dt * 25) X.fire.emit(P.x + (Math.random() - 0.5) * 8, 0.2 + Math.random() * 2, P.z + (Math.random() - 0.5) * 8, 0, 0.6 + Math.random(), -2 - Math.random() * 3, 3, 0.18, 0.05, FIRE.gold, FIRE.white, 1, 0.3, 0.1);
+      const k = clamp(t / 3, 0, 1);
+      this.pillar.visible = true; this.pillar.scale.set(1 + k * 16, 900, 1 + k * 16); this.pillar.position.y = 0;
+      this.pillar.material.opacity = 0.05 + k * 0.45;
+      g.player.shake = Math.max(g.player.shake, 0.06 + k * 0.12);
+    }
+    // 2) the flash
+    if (t >= 3 && !m.flashed) {
+      m.flashed = true;
+      const fl = document.getElementById('flash'); fl.classList.remove('show'); void fl.offsetWidth; fl.classList.add('show');
+      g.audio.play('explosion', { vol: 0.7, rate: 0.42, verbAmt: 1.5, vary: 0 });
+      g.audio.play('bell', { vol: 0.9, rate: 0.5, verbAmt: 1.6 });
+      g.audio.play('bell', { vol: 0.5, rate: 0.75, verbAmt: 1.6, delay: 1.4 });
+      g.player.shake = Math.max(g.player.shake, 0.7);
+      this.burst.visible = true;
+      this.fig.visible = true;
+      this.revealed = true;                       // the Shivji music and drone start now
+      if (!this.drone) this.drone = g.audio.loop('drone', 0.4, g.audio.sfx);
+    }
+    if (m.flashed) {
+      const k = t - 3;
+      this.burst.scale.setScalar(80 + k * 420); this.burst.material.opacity = Math.max(0, 1 - k / 1.6);
+      if (k > 1.6) this.burst.visible = false;
+      // 3) he is drawn in by light, feet to crown (5 s), the glow behind him rising with it
+      const u = clamp(k / 5, 0, 1);
+      this.revealU.value = u * u * (3 - 2 * u);
+      this.magicK = clamp(k / 4, 0, 1);
+      this.setLayers(this.glowK * this.glowK * (3 - 2 * this.glowK));
+      this.pillar.material.opacity = Math.max(0, 0.5 - k * 0.12);
+      if (this.pillar.material.opacity <= 0) this.pillar.visible = false;
+      // sparks along the line where the figure is appearing
+      if (u < 1) {
+        const ey = clamp((this.revealU.value * 1.25 - 0.1) / 0.82, 0, 1) * H;
+        for (let i = 0; i < 4; i++) X.fire.emit(X0 + (Math.random() - 0.5) * this.statueW * 0.55, ey, S.z + 6, (Math.random() - 0.5) * 6, 2 + Math.random() * 6, 3, 1.2 + Math.random(), 4 + Math.random() * 4, 1, FIRE.white, FIRE.gold, 1, -2, 0.3);
+      }
+    }
+    // 4) a gift falls from the sky in front of you
+    if (t > 8.6 && !m.crate) {
+      m.crate = true;
+      g.banner('हर हर महादेव', 'SHIVJI HAS APPEARED · A GIFT FALLS FROM THE SKY', 'divine');
+      this.dropCrate();
+    }
+    if (t > 11) this.magic = null;
   }
+
+  dropCrate() {
+    const P = this.g.player.pos;
+    let z = clamp(P.z - 8, -80, -10);
+    if (Math.abs(z - P.z) < 3) z = clamp(P.z - 4, -80, -8);
+    this.crateAt = { x: X0, z };
+    this.crateState = 'falling'; this.crateT = 0;
+    this.crate.visible = true; this.crate.position.set(X0, 60, z); this.crate.rotation.set(0, 0.35, 0);
+    this.crateLid.rotation.x = 0;
+  }
+
+  crateUpdate(dt) {
+    const g = this.g, c = this.crate, X = g.explosives;
+    if (this.crateState === 'falling') {
+      this.crateT += dt;
+      const k = clamp(this.crateT / 1.5, 0, 1);
+      c.position.y = 60 * (1 - k * k);
+      c.rotation.y = 0.35 + (1 - k) * 3;
+      X.fire.emit(c.position.x + (Math.random() - 0.5), c.position.y + 1, c.position.z + (Math.random() - 0.5), 0, 2, 0, 1.2, 1.2, 0.3, FIRE.gold, FIRE.white, 0.9);
+      if (k >= 1) {
+        this.crateState = 'landed';
+        const A = this.crateAt;
+        g.audio.play('bang', { pos: [A.x, 0.5, A.z], vol: 1, rate: 0.7 }); g.audio.play('slam', { pos: [A.x, 0.5, A.z], vol: 0.8, rate: 0.6 });
+        g.player.shake = Math.max(g.player.shake, 0.5);
+        for (let i = 0; i < 24; i++) { const a = i / 24 * 6.28; X.smoke.emit(A.x, 0.3, A.z, Math.cos(a) * 4, 0.5, Math.sin(a) * 4, 1.6, 0.6, 2.4, [0.5, 0.47, 0.42], [0.4, 0.38, 0.35], 0.45, 0.2, 2); }
+        for (let i = 0; i < 40; i++) { const a = Math.random() * 6.28, sp = 2 + Math.random() * 5; X.fire.emit(A.x, 0.6, A.z, Math.cos(a) * sp, 2 + Math.random() * 5, Math.sin(a) * sp, 1 + Math.random(), 0.35, 0.08, FIRE.gold, FIRE.white, 1, -5, 0.5); }
+        g.physics.update(this.crateBox, A.x, 0.4, A.z, 0.35); this.crateBox.enabled = true;
+        Object.assign(this.crateLight, { x: A.x, y: 1.6, z: A.z, on: true });
+        g.toast('दिव्य शस्त्र-पेटी', g.input.touch ? 'A divine weapons crate — walk up and press USE.' : 'A divine weapons crate — walk up and press E.');
+      }
+    } else if (this.crateState === 'landed' || this.crateState === 'opened') {
+      const t = g.time, open = this.crateState === 'opened';
+      this.crateGlow.material.opacity = open ? Math.max(0, this.crateGlow.material.opacity - dt * 0.4) : 0.55 + Math.sin(t * 3) * 0.2;
+      if (!open && Math.random() < dt * 8) X.fire.emit(c.position.x + (Math.random() - 0.5) * 1.4, 0.9, c.position.z + (Math.random() - 0.5) * 0.9, 0, 0.8 + Math.random(), 0, 1.5, 0.12, 0.04, FIRE.gold, FIRE.white, 1, 0.2, 0.2);
+      if (open && this.crateLid.rotation.x > -1.9) this.crateLid.rotation.x = Math.max(-1.9, this.crateLid.rotation.x - dt * 5);
+    }
+  }
+
+  // Shivji's gift: three guns, ammunition, and a rocket launcher with five rockets.
+  openCrate() {
+    if (this.crateState !== 'landed') return;
+    this.crateState = 'opened';
+    const g = this.g, A = g.arsenal, c = this.crate.position;
+    g.audio.play('creak', { pos: [c.x, 0.8, c.z], vol: 0.8, rate: 1.3 }); g.audio.play('magic', { vol: 0.5, rate: 1.4 });
+    for (let i = 0; i < 50; i++) { const a = Math.random() * 6.28, sp = 1 + Math.random() * 3; g.explosives.fire.emit(c.x, 0.9, c.z, Math.cos(a) * sp, 3 + Math.random() * 5, Math.sin(a) * sp, 1.4 + Math.random(), 0.3, 0.06, FIRE.gold, FIRE.white, 1, -3, 0.6); }
+    const gifts = [['pistol', 24], ['revolver', 12], ['dunali', 10]];
+    for (const [id, n] of gifts) {
+      const w = WEAPONS[id], fresh = A.give(id);
+      A.reserve[w.ammo] += n;
+      g.feed(fresh ? '+ ' + w.name : `+${w.mag} ${AMMO[w.ammo]}`); g.feed(`+${n} ${AMMO[w.ammo]}`);
+    }
+    A.reserve['7.62'] += 60; g.feed(`+60 ${AMMO['7.62']}`);
+    const fresh = A.give('rpg');
+    A.reserve.rocket += 4;                           // one in the tube + four spare = five rockets
+    A.equip('rpg');
+    g.feed(fresh ? '+ ' + WEAPONS.rpg.name : '+ ' + AMMO.rocket); g.feed('+5 ' + AMMO.rocket);
+    g.stats.supplies += 5;
+    g.toast('शिवजी का आशीर्वाद', 'Pistol, revolver, double barrel, rifle rounds — and a ROCKET LAUNCHER with 5 rockets.');
+    g.updateHud(true);
+  }
+
+
 }

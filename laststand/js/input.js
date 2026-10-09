@@ -1,6 +1,9 @@
 // Keyboard + mouse (pointer lock) and touch controls (joystick, look pad, buttons).
 import { store } from './util.js';
 
+// touch buttons that act while held down (the jeep's pedals and steering)
+const HOLD = new Set(['gas', 'brake', 'steerL', 'steerR']);
+
 export class Input {
   constructor(canvas, ui) {
     this.canvas = canvas; this.ui = ui;
@@ -9,6 +12,7 @@ export class Input {
     this.keys = {};
     this.fire = false; this.aim = false; this.sprint = false; this.crouch = false;
     this.pressed = new Set();
+    this.hold = {};
     this.touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.settings = Object.assign({ sens: 1, touchSens: 1, invertY: false, btnScale: 1, leftHanded: false, bob: true, minimap: true, quality: 'auto' }, store('jls_settings') || {});
     this.enabled = false;
@@ -22,14 +26,14 @@ export class Input {
   consume(a) { const h = this.pressed.has(a); this.pressed.delete(a); return h; }
 
   _bindKeys() {
-    const map = { KeyR: 'reload', KeyE: 'use', KeyF: 'torch', KeyQ: 'swap', KeyH: 'eat', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Digit1: 'w1', Digit2: 'w2', Digit3: 'w3', Digit4: 'w4', KeyV: 'melee' };
+    const map = { KeyR: 'reload', KeyE: 'use', KeyF: 'torch', KeyQ: 'swap', KeyH: 'eat', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Digit1: 'w1', Digit2: 'w2', Digit3: 'w3', Digit4: 'w4', Digit5: 'w5', Digit6: 'w6', Digit7: 'w7', KeyV: 'melee', KeyG: 'drive' };
     addEventListener('keydown', (e) => {
       if (!this.enabled) return;
       this.keys[e.code] = true;
       if (map[e.code] && !e.repeat) this.tap(map[e.code]);
       if (e.code === 'KeyC' && !e.repeat) this.crouch = !this.crouch;
       if (e.code === 'ControlLeft') this.crouch = true;
-      if (e.code === 'Tab') e.preventDefault();
+      if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
     });
     addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'ControlLeft') this.crouch = false; });
   }
@@ -127,18 +131,22 @@ export class Input {
         if (!this.enabled) return;
         const a = b.dataset.act;
         b.classList.add('down');
-        if (a === 'fire') { this.fire = true; const t = e.changedTouches[0]; this._fireTouch = { id: t.identifier, x: t.clientX, y: t.clientY }; }
+        if (HOLD.has(a)) this.hold[a] = true;
+        else if (a === 'fire') { this.fire = true; const t = e.changedTouches[0]; this._fireTouch = { id: t.identifier, x: t.clientX, y: t.clientY }; }
         else if (a === 'aim') this.aim = !this.aim;
         else if (a === 'sprint') this.sprint = !this.sprint;
         else if (a === 'crouch') this.crouch = !this.crouch;
         else this.tap(a);
       }, { passive: false });
-      b.addEventListener('touchend', (e) => {
+      const up = (e) => {
         e.preventDefault();
         b.classList.remove('down');
         if (this.editMode) return this._dragEnd();
         if (b.dataset.act === 'fire') { this.fire = false; this._fireTouch = null; }
-      }, { passive: false });
+        if (HOLD.has(b.dataset.act)) this.hold[b.dataset.act] = false;
+      };
+      b.addEventListener('touchend', up, { passive: false });
+      if (HOLD.has(b.dataset.act)) b.addEventListener('touchcancel', up, { passive: false });
     });
     this.applyLayout();
   }
@@ -179,7 +187,7 @@ export class Input {
 
   resetState() {
     this.move.x = this.move.y = 0; this.look.x = this.look.y = 0;
-    this.fire = this.aim = this.sprint = this.crouch = false; this.pressed.clear(); this.keys = {};
+    this.fire = this.aim = this.sprint = this.crouch = false; this.pressed.clear(); this.keys = {}; this.hold = {};
     this._joy = this._lookTouch = this._fireTouch = null;
     this.joyBase?.classList.remove('on');
   }

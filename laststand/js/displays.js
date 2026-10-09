@@ -1,5 +1,5 @@
 // Places the user's images in the world: photo frames, flex banners,
-// the Maa Kamakhya images and the illuminated Shivji display.
+// and the Maa Kamakhya images.
 import * as THREE from 'three';
 import { coverFit } from './assets.js';
 
@@ -54,36 +54,7 @@ export function buildDisplays(W, scene, A, tex) {
     const mat = new THREE.MeshBasicMaterial({ map: K.texture, toneMapped: false, color: key === 'kamakhyaIdol' ? 0xffe8d0 : 0xffffff });
     planeAt(scene, mat, s.F.world(s.x, s.y, s.z), s.F.yaw + s.faceYaw, w, h, 0.02);
   }
-  // ---- Shivji: illuminated display ----
-  const S = W.special.shiv, SH = A.shivji;
-  if (S && SH) {
-    const yaw = S.F.yaw + S.faceYaw;
-    const h = S.h, w = Math.min(4.6, h * SH.aspect);
-    const hh = w / SH.aspect; // keep the image's real proportions
-    const base = S.F.world(S.x, S.y + hh / 2 + 0.05, S.z);
-    const fx = Math.sin(yaw), fz = Math.cos(yaw);
-    // halo behind the figure
-    const haloMat = new THREE.MeshBasicMaterial({ map: tex.halo, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: 0xffe6c0, opacity: 0.55 });
-    const halo = planeAt(scene, haloMat, [base[0] - fx * 0.12, base[1] + hh * 0.08, base[2] - fz * 0.12], yaw, Math.max(w, hh) * 1.25, Math.max(w, hh) * 1.25);
-    halo.renderOrder = 1;
-    // soft bloom: blurred copy of the figure, additive, slightly larger
-    const bloomMat = new THREE.MeshBasicMaterial({ map: SH.glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: 0x9fc4ff, opacity: 0.32 });
-    const bloom = planeAt(scene, bloomMat, [base[0] - fx * 0.06, base[1], base[2] - fz * 0.06], yaw, w * 1.12, hh * 1.12);
-    bloom.renderOrder = 2;
-    // the figure itself: unlit so it reads as self-illuminated, alpha keeps its silhouette
-    const figMat = new THREE.MeshBasicMaterial({ map: SH.texture, transparent: true, alphaTest: 0.02, toneMapped: false, color: 0xf4f6ff, depthWrite: true });
-    const fig = planeAt(scene, figMat, base, yaw, w, hh, 0);
-    fig.renderOrder = 3;
-    // faint volumetric beam from above
-    const beamMat = new THREE.MeshBasicMaterial({ map: tex.beam, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.07, color: 0xcfe0ff, toneMapped: false });
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.2, Math.max(w, 1.6) * 0.55, hh + 1.6, 20, 1, true), beamMat);
-    beam.position.set(base[0] + fx * 0.5, base[1] + 0.6, base[2] + fz * 0.5);
-    scene.add(beam);
-    // light spill on the courtyard (handled by the light pool as a major light)
-    W.lights.push({ x: base[0] + fx * 1.8, y: base[1] + 0.5, z: base[2] + fz * 1.8, color: 0xcfe0ff, intensity: 9, dist: 14, major: true, shiv: true });
-    out.halo = halo; out.bloom = bloom; out.beam = beam;
-    out.shivPos = base;
-  }
+  // (Shivji is no longer shown in the temple courtyard: he appears only in the hidden Shivdham, see secret.js)
   return out;
 }
 

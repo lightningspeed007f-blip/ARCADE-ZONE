@@ -90,6 +90,31 @@ body.playing #hud { display: block; }
 #hurtDir { position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; transform: translate(-50%,-50%); opacity: 0; }
 #hurtDir::before { content: ''; position: absolute; left: 50%; top: 0; width: 46px; height: 12px; margin-left: -23px; background: radial-gradient(ellipse at center, rgba(255,40,30,.95), transparent 70%); }
 #hurtDir.show { animation: vig 1s ease-out; }
+/* boss bar, banners, the reveal flash */
+#bossHud { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); width: min(52vw, 560px); text-align: center; opacity: 0; transition: opacity .8s; text-shadow: 0 1px 3px #000; pointer-events: none; }
+#bossHud.show { opacity: 1; }
+#bossHud.show.gone { opacity: 0; transition: opacity 3s; }
+#bossName { font-family: 'Noto Sans Devanagari'; font-size: 18px; font-weight: 800; color: #ffd9c0; letter-spacing: 2px; line-height: 1.1; }
+#bossName small { display: block; font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 3px; color: #e0a080; font-weight: 700; }
+#bossHud .bar { position: relative; height: 10px; margin-top: 4px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,120,80,.55); border-radius: 2px; overflow: hidden; }
+#bossTrail { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #f2d2a6; }
+#bossFill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #6a0805, #e0301a); }
+#bossHud.rage #bossFill { background: linear-gradient(90deg, #a00a06, #ff6a1a); animation: rage .5s infinite alternate; }
+@keyframes rage { from { filter: brightness(1); } to { filter: brightness(1.6); } }
+#bossHud.pulse .bar { animation: bpulse .5s 4; }
+@keyframes bpulse { 50% { box-shadow: 0 0 18px rgba(255,60,30,.9); } }
+body.touch #bossHud { top: 8px; width: min(44vw, 420px); }
+#banner { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); text-align: center; opacity: 0; pointer-events: none; white-space: nowrap; }
+#banner.show { animation: banner 4.4s ease forwards; }
+#banner b { display: block; font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif; font-size: clamp(30px, 6vw, 66px); font-weight: 800; letter-spacing: 6px; color: #ff5a3a; text-shadow: 0 0 26px rgba(255,60,30,.65), 0 2px 6px #000; }
+#banner span { font-size: clamp(11px, 1.6vw, 15px); letter-spacing: 4px; color: #f0c8a0; text-shadow: 0 1px 4px #000; }
+#banner.win b { color: var(--gold); text-shadow: 0 0 26px rgba(232,176,74,.7), 0 2px 6px #000; }
+#banner.divine b { color: #ffe6a0; text-shadow: 0 0 30px rgba(255,200,90,.9), 0 2px 6px #000; }
+@keyframes banner { 0% { opacity: 0; transform: translateX(-50%) scale(1.3); } 12% { opacity: 1; transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scale(1); } }
+#flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(255,246,220,.98), rgba(255,200,120,.55) 70%); opacity: 0; pointer-events: none; }
+#flash.show { animation: flash 2.2s ease-out; }
+@keyframes flash { 0% { opacity: 0; } 6% { opacity: .95; } 100% { opacity: 0; } }
+body.driving #cross, body.driving #hitm, body.driving #searchRing { display: none; }
 #fps { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); font-size: 11px; color: #9f9; text-shadow: 0 1px 2px #000; }
 
 /* ---------- touch controls ---------- */
@@ -116,6 +141,18 @@ body.playing.touch #touch { display: block; }
 body.nomini [data-act=swap] { right: calc(26px + env(safe-area-inset-right)); top: auto; bottom: 238px; }
 [data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
 [data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
+/* jeep: DRIVE appears beside the jeep; pedals and steering replace the on-foot buttons while driving */
+#touch .tb.drv, #touch [data-act=drive] { display: none; }
+body.driving #touch .tb.foot { display: none; }
+body.driving #touch .tb.drv, body.canDrive #touch [data-act=drive], body.driving #touch [data-act=drive] { display: flex; }
+#touch [data-act=drive] { right: calc(108px + env(safe-area-inset-right)); bottom: 180px; border-color: rgba(127,201,122,.75); color: #c8f0c0; }
+#touch [data-act=drive] .o, body.driving #touch [data-act=drive] .i { display: none; }
+body.driving #touch [data-act=drive] .o { display: inline; }
+[data-act=gas] { right: calc(26px + env(safe-area-inset-right)); bottom: 54px; }
+[data-act=brake] { right: calc(124px + env(safe-area-inset-right)); bottom: 30px; }
+[data-act=steerL] { left: calc(24px + env(safe-area-inset-left)); bottom: 34px; }
+[data-act=steerR] { left: calc(118px + env(safe-area-inset-left)); bottom: 34px; }
+#touch .tb.drv { font-size: calc(13px * var(--btn)); }
 #minimap { position: absolute; right: calc(16px + env(safe-area-inset-right)); top: 14px; width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 2px 12px rgba(0,0,0,.6); opacity: .92; }
 body.touch #minimap { top: 62px; width: 112px; height: 112px; }
 body.nomini #minimap { display: none; }
@@ -196,6 +233,9 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <div id="hp"><div class="row"><span id="hpNum">100</span><small>HEALTH</small></div><div class="bar"><div id="hpFill"></div></div><div id="stamWrap"><div id="stam"></div></div></div>
   <div id="lowhp"></div>
   <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div></div>
+  <div id="bossHud"><div id="bossName"></div><div class="bar"><div id="bossTrail"></div><div id="bossFill"></div></div></div>
+  <div id="banner"></div>
+  <div id="flash"></div>
   <div id="fps" class="hidden"></div>
   <canvas id="minimap"></canvas>
 </div>
@@ -203,15 +243,20 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
 <div id="touch">
   <div id="touchZone"></div>
   <div id="joy"><div id="joyKnob"></div></div>
-  <button class="tb big" data-act="fire">FIRE</button>
-  <button class="tb" data-act="aim">AIM</button>
-  <button class="tb" data-act="reload">RELOAD</button>
-  <button class="tb" data-act="use" id="btnUse">USE</button>
-  <button class="tb" data-act="crouch">CROUCH</button>
-  <button class="tb" data-act="sprint">RUN</button>
-  <button class="tb" data-act="swap">SWAP</button>
+  <button class="tb big foot" data-act="fire">FIRE</button>
+  <button class="tb foot" data-act="aim">AIM</button>
+  <button class="tb foot" data-act="reload">RELOAD</button>
+  <button class="tb foot" data-act="use" id="btnUse">USE</button>
+  <button class="tb foot" data-act="crouch">CROUCH</button>
+  <button class="tb foot" data-act="sprint">RUN</button>
+  <button class="tb foot" data-act="swap">SWAP</button>
   <button class="tb" data-act="eat" id="btnEat">EAT<small id="foodCount">0</small></button>
-  <button class="tb" data-act="torch" id="torchBtn">TORCH</button>
+  <button class="tb foot" data-act="torch" id="torchBtn">TORCH</button>
+  <button class="tb" data-act="drive"><span class="i">DRIVE</span><span class="o">EXIT</span></button>
+  <button class="tb big drv" data-act="gas">GAS</button>
+  <button class="tb drv" data-act="brake">BRAKE<small>REV</small></button>
+  <button class="tb big drv" data-act="steerL">◀</button>
+  <button class="tb big drv" data-act="steerR">▶</button>
   <button class="tb" data-act="map" id="mapBtn" aria-label="Map"></button>
   <button id="pauseBtn">II</button>
 </div>
@@ -270,6 +315,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li>AIM · RELOAD · USE · CROUCH · RUN · SWAP</li>
       <li>EAT — eats food from your bag (the only way to heal).</li>
       <li>TORCH — flashlight (people can see you from further away).</li>
+      <li>DRIVE — appears next to the jeep. Then ◀ ▶ steer, GAS, BRAKE (hold to reverse), EXIT. The left stick also drives.</li>
       <li>Minimap (top right) — tap it to open the full map of Jais.</li>
       <li>Settings → EDIT BUTTON LAYOUT to move buttons.</li></ul></div>
     <div><h3>KEYBOARD &amp; MOUSE</h3><ul>
@@ -278,14 +324,17 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li><kbd>R</kbd> reload · <kbd>E</kbd> open / take / search</li>
       <li><kbd>Shift</kbd> sprint · <kbd>C</kbd> crouch</li>
       <li><kbd>F</kbd> torch · <kbd>H</kbd> eat · <kbd>Q</kbd>/wheel switch weapon</li>
-      <li><kbd>1</kbd>–<kbd>4</kbd> weapon slots · <kbd>V</kbd> lathi</li>
+      <li><kbd>1</kbd>–<kbd>7</kbd> weapon slots · <kbd>V</kbd> lathi</li>
+      <li><kbd>G</kbd> / <kbd>E</kbd> get in / out of the jeep</li>
+      <li>Jeep: <kbd>W</kbd><kbd>S</kbd> gas / brake-reverse · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · mouse looks around</li>
       <li><kbd>M</kbd> map · <kbd>Esc</kbd> pause</li></ul></div>
     <div><h3>SURVIVAL</h3><ul>
       <li>One life. No health regeneration.</li>
       <li>Gunshots carry far — zombies and looters come to the sound.</li>
       <li>Headshots matter. Ammo is scarce.</li>
       <li>Locked doors can be kicked in (loud). Zombies can break doors too.</li>
-      <li>Zombies will not enter the Maa Kamakhya Mandir compound. Looters will.</li></ul></div>
+      <li>Zombies will not enter the Maa Kamakhya Mandir compound. Looters will.</li>
+      <li>Something enormous sleeps beside the tracks west of Guru Gorakhnath Dham. Let it sleep — until you can't.</li></ul></div>
   </div>
 </div>
 

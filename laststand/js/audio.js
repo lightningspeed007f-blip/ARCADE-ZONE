@@ -132,6 +132,55 @@ const R = {
   drone() { const len = 8; return norm(mix(sine(len, 110), scale(sine(len, 110.4), 0.8), scale(sine(len, 165), 0.5), scale(sine(len, 220.6), 0.3)), 0.45); },
   rumble() { const a = lp(lp(noise(4), 90), 160); for (let i = 0; i < a.length; i++) a[i] *= 0.75 + 0.25 * Math.sin(i / SR * 2 * Math.PI * 3.1) ** 8; return norm(a, 0.8); },
   alarm() { const a = buf(1.2); let ph = 0; for (let i = 0; i < a.length; i++) { const f = (i / SR) % 0.6 < 0.3 ? 880 : 660; ph += f / SR; a[i] = (ph % 1 < 0.5 ? 1 : -1) * 0.3; } return lp(a, 3000); },
+  // rocket launcher: a hard pop, then the motor's hiss tearing away
+  rocket() {
+    const pop = env(mix(sine(0.5, 120, 45), scale(lp(noise(0.5), 900), 0.9)), 0.001, 0.07);
+    const n = noise(1.3), hiss = buf(1.3); let y = 0;
+    for (let i = 0; i < n.length; i++) { const t = i / n.length; const k = 1 - Math.exp(-2 * Math.PI * (3200 - 2400 * t) / SR); y += k * (n[i] - y); hiss[i] = y * Math.min(1, t * 30) * Math.pow(1 - t, 1.6); }
+    return norm(mix(pop, scale(hiss, 0.8)), 0.95);
+  },
+  // explosion: deep thump, rolling low noise and a crackle of debris
+  explosion() {
+    const len = 2.6;
+    const thump = env(sine(len, 75, 22), 0.002, 0.35);
+    const body = env(lp(lp(noise(len), 380), 520), 0.004, 0.55);
+    const crack = env(hp(noise(len), 1800), 0.0008, 0.05);
+    const debris = buf(len); for (let k = 0; k < 26; k++) { const s = env(hp(noise(0.03), 2500), 0.0005, 0.008); debris.set(s, Math.floor((0.15 + Math.random() * 1.3) * SR)); }
+    return norm(mix(scale(thump, 1.2), body, scale(crack, 0.5), scale(env(debris, 0.01, 0.9), 0.25)), 0.98);
+  },
+  // looping fire: low roar with random pops and crackles
+  fire() {
+    const len = 4, a = lp(lp(noise(len), 260), 400);
+    for (let i = 0; i < a.length; i++) a[i] *= 0.7 + 0.3 * Math.sin(i / SR * 2 * Math.PI * 0.5) ** 2;
+    const cr = buf(len);
+    for (let k = 0; k < 120; k++) { const s = env(bp(noise(0.02), 1500 + Math.random() * 3000, 1.5), 0.0003, 0.004 + Math.random() * 0.01); const at = Math.floor(Math.random() * (len - 0.03) * SR); for (let i = 0; i < s.length; i++) cr[at + i] += s[i] * (0.3 + Math.random()); }
+    return norm(mix(a, scale(cr, 0.55)), 0.7);
+  },
+  // jeep engine idle (2 s, every partial a whole number of cycles so it loops cleanly)
+  engine() {
+    const len = 2, a = buf(len);
+    for (let i = 0; i < a.length; i++) {
+      const t = i / SR;
+      a[i] = Math.sin(2 * Math.PI * 34 * t) * 0.6 + Math.sin(2 * Math.PI * 68 * t) * 0.45 + Math.sin(2 * Math.PI * 102 * t) * 0.25 + Math.sin(2 * Math.PI * 17 * t) * 0.3;
+      a[i] *= 0.65 + 0.35 * Math.abs(Math.sin(2 * Math.PI * 8.5 * t));
+    }
+    return norm(mix(lp(a, 700), scale(lp(noise(len), 500), 0.12)), 0.75);
+  },
+  // the railway giant's roar: very low, long, rising then breaking up
+  roar() {
+    const len = 2.8, src = buf(len); let ph = 0;
+    for (let i = 0; i < src.length; i++) { const t = i / src.length; const f = 48 + 30 * Math.sin(t * Math.PI) + rnd() * 10; ph += f / SR; src[i] = (2 * (ph % 1) - 1) * 0.8 + rnd() * 0.45; }
+    const a = mix(bp(src, 300, 2.5), scale(bp(src, 760, 4), 0.7), scale(lp(src, 160), 0.8));
+    for (let i = 0; i < a.length; i++) { const t = i / SR; a[i] *= Math.min(1, t / 0.25) * (t > len - 0.8 ? (len - t) / 0.8 : 1) * (0.75 + 0.25 * Math.sin(t * 31) ** 2); }
+    return norm(a, 0.95);
+  },
+  // shimmering divine chime: rising glissandi with sparkles
+  magic() {
+    const len = 4.5, parts = [];
+    for (const f of [523, 659, 784, 1047, 1319]) parts.push(scale(env(sine(len, f * 0.5, f * 1.5, 2.2), 0.4, 1.8), 0.25));
+    const sp = buf(len); for (let k = 0; k < 70; k++) { const s = env(sine(0.15, 2500 + Math.random() * 3500), 0.002, 0.04); sp.set(s, Math.floor(Math.random() * (len - 0.2) * SR)); }
+    return norm(mix(...parts, scale(sp, 0.35)), 0.8);
+  },
 };
 
 export class Audio {
@@ -173,6 +222,7 @@ export class Audio {
     set('horn', R.horn); set('bell', R.bell); set('beep', () => R.beep(1200)); set('beepLow', () => R.beep(500, 0.2)); set('splash', R.splash);
     set('static', () => R.staticNoise(2.5));
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
+    set('rocket', R.rocket); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
     this._loadGunSounds();
     this._loadUserAudio();
   }
