@@ -52,7 +52,7 @@ export function rectsOverlap(a, b) {
 }
 
 export function createWorldContext() {
-  const P = new Physics(BOUNDS.minX - 10, BOUNDS.minZ - 10, BOUNDS.maxX + 10, BOUNDS.maxZ + 10);
+  const P = new Physics(BOUNDS.minX - 1010, BOUNDS.minZ - 150, BOUNDS.maxX + 10, BOUNDS.maxZ + 10); // west part: hidden valley
   const B = new Builder(P, 60);
   const W = {
     B, P, signs: new SignAtlas(2048), rng: makeRng(20240611),

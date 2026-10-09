@@ -13,6 +13,8 @@ import { Audio } from './audio.js';
 import { LightPool } from './lights.js';
 import { loadUserAssets } from './assets.js';
 import { buildDisplays, animateDisplays } from './displays.js';
+import { TownMap } from './minimap.js';
+import { buildSecret, prepareMaterials, Secret } from './secret.js';
 import { ROADS, ZONES, RAIL, KAMAKHYA, roadInfo, BOUNDS } from './layout.js';
 import { makeRng, clamp, store } from './util.js';
 import { Physics } from './physics.js';
@@ -41,7 +43,7 @@ export class Game {
     this.mobile = touch && Math.min(screen.width, screen.height) < 900;
     const saved = store('jls_settings') || {};
     this.quality = saved.quality && saved.quality !== 'auto' ? saved.quality : this.mobile ? 'med' : 'high';
-    const R = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: this.quality === 'high', powerPreference: 'high-performance' });
+    const R = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: this.quality === 'high', powerPreference: 'high-performance', stencil: true });
     this.maxDpr = this.quality === 'high' ? Math.min(devicePixelRatio, 1.75) : this.quality === 'med' ? Math.min(devicePixelRatio, 1.4) : 1;
     this.dpr = this.maxDpr;
     R.setPixelRatio(this.dpr);
@@ -63,9 +65,11 @@ export class Game {
     await tick();
     const W = this.W = createWorldContext();
     buildWorld(W);
+    buildSecret(W);
     const signTex = W.signs.finish();
     this.physics = W.P;
     const mats = this.mats = this.makeMaterials(tex, signTex);
+    prepareMaterials(mats);
     progress(0.4, 'सड़कें, खंभे, तार… props');
     await tick();
     this.doors = this.buildDoors();
@@ -78,6 +82,7 @@ export class Game {
     progress(0.55, 'रास्ते… navigation');
     await tick();
     this.nav = new Nav(this.physics);
+    this.townMap = new TownMap(W);
     progress(0.62, 'तस्वीरें और बैनर… your images');
     this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.25, 'तस्वीरें और बैनर… your images'));
     this.displays = buildDisplays(W, scene, this.assets, tex);
@@ -106,6 +111,8 @@ export class Game {
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
+    this.secret = new Secret(this);
+    this.secret.build();
     // cached lists
     this.enterables = W.buildings.filter((b) => b.tpl);
     this.stairs = this.collectStairs();
@@ -360,6 +367,7 @@ export class Game {
     this.playerLit = false;
     this.broadcastI = 0; this.broadcastT = 2;
     this.hint('', '');
+    this.secret.reset();
     this.state = 'play';
     this.input.resetState();
     this.input.enabled = true;
@@ -569,6 +577,7 @@ export class Game {
     consider(S.well, 2.6, { type: 'well' });
     consider(S.bell, 2.6, { type: 'bell' });
     consider(S.signalPanel, 2.4, { type: 'signal' });
+    this.secret.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
       const x = clamp(P.pos.x, this.train.x + 2, this.train.x + this.rescue.userData.len - 2);
@@ -609,6 +618,7 @@ export class Game {
       case 'radio': return [t.r.on ? 'OFF' : 'ON', 'रेडियो'];
       case 'signal': return this.obj.signal ? ['—', 'सिग्नल हरा है'] : this.obj.fuse ? ['SET SIGNAL', 'फ्यूज़ लगाएं'] : ['NO FUSE', 'फ्यूज़ चाहिए'];
       case 'board': return ['BOARD', 'ट्रेन में चढ़ें'];
+      case 'secret': return this.secret.prompt();
     }
     return null;
   }
@@ -664,6 +674,7 @@ export class Game {
         return;
       }
       case 'board': return this.win();
+      case 'secret': return this.secret.use();
     }
   }
 
@@ -774,6 +785,7 @@ export class Game {
   }
 
   menuCam(dt) {
+    if (this.secret && this.secret.mode) this.secret.setMode(false);
     this.time += dt;
     const t = this.time * 0.05;
     const T = KAMAKHYA.temple;
@@ -842,7 +854,9 @@ export class Game {
     this.updateDoors(dt);
     this.updateWorld(dt);
     this.updateTrains(dt);
+    this.secret.update(dt);
     this.updateHud();
+    this.drawMinimap(dt);
     if (P.dead && this.state === 'play') this.gameOver('');
   }
 
@@ -883,7 +897,7 @@ export class Game {
       this.playerLit = lit;
       this.vis = lit ? 0.8 : inside ? 0.22 : 0.38;
     }
-    this.audio.setListener(this.camera, !!this.inside);
+    this.audio.setListener(this.camera, !!this.inside || this.secret.underground);
     // start-house broadcast
     if (this.obj.phase === 'radio') {
       this.broadcastT -= dt;
@@ -906,6 +920,7 @@ export class Game {
     }
     // ambience: dogs, distant screams, gunfire, train horn
     this.ambT -= dt;
+    if (this.ambT <= 0 && this.secret.mode) this.ambT = 5; // the valley is silent but for its own sounds
     if (this.ambT <= 0) {
       this.ambT = 6 + Math.random() * 12;
       const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 60;
@@ -1081,29 +1096,19 @@ export class Game {
     this.drawMap($('mapCanvas'));
   }
 
-  drawMap(c) {
-    const W = BOUNDS.maxX - BOUNDS.minX, H = BOUNDS.maxZ - BOUNDS.minZ;
-    const s = Math.min((innerWidth - 40) / W, (innerHeight - 80) / H);
-    c.width = W * s * devicePixelRatio; c.height = H * s * devicePixelRatio;
-    c.style.width = W * s + 'px'; c.style.height = H * s + 'px';
-    const x = c.getContext('2d'); x.scale(s * devicePixelRatio, s * devicePixelRatio); x.translate(-BOUNDS.minX, -BOUNDS.minZ);
-    x.fillStyle = '#d9cba8'; x.fillRect(BOUNDS.minX, BOUNDS.minZ, W, H);
-    // paper texture-ish blocks
-    x.fillStyle = 'rgba(120,90,60,0.25)';
-    for (const r of this.W.rects) { x.save(); x.translate(r.x, r.z); x.rotate(-r.yaw); x.fillRect(-r.hx, -r.hz, r.hx * 2, r.hz * 2); x.restore(); }
-    for (const road of Object.values(ROADS)) {
-      x.strokeStyle = road.s === 'lane' ? '#8a5a3a' : '#3a3a3a'; x.lineWidth = road.w; x.lineCap = 'round';
-      x.beginPath(); x.moveTo(road.a[0], road.a[1]); x.lineTo(road.b[0], road.b[1]); x.stroke();
-    }
-    x.strokeStyle = '#222'; x.lineWidth = 2; x.setLineDash([4, 3]);
-    x.beginPath(); x.moveTo(RAIL.x0, RAIL.mainZ); x.lineTo(RAIL.x1, RAIL.mainZ); x.stroke(); x.setLineDash([]);
-    const label = (t, px, pz, col = '#5a1a0a') => { x.fillStyle = col; x.font = `bold 7px "Noto Sans Devanagari", sans-serif`; x.textAlign = 'center'; x.fillText(t, px, pz); };
-    label('वहाबगंज', -90, -10); label('नौगजी तिराहा', 22, 92); label('बस अड्डा', 95, 120); label('जायस सिटी', -140, -184); label('गुरु गोरखनाथ धाम', 138, -188);
-    label('माँ कामाख्या मंदिर', -127, 16, '#b02010'); label('कुआँ', -125, 52); label('आलिया मार्केट', -150, 46); label('स्टेशन रोड', 55, -133);
-    // player arrow
-    const P = this.player;
-    x.save(); x.translate(P.pos.x, P.pos.z); x.rotate(-P.yaw + Math.PI);
-    x.fillStyle = '#d01010'; x.beginPath(); x.moveTo(0, 6); x.lineTo(-3.5, -4); x.lineTo(3.5, -4); x.closePath(); x.fill(); x.restore();
+  drawMap(c) { this.townMap.drawFull(c, this); }
+
+  drawMinimap(dt) {
+    const c = $('minimap');
+    if (!c || !this.input.settings.minimap) return;
+    c.style.visibility = this.secret.mode ? 'hidden' : '';
+    if (this.secret.mode) return;
+    this._mmT = (this._mmT || 0) - dt;
+    if (this._mmT > 0) return;
+    this._mmT = 0.066;
+    const css = c.clientWidth || 112, dpr = Math.min(2, devicePixelRatio || 1), size = Math.round(css * dpr);
+    if (c.width !== size) { c.width = size; c.height = size; }
+    this.townMap.drawMini(c.getContext('2d'), size, this);
   }
 
   gameOver(reason) {
@@ -1152,7 +1157,8 @@ export class Game {
     document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => b.closest('.view').classList.add('hidden')));
     $('pResume').onclick = () => this.resume();
     $('pMap').onclick = () => { $('pause').classList.add('hidden'); $('mapView').classList.remove('hidden'); this.drawMap($('mapCanvas')); };
-    $('mapClose').onclick = () => this.resume();
+    $('mapView').onclick = () => this.resume();
+    document.body.classList.toggle('nomini', !this.input.settings.minimap);
     $('pQuit').onclick = () => { $('pause').classList.add('hidden'); this.audio.stopAll(); this.state = 'menu'; document.body.classList.remove('playing'); $('menu').classList.remove('hidden'); this.audio.resume(); };
     $('pauseBtn').addEventListener('touchstart', (e) => { e.preventDefault(); this.pause(); }, { passive: false });
     $('pauseBtn').onclick = () => this.pause();
@@ -1167,6 +1173,8 @@ export class Game {
     const S = this.input.settings, v = $('settingsView');
     v.classList.remove('hidden');
     const bind = (id, key, fn = (x) => +x) => { const el = $(id); el.value = S[key]; el.oninput = () => { S[key] = el.type === 'checkbox' ? el.checked : fn(el.value); if (el.type === 'checkbox') el.value = el.checked; this.input.saveSettings(); this.input.applyLayout(); }; if (el.type === 'checkbox') el.checked = !!S[key]; };
+    bind('sMini', 'minimap'); document.body.classList.toggle('nomini', !S.minimap);
+    $('sMini').addEventListener('change', () => document.body.classList.toggle('nomini', !S.minimap));
     bind('sSens', 'sens'); bind('sTouch', 'touchSens'); bind('sBtn', 'btnScale'); bind('sInvert', 'invertY'); bind('sLefty', 'leftHanded'); bind('sBob', 'bob');
     const q = $('sQuality'); q.value = S.quality || 'auto'; q.onchange = () => { S.quality = q.value; this.input.saveSettings(); $('qNote').textContent = 'Applies after reload.'; };
     $('sFps').checked = !$('fps').classList.contains('hidden'); $('sFps').onchange = () => $('fps').classList.toggle('hidden', !$('sFps').checked);

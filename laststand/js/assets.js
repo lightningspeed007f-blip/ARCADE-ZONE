@@ -189,7 +189,7 @@ export async function loadUserAssets(onProgress) {
   jobs.push(loadImage(MANIFEST.shivji).then((img) => {
     note('shivji', !!img);
     const p = img ? processShivji(img) : { canvas: phShiv(), mode: 'placeholder' };
-    out.shivji = { canvas: p.canvas, mode: p.mode, texture: tex(p.canvas), glow: tex(blurred(p.canvas)), aspect: p.canvas.width / p.canvas.height };
+    out.shivji = { canvas: p.canvas, mode: p.mode, texture: tex(p.canvas), glow: tex(blurred(p.canvas)), aspect: p.canvas.width / p.canvas.height, source: img || p.canvas };
     tick();
   }));
   jobs.push(loadImage(MANIFEST.kamakhya).then((img) => {

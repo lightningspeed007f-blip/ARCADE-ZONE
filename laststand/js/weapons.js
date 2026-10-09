@@ -35,7 +35,25 @@ function buildModels(mats) {
   const { gun, wood, skin, sleeve, brass } = mats;
   const hand = (g, x, y, z) => { bx(g, skin, 0.075, 0.08, 0.1, x, y, z); bx(g, sleeve, 0.09, 0.1, 0.2, x, y - 0.02, z + 0.14); };
   const M = {};
-  M.lathi = vm((g) => { const s = cy(g, wood, 0.016, 1.25, 0.0, 0.1, -0.5); s.rotation.x = Math.PI / 2 - 0.32; hand(g, 0, -0.05, 0.02); });
+  // lathi: a bamboo stick gripped in the right fist, forearm running down to the screen edge
+  M.lathi = vm((g) => {
+    const up = new THREE.Vector3(0, 1, 0);
+    const along = (mesh, dir, centre) => { mesh.quaternion.setFromUnitVectors(up, dir.clone().normalize()); mesh.position.copy(centre); g.add(mesh); return mesh; };
+    const d = new THREE.Vector3(-0.2, 0.6, -0.77).normalize();            // stick: up and away
+    along(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.0, 10), wood), d, d.clone().multiplyScalar(0.38));
+    along(new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.05, 10), brass), d, d.clone().multiplyScalar(0.86)); // metal ferrule at the tip
+    along(new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.13, 10), mats.tape || sleeve), d, d.clone().multiplyScalar(-0.03)); // cloth grip
+    // fist wrapped around the stick
+    const fist = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.1, 0.095), skin);
+    fist.quaternion.setFromUnitVectors(up, d); fist.position.set(0.012, 0, 0.006); g.add(fist);
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.03), skin);
+    thumb.position.set(-0.035, 0.035, -0.02); g.add(thumb);
+    // wrist + forearm in a sleeve, going down and back toward the bottom-right corner
+    const e = new THREE.Vector3(0.28, -0.55, 0.79).normalize();
+    along(new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.12, 0.07), skin), e, e.clone().multiplyScalar(0.07));
+    along(new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.3, 0.1), sleeve), e, e.clone().multiplyScalar(0.26));
+    g.userData.melee = true;
+  });
   M.pistol = vm((g) => {
     bx(g, gun, 0.035, 0.045, 0.2, 0, 0.03, -0.08); bx(g, gun, 0.032, 0.11, 0.05, 0, -0.035, -0.0, 0.25);
     bx(g, gun, 0.03, 0.02, 0.06, 0, -0.005, -0.06); hand(g, 0, -0.07, 0.02); g.userData.muzzle = new THREE.Vector3(0, 0.03, -0.19); g.userData.eject = new THREE.Vector3(0.02, 0.04, -0.06);
@@ -271,7 +289,7 @@ export class Arsenal {
     }
     this.lastYaw = player.yaw; this.lastPitch = player.pitch;
     const a = this.adsT;
-    const hip = [0.16, -0.19, -0.42], adsP = [0, w.en === 'RIFLE' ? -0.083 : w.en === 'DOUBLE BARREL' ? -0.082 : -0.085, -0.3];
+    const hip = w.melee ? [0.25, -0.33, -0.5] : [0.16, -0.19, -0.42], adsP = [0, w.en === 'RIFLE' ? -0.083 : w.en === 'DOUBLE BARREL' ? -0.082 : -0.085, -0.3];
     let x = lerp(hip[0], adsP[0], a), y = lerp(hip[1], adsP[1], a), z = lerp(hip[2], adsP[2], a);
     const bob = player.bobAmt * (1 - a * 0.8);
     x += Math.cos(player.bobT) * 0.012 * bob + this.sway.x * (1 - a * 0.7);
@@ -289,7 +307,8 @@ export class Arsenal {
     if (this.switchT > 0) y -= this.switchT * 0.5;
     if (w.melee && this.swingT > 0) {
       const t = 1 - this.swingT / 0.35;
-      rx += -1.4 * Math.sin(t * Math.PI); x -= 0.15 * Math.sin(t * Math.PI); ry = 0.6 * Math.sin(t * Math.PI);
+      const k = Math.sin(t * Math.PI);
+      rx += -0.9 * k; ry = 0.75 * k; rz = 0.35 * k; x -= 0.14 * k; y += 0.04 * k;
       this.swingT -= dt;
     }
     m.position.set(x, y, z);

@@ -112,10 +112,17 @@ body.playing.touch #touch { display: block; }
 [data-act=use] { right: calc(40px + env(safe-area-inset-right)); bottom: 170px; }
 [data-act=crouch] { right: calc(186px + env(safe-area-inset-right)); bottom: 22px; }
 [data-act=sprint] { left: calc(22px + env(safe-area-inset-left)); top: 196px; }
-[data-act=swap] { right: calc(26px + env(safe-area-inset-right)); bottom: 238px; }
+[data-act=swap] { right: calc(140px + env(safe-area-inset-right)); top: 74px; }
+body.nomini [data-act=swap] { right: calc(26px + env(safe-area-inset-right)); top: auto; bottom: 238px; }
 [data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
 [data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
-[data-act=map] { right: calc(70px + env(safe-area-inset-right)); top: 12px; width: calc(42px * var(--btn)) !important; height: calc(42px * var(--btn)) !important; }
+#minimap { position: absolute; right: calc(16px + env(safe-area-inset-right)); top: 14px; width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 2px 12px rgba(0,0,0,.6); opacity: .92; }
+body.touch #minimap { top: 62px; width: 112px; height: 112px; }
+body.nomini #minimap { display: none; }
+#touch [data-act=map] { right: calc(16px + env(safe-area-inset-right)); top: 62px; width: 112px; height: 112px; background: transparent; border-color: transparent; }
+body.nomini #touch [data-act=map] { width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 12px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
+body.nomini #touch [data-act=map]::after { content: 'MAP'; }
+#mapHint { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
 #pauseBtn { position: absolute; right: calc(18px + env(safe-area-inset-right)); top: 12px; width: 42px; height: 42px; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; font-weight: 700; }
 body.editing #touch { display: block; }
 body.editing #touch .tb { outline: 2px dashed var(--gold); }
@@ -190,6 +197,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <div id="lowhp"></div>
   <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div></div>
   <div id="fps" class="hidden"></div>
+  <canvas id="minimap"></canvas>
 </div>
 
 <div id="touch">
@@ -204,7 +212,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <button class="tb" data-act="swap">SWAP</button>
   <button class="tb" data-act="eat" id="btnEat">EAT<small id="foodCount">0</small></button>
   <button class="tb" data-act="torch" id="torchBtn">TORCH</button>
-  <button class="tb" data-act="map">MAP</button>
+  <button class="tb" data-act="map" id="mapBtn" aria-label="Map"></button>
   <button id="pauseBtn">II</button>
 </div>
 <div id="editBar" class="hidden">Drag buttons to move them <button id="editDone">DONE</button></div>
@@ -237,7 +245,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   </div>
 </div>
 
-<div id="mapView" class="view hidden"><canvas id="mapCanvas"></canvas><button class="close" id="mapClose" style="position:static">BACK</button></div>
+<div id="mapView" class="view hidden"><canvas id="mapCanvas"></canvas><div id="mapHint">जायस · TAP ANYWHERE TO CLOSE · <span style="color:#ff4a3a">●</span> OBJECTIVE</div><button class="close" id="mapClose" style="position:static">BACK</button></div>
 
 <div id="over" class="screen hidden">
   <div id="overTitle">YOU DIED</div>
@@ -262,6 +270,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li>AIM · RELOAD · USE · CROUCH · RUN · SWAP</li>
       <li>EAT — eats food from your bag (the only way to heal).</li>
       <li>TORCH — flashlight (people can see you from further away).</li>
+      <li>Minimap (top right) — tap it to open the full map of Jais.</li>
       <li>Settings → EDIT BUTTON LAYOUT to move buttons.</li></ul></div>
     <div><h3>KEYBOARD &amp; MOUSE</h3><ul>
       <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · mouse look</li>
@@ -300,6 +309,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
     <label>Invert look up/down</label><input type="checkbox" id="sInvert">
     <label>Left-handed buttons</label><input type="checkbox" id="sLefty">
     <label>Head bob</label><input type="checkbox" id="sBob">
+    <label>Minimap</label><input type="checkbox" id="sMini">
     <label>Graphics</label><div><select id="sQuality"><option value="auto">Auto</option><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select> <small id="qNote" style="color:var(--muted)"></small></div>
     <label>Show FPS</label><input type="checkbox" id="sFps">
     <label>Touch layout</label><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="sEdit">EDIT BUTTON LAYOUT</button><button id="sReset">RESET</button></div>
