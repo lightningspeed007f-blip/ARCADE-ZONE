@@ -134,11 +134,6 @@ function temple(W) {
   }
   for (let x = -1.9; x <= 1.9; x += 0.35) W.fairy.push({ p: F.world(x, 4.2, -0.1), c: 0xffe080, s: 0.2 });
 
-  // Shivji display on a pedestal, turned toward the gate
-  F.box('concrete', 5.6, 0.45, 6.2, 3.4, 0.9, 1.6, rgb(0xeae4d8));
-  F.box('plain', 5.6, 0.95, 6.2, 3.5, 0.1, 1.7, SAFFRON, { collide: false });
-  const shivYaw = Math.atan2(-0.42, -0.9);
-  W.special.shiv = { F, x: 5.6, y: 1.0, z: 6.25, w: 3.0, h: 4.4, faceYaw: shivYaw };
   // peepal tree with chabutra, inside the compound
   F.cyl('concrete', -6.2, 0, 5.0, 1.5, 0.5, rgb(0xd8ccb8), 12, { collide: true });
   W.props.trees.push({ p: F.world(-6.2, 0.5, 5.0), s: 1.5, type: 'peepal' });

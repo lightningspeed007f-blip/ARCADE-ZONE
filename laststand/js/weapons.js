@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
 
-export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62': '7.62' };
+export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62': '7.62', rocket: 'रॉकेट' };
 
 // rpm = rounds per minute, spread/recoil in degrees
 export const WEAPONS = {
@@ -13,6 +13,8 @@ export const WEAPONS = {
   revolver: { name: '.32 रिवॉल्वर', en: 'REVOLVER', ammo: '.32', mag: 6, dmg: 48, pellets: 1, rpm: 150, reload: 2.9, spread: 0.8, adsSpread: 0.25, recoil: 2.8, noise: 75, sound: 'revolver', fov: 58 },
   dunali:   { name: 'दुनाली बंदूक', en: 'DOUBLE BARREL', ammo: '12G', mag: 2, dmg: 15, pellets: 9, rpm: 160, reload: 2.6, spread: 4.2, adsSpread: 3.2, recoil: 6, noise: 100, sound: 'shotgun', fov: 62 },
   rifle:    { name: 'राइफल', en: 'RIFLE', ammo: '7.62', mag: 30, dmg: 27, pellets: 1, rpm: 600, auto: true, reload: 2.5, spread: 1.6, adsSpread: 0.3, recoil: 1.15, noise: 90, sound: 'rifle', fov: 48 },
+  // fires a real projectile (see explosives.js); one rocket in the tube, slow reload
+  rpg:      { name: 'रॉकेट लॉन्चर', en: 'ROCKET LAUNCHER', ammo: 'rocket', mag: 1, dmg: 0, pellets: 1, rocket: true, rpm: 45, reload: 3.0, spread: 0.9, adsSpread: 0.25, recoil: 7.5, noise: 120, sound: 'rocket', fov: 56, ads: [0.12, -0.125, -0.5] },
 };
 
 const DEG = Math.PI / 180;
@@ -78,6 +80,21 @@ function buildModels(mats) {
     bx(g, wood, 0.045, 0.07, 0.25, 0, -0.03, 0.15); bx(g, wood, 0.05, 0.05, 0.2, 0, -0.03, -0.34); bx(g, gun, 0.02, 0.04, 0.03, 0, 0.055, -0.36);
     hand(g, 0.0, -0.09, 0.0); hand(g, -0.01, -0.06, -0.33);
     g.userData.muzzle = new THREE.Vector3(0, 0.015, -0.72); g.userData.eject = new THREE.Vector3(0.03, 0.03, -0.15); g.userData.mag = g.children[2];
+  });
+  // rocket launcher: olive tube on the shoulder, flared back end, grip, sight and the warhead poking out
+  M.rpg = vm((g) => {
+    const olive = mats.olive || gun;
+    cy(g, olive, 0.045, 0.86, 0, 0.02, -0.18);
+    const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.066, 0.048, 0.14, 12, 1, true), gun); bell.rotation.x = -Math.PI / 2; bell.position.set(0, 0.02, 0.31); g.add(bell);
+    cy(g, gun, 0.05, 0.06, 0, 0.02, -0.5); cy(g, gun, 0.05, 0.05, 0, 0.02, 0.1);
+    bx(g, gun, 0.03, 0.12, 0.05, 0, -0.07, -0.1, 0.25); bx(g, gun, 0.03, 0.1, 0.05, 0, -0.06, -0.36, 0.15);
+    bx(g, gun, 0.03, 0.05, 0.08, -0.06, 0.07, -0.25); bx(g, brass, 0.012, 0.012, 0.012, -0.06, 0.1, -0.22);
+    const head = new THREE.Group(); head.position.set(0, 0.02, -0.62);
+    const war = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.044, 0.15, 10), mats.olive2 || olive); war.rotation.x = -Math.PI / 2; head.add(war);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.064, 0.18, 10), gun); tip.rotation.x = -Math.PI / 2; tip.position.z = -0.18; head.add(tip);
+    g.add(head);
+    hand(g, 0, -0.12, -0.06); hand(g, -0.01, -0.11, -0.33);
+    g.userData.muzzle = new THREE.Vector3(0, 0.02, -0.8); g.userData.warhead = head;
   });
   return M;
 }
@@ -208,7 +225,7 @@ export class Arsenal {
   reset() {
     this.owned = ['lathi'];
     this.mag = { lathi: 0 };
-    this.reserve = { '9mm': 0, '.32': 0, '12G': 0, '7.62': 0 };
+    this.reserve = { '9mm': 0, '.32': 0, '12G': 0, '7.62': 0, rocket: 0 };
     this.cur = 'lathi';
     this.cool = 0; this.reloadT = 0; this.switchT = 0; this.adsT = 0;
     this.kick = 0; this.bloom = 0; this.swingT = 0; this.shotsFired = 0;
@@ -293,7 +310,7 @@ export class Arsenal {
     }
     this.lastYaw = player.yaw; this.lastPitch = player.pitch;
     const a = this.adsT;
-    const hip = w.melee ? [0.25, -0.33, -0.5] : [0.16, -0.19, -0.42], adsP = [0, w.en === 'RIFLE' ? -0.083 : w.en === 'DOUBLE BARREL' ? -0.082 : -0.085, -0.3];
+    const hip = w.melee ? [0.25, -0.33, -0.5] : w.rocket ? [0.24, -0.2, -0.55] : [0.16, -0.19, -0.42], adsP = w.ads || [0, w.en === 'RIFLE' ? -0.083 : w.en === 'DOUBLE BARREL' ? -0.082 : -0.085, -0.3];
     let x = lerp(hip[0], adsP[0], a), y = lerp(hip[1], adsP[1], a), z = lerp(hip[2], adsP[2], a);
     const bob = player.bobAmt * (1 - a * 0.8);
     x += Math.cos(player.bobT) * 0.012 * bob + this.sway.x * (1 - a * 0.7);
@@ -317,6 +334,7 @@ export class Arsenal {
     }
     m.position.set(x, y, z);
     m.rotation.set(rx, ry, rz);
+    if (m.userData.warhead) m.userData.warhead.visible = this.mag[this.cur] > 0 || (this.reloadT > 0 && this.reloadT < w.reload * 0.45);
     this.holder.position.copy(this.cam.position);
     this.holder.quaternion.copy(this.cam.quaternion);
   }
@@ -345,7 +363,9 @@ export class Arsenal {
     for (let p = 0; p < w.pellets; p++) {
       const r = Math.sqrt(Math.random()) * spread, a = Math.random() * Math.PI * 2;
       const dir = fwd.clone().addScaledVector(right, Math.cos(a) * Math.tan(r)).addScaledVector(up, Math.sin(a) * Math.tan(r)).normalize();
-      game.fireRay(origin, dir, w.dmg, 'player', w);
+      // the rocket starts a metre ahead of the eye, so it can never hit the shooter
+      if (w.rocket) game.explosives.launch(origin, dir, right, 'player');
+      else game.fireRay(origin, dir, w.dmg, 'player', w);
     }
     // recoil: kick up, random side
     const rk = w.recoil * DEG * (1 - this.adsT * 0.35) * (player.crouched ? 0.8 : 1);
@@ -357,11 +377,11 @@ export class Arsenal {
     const m = this.models[this.cur];
     const mp = m.userData.muzzle.clone(); m.updateMatrixWorld(); m.localToWorld(mp);
     this.flash.position.copy(mp); this.flash.material.rotation = Math.random() * 6;
-    const fs = w.pellets > 1 || this.cur === 'katta' ? 0.5 : 0.3;
+    const fs = w.rocket ? 0.55 : w.pellets > 1 || this.cur === 'katta' ? 0.5 : 0.3;
     this.flash.scale.setScalar(fs * (0.8 + Math.random() * 0.4)); this.flash.visible = true; this.flashT = 0.045;
     // world-space flash light at the muzzle direction
     this.flashLight.position.copy(origin).addScaledVector(fwd, 0.8);
-    this.flashLight.intensity = 14;
+    this.flashLight.intensity = w.rocket ? 30 : 14; this.flashLight.distance = 14;
     // casing
     if (m.userData.eject) {
       const ep = m.userData.eject.clone(); m.localToWorld(ep);

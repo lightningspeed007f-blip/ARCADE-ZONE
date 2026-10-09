@@ -101,6 +101,8 @@ export class TownMap {
     if (!o) return out;
     if (o.signal) out.push({ x: 140, z: -164, label: 'प्लेटफ़ॉर्म 1', en: 'Platform 1' });
     else if (o.key && o.fuse) { const p = S.signalPanel; out.push({ x: p[0], z: p[2], label: 'सिग्नल केबिन', en: 'Signal cabin' }); }
+    const B = game.boss;
+    if (B && B.awake && !B.dead) out.push({ x: B.pos.x, z: B.pos.z, label: 'लोहासुर', en: 'Lohasur', boss: true });
     return out;
   }
 
@@ -127,7 +129,14 @@ export class TownMap {
       let sx = (dx * c - dz * s) * k, sy = (dx * s + dz * c) * k;
       const d = Math.hypot(sx, sy), lim = r - 9;
       if (d > lim) { sx *= lim / d; sy *= lim / d; }
-      marker(ctx, r + sx, r + sy, 5);
+      marker(ctx, r + sx, r + sy, t.boss ? 6 : 5, t.boss);
+    }
+    // the jeep (when you are not in it)
+    const V = game.vehicles;
+    if (V && V.car && !V.driving) {
+      const dx = V.car.x - P.pos.x, dz = V.car.z - P.pos.z, c = Math.cos(P.yaw), s = Math.sin(P.yaw);
+      const sx = (dx * c - dz * s) * k, sy = (dx * s + dz * c) * k;
+      if (Math.hypot(sx, sy) < r - 6) jeepMark(ctx, r + sx, r + sy, 4);
     }
     // player arrow (always points up)
     ctx.save(); ctx.translate(r, r);
@@ -165,7 +174,9 @@ export class TownMap {
       x.strokeText(L.en.toUpperCase(), px, py + 12 * dpr); x.fillStyle = '#b9b2a2'; x.fillText(L.en.toUpperCase(), px, py + 12 * dpr);
     }
     // objective
-    for (const t of this.targets(game)) { const [px, py] = P(t.x, t.z); marker(x, px, py, 8 * dpr); }
+    for (const t of this.targets(game)) { const [px, py] = P(t.x, t.z); marker(x, px, py, 8 * dpr, t.boss); }
+    const V = game.vehicles;
+    if (V && V.car && !V.driving) { const [jx, jy] = P(V.car.x, V.car.z); jeepMark(x, jx, jy, 6 * dpr); }
     // player
     const pl = game.player;
     const [px, py] = P(pl.pos.x, pl.pos.z);
@@ -179,9 +190,16 @@ export class TownMap {
   }
 }
 
-function marker(ctx, x, y, r) {
+function jeepMark(ctx, x, y, r) {
   ctx.save();
-  ctx.fillStyle = '#ff4a3a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.5, r * 0.3);
+  ctx.fillStyle = '#7fc97a'; ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(1, r * 0.3);
+  ctx.fillRect(x - r, y - r * 0.6, r * 2, r * 1.2); ctx.strokeRect(x - r, y - r * 0.6, r * 2, r * 1.2);
+  ctx.restore();
+}
+
+function marker(ctx, x, y, r, boss) {
+  ctx.save();
+  ctx.fillStyle = boss ? '#8a0000' : '#ff4a3a'; ctx.strokeStyle = boss ? '#ff6a40' : '#fff'; ctx.lineWidth = Math.max(1.5, r * 0.3);
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r * 0.35, 0, Math.PI * 2); ctx.fill();
   ctx.restore();

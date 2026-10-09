@@ -18,6 +18,9 @@ import { buildSecret, prepareMaterials, Secret } from './secret.js';
 import { ROADS, ZONES, RAIL, KAMAKHYA, roadInfo, BOUNDS } from './layout.js';
 import { makeRng, clamp, store } from './util.js';
 import { Physics } from './physics.js';
+import { Explosives } from './explosives.js';
+import { Vehicles } from './vehicles.js';
+import { Boss } from './boss.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -75,6 +78,9 @@ export class Game {
     this.doors = this.buildDoors();
     W.lowPoly = this.quality !== 'high';
     this.props = buildProps(W, scene, mats, tex);
+    this.vehicles = new Vehicles(this);
+    this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
+    Boss.buildLair(W);
     W.B.build(scene, mats);
     this.buildWell();
     this.buildSky();
@@ -103,12 +109,15 @@ export class Game {
       skin: new THREE.MeshLambertMaterial({ color: 0xa8714c }),
       sleeve: new THREE.MeshLambertMaterial({ color: 0x3c4148 }),
       brass: new THREE.MeshLambertMaterial({ color: 0xc8a040 }),
+      olive: new THREE.MeshLambertMaterial({ color: 0x4a5236 }), olive2: new THREE.MeshLambertMaterial({ color: 0x5e6640 }),
     };
     this.wscene.add(new THREE.HemisphereLight(0x8090b0, 0x302820, 1.4));
     const wl = new THREE.DirectionalLight(0xffffff, 0.5); wl.position.set(1, 2, 1); this.wscene.add(wl);
     this.arsenal = new Arsenal(cam, scene, this.wscene, tex, gunMats, this.audio);
     this.fx = this.arsenal.fx;
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
+    this.explosives = new Explosives(this);
+    this.boss = new Boss(this);                          // exactly one, created once and reset every run
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
     this.secret = new Secret(this);
@@ -328,11 +337,13 @@ export class Game {
     const r = this.rng = makeRng((Math.random() * 1e9) | 0);
     const W = this.W;
     this.audio.init(); this.audio.resume();
+    if (this.vehicles.driving) this.vehicles.exit(true);
     this.audio.stopAll();
     this.player.dead = false; this.player.health = 100; this.player.stamina = 100; this.player.distance = 0; this.player.recoil.x = this.player.recoil.y = 0;
     this.arsenal.reset();
     this.food = [];
-    this.stats = { kills: 0, supplies: 0, t: 0, farthest: 'वहाबगंज' };
+    this.stats = { kills: 0, supplies: 0, t: 0, farthest: 'वहाबगंज', boss: false };
+    this.bossWon = false; this.bossWakeAt = 0;
     this.obj = { key: false, fuse: false, cabin: false, signal: false, trainT: 0, phase: 'radio' };
     this.resetDoors();
     this.used = new Set();
@@ -359,6 +370,11 @@ export class Game {
     }
     if (this.townMap.revealed) this.townMap.build();
     this.audio.startAmbience(this.displays.shivPos);
+    this.explosives.reset();
+    this.vehicles.reset();
+    this.boss.reset();
+    document.body.classList.remove('driving', 'canDrive');
+    $('banner').classList.remove('show');
     // trains
     this.freight.visible = false; this.rescue.visible = false;
     this.nextFreight = 70 + r() * 60; this.train = null; this.trainLight.on = false;
@@ -613,6 +629,15 @@ export class Game {
     const wall = P.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, 160);
     const maxT = wall ? wall.t : 160;
     const hit = this.enemies.hitTest(origin, dir, maxT);
+    const bh = this.boss.hitTest(origin, dir, hit ? hit.t : maxT);
+    if (bh) {
+      const pt = [origin.x + dir.x * bh.t, origin.y + dir.y * bh.t, origin.z + dir.z * bh.t];
+      const killed = this.boss.damage(dmg * (bh.t > 40 ? 0.8 : 1), bh.part, dir, src);
+      this.fx.burst(pt, [-dir.x * 0.4, 0.2, -dir.z * 0.4], bh.part === 'head' ? 16 : 9, [0.38, 0.05, 0.03], 2.4, 0.7);
+      this.audio.play('flesh', { pos: pt, vol: 0.55 });
+      if (src === 'player') this.hitMarker(bh.part === 'head', killed);
+      return;
+    }
     if (hit) {
       const e = hit.e;
       const pt = [origin.x + dir.x * hit.t, origin.y + dir.y * hit.t, origin.z + dir.z * hit.t];
@@ -637,6 +662,14 @@ export class Game {
 
   melee(origin, dir, dmg, range) {
     const hit = this.enemies.hitTest(origin, dir, range);
+    const bh = this.boss.hitTest(origin, dir, hit ? hit.t : range);
+    if (bh) {
+      const killed = this.boss.damage(dmg * (bh.part === 'head' ? 1.2 : 1), bh.part, dir, 'player');
+      this.audio.play('flesh', { pos: [origin.x + dir.x * bh.t, origin.y + dir.y * bh.t, origin.z + dir.z * bh.t], vol: 0.9 });
+      this.hitMarker(false, killed);
+      this.noise(this.player.pos, 6, 'melee');
+      return;
+    }
     if (hit) {
       const killed = this.enemies.damage(hit.e, dmg * (hit.part === 'head' ? 1.2 : 1), hit.part === 'head' ? 'head' : 'body', dir, 'player');
       hit.e.stagger = Math.max(hit.e.stagger, 0.5);
@@ -651,9 +684,10 @@ export class Game {
     }
   }
 
-  hurtPlayer(dmg, from) {
+  hurtPlayer(dmg, from, reason) {
     const P = this.player;
     if (P.dead || this.state !== 'play') return;
+    if (this.vehicles.driving) dmg *= 0.5;                 // the jeep's body takes some of it
     P.damage(dmg, from);
     P.shake = Math.max(P.shake, 0.45);
     this.audio.play('flesh', { vol: 0.6 });
@@ -667,7 +701,8 @@ export class Game {
     }
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
-      this.gameOver(from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+      if (reason) { this.gameOver(reason); return; }
+      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -754,6 +789,8 @@ export class Game {
     consider(S.bell, 2.6, { type: 'bell' });
     consider(S.signalPanel, 2.4, { type: 'signal' });
     this.secret.consider(consider);
+    this.vehicles.consider(consider);
+    this.boss.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
       const x = clamp(P.pos.x, this.train.x + 2, this.train.x + this.rescue.userData.len - 2);
@@ -794,7 +831,9 @@ export class Game {
       case 'radio': return [t.r.on ? 'OFF' : 'ON', 'रेडियो'];
       case 'signal': return this.obj.signal ? ['—', 'सिग्नल हरा है'] : this.obj.fuse ? ['SET SIGNAL', 'फ्यूज़ लगाएं'] : ['NO FUSE', 'फ्यूज़ चाहिए'];
       case 'board': return ['BOARD', 'ट्रेन में चढ़ें'];
-      case 'secret': return this.secret.prompt();
+      case 'secret': return this.secret.prompt(t);
+      case 'vehicle': return ['DRIVE', 'जीप · enter the jeep'];
+      case 'boss': return ['WAKE', 'सोता हुआ दानव · wake the sleeping giant'];
     }
     return null;
   }
@@ -847,10 +886,13 @@ export class Game {
         this.noise(P.pos, 120, 'alarm');
         this.toast('सिग्नल हरा!', 'Signal set. The train is coming — hold out on platform 1.');
         this.updateObjective();
+        this.bossWakeAt = this.time + 3.5;                // the final stage: the giant on the tracks wakes up
         return;
       }
       case 'board': return this.win();
-      case 'secret': return this.secret.use();
+      case 'secret': return this.secret.use(t);
+      case 'vehicle': return this.vehicles.enter();
+      case 'boss': return this.boss.wake('player');
     }
   }
 
@@ -932,9 +974,12 @@ export class Game {
       $('hpFill').style.width = hp + '%'; $('hpNum').textContent = hp;
       $('hp').classList.toggle('low', hp <= 30);
     }
-    const ammo = w.melee ? '—' : `${A.mag[A.cur]}<small> / ${A.reserve[w.ammo]}</small>`;
+    const V = this.vehicles, drv = V.driving;
+    const ammo = drv ? `${Math.round(Math.abs(V.car.speed) * 3.6)}<small> km/h</small>` : w.melee ? '—' : `${A.mag[A.cur]}<small> / ${A.reserve[w.ammo]}</small>`;
     if (force || ammo !== this._ammo) { this._ammo = ammo; $('ammoNum').innerHTML = ammo; }
-    const wn = w.name + (A.reloadT > 0 ? ' · रीलोड' : '');
+    const near = !drv && V.near();
+    if (near !== this._canDrive) { this._canDrive = near; document.body.classList.toggle('canDrive', near); }
+    const wn = drv ? 'जीप · JEEP' : w.name + (A.reloadT > 0 ? ' · रीलोड' : '');
     if (force || wn !== this._wn) { this._wn = wn; $('wName').textContent = wn; }
     const fc = this.food.length;
     if (force || fc !== this._fc) { this._fc = fc; $('foodCount').textContent = fc; $('btnEat').classList.toggle('dim', fc === 0); }
@@ -980,12 +1025,27 @@ export class Game {
     // presses
     if (I.consume('pause')) return this.pause();
     if (I.consume('map')) { this.showMap(); return; }
+    const V = this.vehicles;
+    if (I.consume('eat')) this.eat();
+    if (V.driving) {
+      // ---- in the jeep: no shooting or looting, USE / G / EXIT gets out ----
+      for (const k of ['reload', 'swap', 'melee', 'torch', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7']) I.consume(k);
+      I.fire = false;
+      if (I.consume('use') || I.consume('drive')) V.exit();
+      if (V.driving) V.drive(dt, I);
+      this.target = null; this._pr = null;
+      $('prompt').classList.remove('show'); $('btnUse').classList.remove('ready');
+      this.fx.update(dt, this.physics, this.audio);
+      A.flashLight.intensity = Math.max(0, A.flashLight.intensity - dt * 400);
+      this.afterMove(dt);
+      return;
+    }
     if (I.consume('reload')) A.startReload();
     if (I.consume('swap')) A.cycle();
     if (I.consume('melee')) A.equip('lathi');
-    for (let k = 1; k <= 4; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
+    for (let k = 1; k <= 7; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
     if (I.consume('torch')) { this.torchOn = !this.torchOn; this.audio.play('click', { vol: 0.4 }); }
-    if (I.consume('eat')) this.eat();
+    if (I.consume('drive') && V.near()) { V.enter(); return; }
     const mv = P.update(dt, I, this, A);
     this.torch.intensity = this.torchOn ? 26 : 0;
     // interaction
@@ -1021,12 +1081,22 @@ export class Game {
       }
     }
     A.update(dt, { player: P, input: I, game: this, sprinting: mv.sprinting });
+    this.afterMove(dt);
+  }
+
+  // everything that runs the same on foot and in the jeep
+  afterMove(dt) {
+    const P = this.player;
     // footsteps & movement noise reach enemies
     if (P.noise > 0) { this._nT = (this._nT || 0) - dt; if (this._nT <= 0) { this._nT = 0.5; this.noise(P.pos, P.noise, 'step'); } }
     // flow field toward the player
     this.flowT -= dt;
     if (this.flowT <= 0) { this.flowT = 0.35; this.nav.build(P.pos.x, P.pos.z); }
     this.enemies.update(dt, this.camera);
+    if (this.bossWakeAt && this.time >= this.bossWakeAt) { this.bossWakeAt = 0; this.boss.wake('final'); }
+    this.boss.update(dt);
+    this.explosives.update(dt);
+    this.vehicles.update(dt);
     this.loot.update(this.time);
     this.updateDoors(dt);
     this.updateWorld(dt);
@@ -1204,6 +1274,8 @@ export class Game {
     // getting hit by a train is fatal
     if (!T.stopped && Math.abs(P.pos.z - T.z) < 1.9 && P.pos.x > tx0 && P.pos.x < tx1 + 1 && P.pos.y < 3) { P.damage(999); this.gameOver('ट्रेन की चपेट में'); }
     for (const e of this.enemies.list) if (!e.dead && !T.stopped && Math.abs(e.pos.z - T.z) < 1.9 && e.pos.x > tx0 && e.pos.x < tx1) this.enemies.kill(e, 'body', { x: Math.sign(T.v), z: 0 }, 'train');
+    const Bo = this.boss;
+    if (!T.stopped && Bo.solid() && Math.abs(Bo.pos.z - T.z) < 2.6 && Bo.pos.x > tx0 - 1 && Bo.pos.x < tx1 + 1) Bo.trainHit(T);
     if (T.kind === 'freight' && (T.v > 0 ? tx0 > 300 : tx1 < -300)) {
       T.g.visible = false; this.train = null; this.trainLight.on = false;
       if (T.rumble) { T.rumble.stop(); }
@@ -1294,6 +1366,7 @@ export class Game {
 
   gameOver(reason) {
     if (this.state !== 'play') return;
+    if (this.vehicles.driving) this.vehicles.exit(true);
     this.state = 'dead'; this.input.enabled = false;
     document.exitPointerLock?.();
     document.body.classList.remove('playing');
@@ -1302,22 +1375,45 @@ export class Game {
     if (this.secret.drone && this.secret.drone.gain) this.secret.drone.gain.gain.value = 0;
     if (this.signalAlarm) { this.signalAlarm = null; }
     if (this.train) { this.train.g.visible = false; this.train = null; }
+    $('bossHud').classList.remove('show');
     $('overTitle').textContent = 'YOU DIED';
     $('overSub').textContent = reason || 'आप मारे गए';
     this.fillStats();
     $('over').classList.remove('hidden');
   }
 
-  win() {
+  win(kind) {
+    if (this.state !== 'play') return;
+    if (this.vehicles.driving) this.vehicles.exit(true);
     this.state = 'win'; this.input.enabled = false;
     document.exitPointerLock?.();
     document.body.classList.remove('playing');
     this.audio.stopAll();
-    $('overTitle').textContent = 'YOU MADE IT OUT';
-    $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.';
+    $('bossHud').classList.remove('show');
+    if (kind === 'boss') {
+      $('overTitle').textContent = 'MISSION COMPLETE';
+      $('overSub').textContent = 'लोहासुर मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
+    } else {
+      $('overTitle').textContent = 'YOU MADE IT OUT';
+      $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.' + (this.stats.boss ? ' लोहासुर भी मारा गया।' : '');
+    }
     this.fillStats();
     $('over').classList.remove('hidden');
     $('over').classList.add('won');
+  }
+
+  // The boss is dead: his own death sequence calls this once, a few seconds after the banner.
+  bossVictory() {
+    if (this.bossWon || this.state !== 'play' || this.player.dead) return;
+    this.bossWon = true;
+    this.win('boss');
+  }
+
+  banner(big, small, cls) {
+    const el = $('banner');
+    el.className = cls || '';
+    el.innerHTML = `<b>${big}</b><span>${small}</span>`;
+    void el.offsetWidth; el.classList.add('show');
   }
 
   fillStats() {
@@ -1342,7 +1438,7 @@ export class Game {
     $('pMap').onclick = () => { $('pause').classList.add('hidden'); $('mapView').classList.remove('hidden'); this.drawMap($('mapCanvas')); };
     $('mapView').onclick = () => this.resume();
     document.body.classList.toggle('nomini', !this.input.settings.minimap);
-    $('pQuit').onclick = () => { $('pause').classList.add('hidden'); this.audio.stopAll(); this.state = 'menu'; document.body.classList.remove('playing'); $('menu').classList.remove('hidden'); this.audio.resume(); };
+    $('pQuit').onclick = () => { $('pause').classList.add('hidden'); if (this.vehicles.driving) this.vehicles.exit(true); $('bossHud').classList.remove('show'); this.audio.stopAll(); this.state = 'menu'; document.body.classList.remove('playing'); $('menu').classList.remove('hidden'); this.audio.resume(); };
     $('pauseBtn').addEventListener('touchstart', (e) => { e.preventDefault(); this.pause(); }, { passive: false });
     $('pauseBtn').onclick = () => this.pause();
     document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && this.state === 'play' && !this.input.touch) this.pause(); });

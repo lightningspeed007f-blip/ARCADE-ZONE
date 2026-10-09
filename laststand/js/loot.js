@@ -16,7 +16,7 @@ export const FOOD = {
   laddoo:  { name: 'प्रसाद के लड्डू', en: 'Prasad laddoo', heal: 18, model: 'sweet', color: 0xf0a020 },
 };
 export const AMMO_PICK = { '9mm': [8, 15], '.32': [6, 12], '12G': [3, 6], '7.62': [10, 22] };
-const AMMO_COL = { '9mm': 0x5a6a3a, '.32': 0x6a4a2a, '12G': 0xa02020, '7.62': 0x3a4a2a };
+const AMMO_COL = { '9mm': 0x5a6a3a, '.32': 0x6a4a2a, '12G': 0xa02020, '7.62': 0x3a4a2a, rocket: 0x4a5236 };
 
 function models() {
   return {
@@ -33,6 +33,7 @@ function models() {
     katta: merge([part(Bx(0.03, 0.03, 0.24), 0x4a4a48, 0, 0.03, -0.05, 0, 0, Math.PI / 2), part(Bx(0.04, 0.12, 0.05), 0x6a4024, 0, 0.03, 0.1, Math.PI / 2 - 0.4, 0, Math.PI / 2)]),
     dunali: merge([part(Bx(0.07, 0.04, 0.7), 0x2a2a2c, 0, 0.04, -0.3), part(Bx(0.06, 0.07, 0.45), 0x6a4024, 0, 0.04, 0.25)]),
     rifle: merge([part(Bx(0.05, 0.07, 0.6), 0x252527, 0, 0.04, -0.1), part(Bx(0.04, 0.04, 0.35), 0x252527, 0, 0.05, -0.55), part(Bx(0.05, 0.08, 0.25), 0x5a3a20, 0, 0.04, 0.3), part(Bx(0.035, 0.14, 0.06), 0x252527, 0, 0.0, -0.05, 0.35, 0, 0)]),
+    rpg: merge([part(Cy(0.05, 0.05, 0.9, 8), 0x4a5236, 0, 0.06, 0, Math.PI / 2, 0, 0), part(Cy(0.07, 0.05, 0.2, 8), 0x3a4228, 0, 0.06, -0.52, Math.PI / 2, 0, 0), part(Bx(0.03, 0.1, 0.05), 0x222222, 0, 0.0, 0.05)]),
     key: merge([part(Cy(0.03, 0.03, 0.01, 10), 0xd4aa30, 0, 0.005, 0), part(Bx(0.012, 0.01, 0.12), 0xd4aa30, 0, 0.005, 0.07), part(Bx(0.02, 0.01, 0.012), 0xd4aa30, 0.012, 0.005, 0.12)]),
     fuse: merge([part(Cy(0.03, 0.03, 0.1, 10), 0xf0f0e8, 0, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, 0.055, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, -0.055, 0.03, 0, 0, 0, Math.PI / 2)]),
   };
@@ -130,8 +131,10 @@ export class Loot {
 // Pick what a spot or container gives. r = run RNG.
 export function rollFood(r) { return r.pick(['biscuit', 'biscuit', 'bread', 'water', 'water', 'juice', 'namkeen', 'banana', 'roti', 'noodles', 'glucose']); }
 export function rollAmmo(r, owned) {
-  const pref = owned && owned.length > 1 && r.chance(0.6) ? r.pick(owned.filter((w) => w !== 'lathi')) : null;
+  // rockets are never found lying around: only the guns' ammo is rolled
   const map = { pistol: '9mm', revolver: '.32', katta: '12G', dunali: '12G', rifle: '7.62' };
+  const guns = owned ? owned.filter((w) => map[w]) : [];
+  const pref = guns.length && r.chance(0.6) ? r.pick(guns) : null;
   const t = pref ? map[pref] : r.pick(['9mm', '9mm', '9mm', '12G', '12G', '.32', '7.62']);
   const [a, b] = AMMO_PICK[t];
   return { t, n: r.int(a, b) };
