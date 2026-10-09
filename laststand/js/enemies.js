@@ -4,13 +4,16 @@ import * as THREE from 'three';
 import { clamp, lerp, angleDiff } from './util.js';
 import { Physics } from './physics.js';
 
-const MAX = 72;
+const MAX = 130;
 export const TYPES = {
   walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl' },
   runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream' },
   brute:  { hp: 260, speed: 1.0, chase: 1.9, dmg: 30, reach: 1.7, wind: 0.8, sight: 15, scale: 1.25, growl: 'growlBig' },
   human:  { hp: 95, speed: 1.6, chase: 3.6, dmg: 0, reach: 0, wind: 0, sight: 34, scale: 1, growl: null },
+  // chor: a masked knife thief. Fast, melee, grabs food from the bag and bolts.
+  thief:  { hp: 60, speed: 1.55, chase: 5.0, dmg: 9, reach: 1.5, wind: 0.4, sight: 30, scale: 0.98, growl: null },
 };
+const THIEF_GUN = { dmg: 0, rate: 1, burst: 0, sound: 'pistol', drop: 'katta' };
 const HUMAN_GUNS = {
   pistol: { dmg: 9, rate: 0.65, burst: 2, sound: 'pistol', drop: 'pistol' },
   rifle: { dmg: 7, rate: 0.16, burst: 3, sound: 'rifle', drop: 'rifle' },
@@ -80,25 +83,27 @@ export class Enemies {
       this.list.splice(i, 1);
     }
     const T = TYPES[type], r = Math.random;
-    const human = type === 'human';
+    const human = type === 'human' || type === 'thief';
+    const thief = type === 'thief';
     const pick = (a) => a[(r() * a.length) | 0];
     const e = {
       type, T, human, pos: { x, y, z }, yaw: o.yaw ?? r() * 6.28, hp: T.hp * (o.hpK || 1), maxHp: T.hp,
-      state: o.state || (human ? 'PATROL' : 'IDLE'), stateT: 0, t: r() * 10, phase: r() * 6,
+      state: o.state || (thief ? (o.wait ? 'WAIT' : 'PATROL') : human ? 'PATROL' : 'IDLE'), stateT: 0, t: r() * 10, phase: r() * 6,
       vel: { x: 0, z: 0 }, st: { vy: 0, peak: y, fall: 0 }, dead: false, deathT: 0, fallDir: 1,
       scale: T.scale * (0.94 + r() * 0.12), speedK: 0.85 + r() * 0.3, limp: !human && r() < 0.3 ? 0.3 + r() * 0.4 : 0,
       colors: {
-        skin: human ? pick(SKIN_H) : pick(SKIN_Z),
-        top: human ? pick([0x2a2a30, 0x3a3020, 0x30402a, 0x5a1a1a]) : pick(CLOTH),
-        legs: human ? pick([0x22283a, 0x2a2a2a, 0x3a3428]) : pick(LEGS),
+        skin: thief ? 0x161616 : human ? pick(SKIN_H) : pick(SKIN_Z),   // thieves wear a black mask and gloves
+        top: thief ? pick([0xd8541a, 0xe0a010, 0xc02840]) : human ? pick([0x2a2a30, 0x3a3020, 0x30402a, 0x5a1a1a]) : pick(CLOTH),
+        legs: thief ? 0x1c1c22 : human ? pick([0x22283a, 0x2a2a2a, 0x3a3428]) : pick(LEGS),
       },
       wanderYaw: r() * 6.28, nextGrowl: 2 + r() * 8, attackT: 0, stagger: 0, flinch: 0,
       lastSeen: null, losT: 0, seeT: 0, alert: 0, investigate: null, stuckT: 0, sideT: 0, side: 1,
-      route: o.route || null, routeI: 0, gun: human ? HUMAN_GUNS[o.gun || pick(['pistol', 'pistol', 'rifle', 'shotgun'])] : null,
+      route: o.route || null, routeI: 0, thief, loot: null, tunnel: o.tunnel || false, zone: o.zone || null, hold: o.hold || false,
+      gun: thief ? THIEF_GUN : human ? HUMAN_GUNS[o.gun || pick(['pistol', 'pistol', 'rifle', 'shotgun'])] : null,
       ammo: 0, coolT: 0, burstLeft: 0, cover: null, coverT: 0, peek: null, react: 0, hs: [], home: { x, z },
       inside: o.inside || false, frozen: o.frozen || false, aimT: 0,
     };
-    if (e.gun) e.gunKey = o.gun || Object.keys(HUMAN_GUNS).find((k) => HUMAN_GUNS[k] === e.gun);
+    if (e.gun && !thief) e.gunKey = o.gun || Object.keys(HUMAN_GUNS).find((k) => HUMAN_GUNS[k] === e.gun);
     if (type === 'brute') e.colors.top = 0x3a2a20;
     this.list.push(e);
     return e;
@@ -139,9 +144,9 @@ export class Enemies {
     if (!e.human && e.type !== 'brute' && n > 20) e.stagger = 0.35;
     if (part === 'leg' && !e.human) e.limp = Math.min(0.75, e.limp + 0.2);
     // being shot always reveals the shooter
-    if (src === 'player') { e.alert = 1; e.lastSeen = { x: this.game.player.pos.x, z: this.game.player.pos.z }; if (e.human) { e.state = 'ATTACK'; e.react = 0.1; } else e.state = 'CHASE'; }
+    if (src === 'player') { e.alert = 1; e.lastSeen = { x: this.game.player.pos.x, z: this.game.player.pos.z }; if (e.thief) { if (e.state !== 'FLEE') e.state = 'CHASE'; } else if (e.human) { e.state = 'ATTACK'; e.react = 0.1; } else e.state = 'CHASE'; if (e.zone) this.alertZone(e); }
     if (e.hp <= 0) { this.kill(e, part, dir, src); return true; }
-    if (e.human && e.hp < e.maxHp * 0.3 && e.state !== 'RETREAT') { e.state = 'RETREAT'; e.stateT = 0; }
+    if (e.human && !e.thief && e.hp < e.maxHp * 0.3 && e.state !== 'RETREAT') { e.state = 'RETREAT'; e.stateT = 0; }
     return false;
   }
 
@@ -152,7 +157,7 @@ export class Enemies {
     g.audio.play(e.human ? 'flesh' : (e.type === 'brute' ? 'growlBig' : 'growl'), { pos: [e.pos.x, e.pos.y + 1.4, e.pos.z], vol: 0.6, rate: 0.7 });
     g.fx.bloodPool(e.pos.x, e.pos.y, e.pos.z, 1.2 + Math.random());
     if (src === 'player') g.stats.kills++;
-    if (e.human) g.dropFromHuman(e);
+    if (e.thief) g.dropFromThief(e); else if (e.human) g.dropFromHuman(e);
   }
 
   // ---------- perception ----------
@@ -166,14 +171,31 @@ export class Enemies {
   hear(pos, radius, kind) {
     for (const e of this.list) {
       if (e.dead) continue;
+      if (e.tunnel && !this.game.secret.underground) continue;
       const d = Math.hypot(e.pos.x - pos.x, e.pos.z - pos.z);
       if (d > radius) continue;
       if (e.human) {
-        if (e.state === 'PATROL' || e.state === 'IDLE' || e.state === 'SEARCH') { e.state = 'HEAR'; e.stateT = 0; e.investigate = { x: pos.x, z: pos.z }; }
+        if (e.thief) {
+          if (e.state === 'PATROL' || e.state === 'WAIT' || e.state === 'SEARCH') { e.state = 'HEAR'; e.stateT = 0; e.investigate = { x: pos.x, z: pos.z }; }
+        } else if (e.state === 'PATROL' || e.state === 'IDLE' || e.state === 'SEARCH') { e.state = 'HEAR'; e.stateT = 0; e.investigate = { x: pos.x, z: pos.z }; }
+      } else if (e.zone && kind === 'gun' && d < radius * 0.75 && e.state !== 'CHASE' && e.state !== 'ATTACK') {
+        // a gunshot near an ambush pack: the whole pack comes at once
+        e.state = 'CHASE'; e.lastSeen = { x: pos.x, z: pos.z }; e.lostT = 0; e.nextGrowl = Math.random() * 2;
       } else if (e.state === 'IDLE' || e.state === 'ALERT') {
         e.state = 'ALERT'; e.investigate = { x: pos.x + (Math.random() - 0.5) * 6, z: pos.z + (Math.random() - 0.5) * 6 }; e.stateT = 0;
         if (kind === 'gun' && d < radius * 0.6 && Math.random() < 0.4 && e.nextGrowl > 1) e.nextGrowl = Math.random();
       }
+    }
+  }
+
+  // Everyone in the same ambush pack (or within shouting distance) joins the chase.
+  alertZone(src) {
+    const P = this.game.player;
+    for (const o of this.list) {
+      if (o === src || o.dead || o.human || (o.state !== 'IDLE' && o.state !== 'ALERT')) continue;
+      const dd = Math.hypot(o.pos.x - src.pos.x, o.pos.z - src.pos.z);
+      if (dd > 25 || (dd > 9 && !(src.zone && o.zone === src.zone))) continue;
+      o.state = 'CHASE'; o.lastSeen = { x: P.pos.x, z: P.pos.z }; o.lostT = 0; o.nextGrowl = Math.random() * 1.5; o.hold = false;
     }
   }
 
@@ -246,7 +268,8 @@ export class Enemies {
       if (d > 70) { e.slowAcc = (e.slowAcc || 0) + dt; if (e.slowAcc < 0.25) continue; dt = e.slowAcc; e.slowAcc = 0; }
       e.stagger = Math.max(0, e.stagger - dt);
       e.flinch = Math.max(0, e.flinch - dt * 3);
-      if (e.human) this.updateHuman(e, dt, d, px, pz, peye, P);
+      if (e.thief) this.updateThief(e, dt, d, px, pz, peye, P);
+      else if (e.human) this.updateHuman(e, dt, d, px, pz, peye, P);
       else this.updateZombie(e, dt, d, px, pz, peye, P);
       dt = g.dt;
     }
@@ -273,14 +296,15 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); } }
     }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
     const speedK = e.speedK * (1 - e.limp * 0.5);
     switch (e.state) {
       case 'IDLE': {
         if (e.stateT > 3 + Math.random() * 4) { e.stateT = 0; e.wanderYaw += (Math.random() - 0.5) * 2.5; e.idleWalk = Math.random() < 0.6; }
-        if (e.idleWalk) this.goTo(e, e.pos.x + Math.sin(e.wanderYaw) * 3, e.pos.z + Math.cos(e.wanderYaw) * 3, T.speed * 0.5 * speedK, dt, false);
+        if (e.hold) e.idleWalk = false;
+        if (e.idleWalk && !e.hold) this.goTo(e, e.pos.x + Math.sin(e.wanderYaw) * 3, e.pos.z + Math.cos(e.wanderYaw) * 3, T.speed * 0.5 * speedK, dt, false);
         else this.move(e, 0, 0, 0, dt);
         break;
       }
@@ -300,7 +324,7 @@ export class Enemies {
         let tx = e.lastSeen ? e.lastSeen.x : px, tz = e.lastSeen ? e.lastSeen.z : pz;
         let flow = e.sees || d < 25;
         if (dy > 1.6 && d < 14) { const s = g.stairFor(e, P); if (s) { tx = s[0]; tz = s[1]; flow = false; } }
-        this.goTo(e, tx, tz, T.chase * speedK, dt, flow && P.pos.y < 1.2);
+        this.goTo(e, tx, tz, T.chase * speedK, dt, flow && P.pos.y < 1.2 && !e.tunnel);
         break;
       }
       case 'ATTACK': {
@@ -455,6 +479,111 @@ export class Enemies {
     }
   }
 
+  // ---------- thieves (chor): sneak, rush, stab, grab food and run ----------
+  updateThief(e, dt, d, px, pz, peye, P) {
+    const g = this.game, T = e.T;
+    e.stateT += dt;
+    // eyes: same stealth rules as armed humans, but a shorter reach in the dark
+    e.losT -= dt;
+    if (!P.dead && d < 45 && e.losT <= 0) {
+      e.losT = 0.2;
+      const vis = g.playerVisibility();
+      const range = (7 + 26 * vis) * (P.crouched ? 0.65 : 1) * (P.speedNow > 4 ? 1.2 : 1);
+      const ang = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)));
+      e.sees = (d < 3 || (d < range && ang < 1.2) || d < P.noise) && this.canSee(e, px, peye, pz);
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.alert = Math.min(1.2, e.alert + 0.5); } else e.alert = Math.max(0, e.alert - 0.05);
+    }
+    if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
+    if (e.sees && e.alert >= 0.8 && ['PATROL', 'WAIT', 'HEAR', 'INVESTIGATE', 'SEARCH'].includes(e.state)) {
+      e.state = 'DETECT'; e.stateT = 0; e.react = 0.25 + Math.random() * 0.3; e.hold = false;
+    }
+    const speed = T.speed * e.speedK;
+    switch (e.state) {
+      case 'WAIT': {
+        this.move(e, 0, 0, 0, dt);
+        e.yaw += Math.sin(e.t * 0.6) * dt * 0.5;
+        break;
+      }
+      case 'PATROL': {
+        if (!e.route || !e.route.length) {
+          // no route: loiter around home
+          if (e.stateT > 4) { e.stateT = 0; e.wp = [e.home.x + (Math.random() - 0.5) * 12, e.home.z + (Math.random() - 0.5) * 12]; }
+          if (e.wp && Math.hypot(e.wp[0] - e.pos.x, e.wp[1] - e.pos.z) > 1.2) this.goTo(e, e.wp[0], e.wp[1], speed * 0.7, dt, false);
+          else this.move(e, 0, 0, 0, dt);
+          break;
+        }
+        const wp = e.route[e.routeI % e.route.length];
+        if (Math.hypot(wp[0] - e.pos.x, wp[1] - e.pos.z) < 1.3) { e.pause = (e.pause || 0) + dt; this.move(e, 0, 0, 0, dt); if (e.pause > 1.5) { e.pause = 0; e.routeI++; } }
+        else this.goTo(e, wp[0], wp[1], speed * 0.75, dt, false);
+        break;
+      }
+      case 'HEAR': {
+        this.move(e, 0, 0, 0, dt);
+        if (e.investigate) e.yaw += angleDiff(e.yaw, Math.atan2(e.investigate.x - e.pos.x, e.investigate.z - e.pos.z)) * Math.min(1, dt * 4);
+        if (e.stateT > 0.8) { e.state = 'INVESTIGATE'; e.stateT = 0; }
+        break;
+      }
+      case 'INVESTIGATE': {
+        if (!e.investigate) { e.state = 'PATROL'; break; }
+        if (Math.hypot(e.investigate.x - e.pos.x, e.investigate.z - e.pos.z) < 2 || e.stateT > 18) { e.state = 'SEARCH'; e.stateT = 0; break; }
+        this.goTo(e, e.investigate.x, e.investigate.z, speed * 1.1, dt, false);
+        break;
+      }
+      case 'SEARCH': {
+        const c = e.lastSeen || e.home;
+        if (!e.searchPt || e.searchT <= 0) { e.searchPt = [c.x + (Math.random() - 0.5) * 10, c.z + (Math.random() - 0.5) * 10]; e.searchT = 3.5; }
+        e.searchT -= dt;
+        this.goTo(e, e.searchPt[0], e.searchPt[1], speed, dt, false);
+        if (e.stateT > 16) { e.state = e.route ? 'PATROL' : 'WAIT'; e.alert = 0; e.stateT = 0; }
+        break;
+      }
+      case 'DETECT': {
+        this.move(e, 0, 0, 0, dt);
+        e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 7);
+        e.react -= dt;
+        if (e.react <= 0) { e.state = 'CHASE'; e.stateT = 0; g.noise(e.pos, 14, 'shout'); }
+        break;
+      }
+      case 'CHASE': {
+        if (P.dead) { e.state = 'SEARCH'; break; }
+        if (e.sees) e.lostT = 0; else { e.lostT = (e.lostT || 0) + dt; if (e.lostT > 9) { e.state = 'SEARCH'; e.stateT = 0; break; } }
+        const dy = Math.abs(P.pos.y - e.pos.y);
+        if (d < T.reach && dy < 1.3) { e.state = 'ATTACK'; e.attackT = T.wind; break; }
+        let tx = e.lastSeen ? e.lastSeen.x : px, tz = e.lastSeen ? e.lastSeen.z : pz, flow = e.sees || d < 25;
+        if (dy > 1.6 && d < 14) { const st = g.stairFor(e, P); if (st) { tx = st[0]; tz = st[1]; flow = false; } }
+        this.goTo(e, tx, tz, T.chase * e.speedK * 0.9, dt, flow && P.pos.y < 1.2 && !e.tunnel);
+        break;
+      }
+      case 'ATTACK': {
+        this.move(e, 0, 0, 0, dt);
+        e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 9);
+        e.attackT -= dt;
+        if (e.attackT <= 0) {
+          if (d < T.reach + 0.4 && Math.abs(P.pos.y - e.pos.y) < 1.4 && !P.dead) {
+            g.hurtPlayer(T.dmg * (0.85 + Math.random() * 0.3), e);
+            g.audio.play('flesh', { pos: [px, P.pos.y + 1.2, pz], vol: 0.8 });
+            // snatch a bite of food and run
+            if (!e.loot && g.food.length && Math.random() < 0.55) {
+              e.loot = g.food.splice((Math.random() * g.food.length) | 0, 1)[0];
+              g.toast('चोर ने खाना चुरा लिया!', 'A thief snatched food from your bag — kill him to get it back.');
+              g.updateHud && g.updateHud();
+              e.state = 'FLEE'; e.stateT = 0; break;
+            }
+          } else g.audio.play('whoosh', { pos: [e.pos.x, e.pos.y + 1.2, e.pos.z], vol: 0.4 });
+          e.state = 'CHASE'; e.stateT = 0;
+        }
+        break;
+      }
+      case 'FLEE': {
+        const ax = e.pos.x - px, az = e.pos.z - pz, l = Math.hypot(ax, az) || 1;
+        this.goTo(e, e.pos.x + ax / l * 10, e.pos.z + az / l * 10, T.chase * 1.1, dt, false);
+        if (e.stateT > 9 || d > 45) { e.state = 'SEARCH'; e.stateT = 0; e.alert = 0; }
+        break;
+      }
+      default: e.state = e.route ? 'PATROL' : 'WAIT';
+    }
+  }
+
   findCover(e, px, peye, pz) {
     const g = this.game;
     let best = null, bestScore = 1e9;
@@ -533,7 +662,7 @@ export class Enemies {
         put('ua', R.ua[i], e.human ? col.top : col.skin); put('fa', R.fa[i], col.skin);
         put('th', R.th[i], col.legs); put('sn', R.sn[i], e.human ? 0x1a1a1a : col.legs);
       }
-      if (e.human) put('gun', R.gun, 0x1c1c1e);
+      if (e.human) put('gun', R.gun, e.thief ? 0xc4c8d0 : 0x1c1c1e);
       // hit spheres
       if (!e.dead) {
         const hs = e.hs; hs.length = 0;
@@ -598,8 +727,15 @@ export class Enemies {
       R.sh[0].rotation.set(aiming ? -1.35 : -0.5, aiming ? -0.5 : 0, 0);
       R.el[0].rotation.set(aiming ? -0.35 : -0.9, 0, 0);
       R.spine.rotation.set(-fl * 0.4, aiming ? 0.05 : 0, 0);
+      if (e.thief) {
+        const chasing = e.state === 'CHASE' || e.state === 'FLEE' || e.state === 'DETECT';
+        R.sh[0].rotation.set(chasing ? -0.5 : -0.2, 0, 0); R.el[0].rotation.set(-0.5, 0, 0);
+        R.sh[1].rotation.set(chasing ? -1.0 : -0.5, 0, 0); R.el[1].rotation.set(-0.5, 0, 0);
+        R.spine.rotation.x = chasing ? 0.3 - fl * 0.4 : -fl * 0.4;
+        if (e.state === 'ATTACK') { const k = 1 - Math.max(0, e.attackT) / e.T.wind; R.sh[1].rotation.x = -1.0 - Math.sin(k * Math.PI) * 1.2; R.spine.rotation.x = 0.1 + Math.sin(k * Math.PI) * 0.4; }
+      }
       if (e.state === 'COVER' && e.stateT > 0.5) { R.body.position.y = -0.35; R.hip[0].rotation.x = -1.2; R.hip[1].rotation.x = -0.2; R.kn[0].rotation.x = 1.6; R.kn[1].rotation.x = 1.4; }
-      if (!aiming) { R.sh[0].rotation.x += legA * 0.4; }
+      if (!aiming && !e.thief) { R.sh[0].rotation.x += legA * 0.4; }
     }
     if (e.dead) {
       // fall: rotate the whole body around the feet, then sink slowly much later

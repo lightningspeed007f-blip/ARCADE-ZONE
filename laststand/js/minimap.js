@@ -23,6 +23,12 @@ export const LANDMARKS = [
 export class TownMap {
   constructor(W) {
     this.W = W;
+    this.build();
+  }
+
+  build() {
+    const W = this.W;
+    this.revealed = false;
     const w = (BOUNDS.maxX - BOUNDS.minX) * PX, h = (BOUNDS.maxZ - BOUNDS.minZ) * PX;
     const c = this.base = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -56,12 +62,37 @@ export class TownMap {
     x.fillStyle = '#8c8577';
     x.fillRect(RAIL.jaisCity.x0, RAIL.mainZ + 1.8, RAIL.jaisCity.x1 - RAIL.jaisCity.x0, 12);
     x.fillRect(RAIL.ggd.x0, RAIL.loopZ + 1.8, RAIL.ggd.x1 - RAIL.ggd.x0, 10);
+    this.bx = x;
+    // house markers: one dot per house you can walk into. A couple are left off on purpose and
+    // only appear once you get close, so the town keeps a few secrets.
+    this.hidden = new Set(['abandoned2', 'e2house']);
+    this.dots = [];
+    for (const b of W.buildings) {
+      if (!b.tpl || ['jaisCity', 'ggd', 'cabin'].includes(b.name)) continue;
+      const [cx, cz] = b.F.p(0, b.d / 2);
+      const dot = { name: b.name, x: cx, z: cz, shown: false };
+      this.dots.push(dot);
+      if (!this.hidden.has(b.name)) this.paintDot(dot);
+    }
     // temple compound in saffron
     const T = KAMAKHYA.temple;
     x.fillStyle = '#b8641c'; x.fillRect(T.x - T.w / 2, T.z - T.d / 2, T.w, T.d);
     x.fillStyle = '#f0a040'; x.fillRect(T.x - 3, T.z - 3, 6, 7);
     // well
     x.fillStyle = '#3a6a9a'; x.beginPath(); x.arc(KAMAKHYA.well.x, KAMAKHYA.well.z, 2.2, 0, 7); x.fill();
+  }
+
+  paintDot(d) {
+    const x = this.bx; d.shown = true;
+    x.save();
+    x.fillStyle = '#ffcf5a'; x.strokeStyle = '#2a1a08'; x.lineWidth = 0.9;
+    x.beginPath(); x.arc(d.x, d.z, 2.7, 0, Math.PI * 2); x.fill(); x.stroke();
+    x.restore();
+  }
+
+  // Reveal a secret house's dot once the player is near it (or inside it).
+  discover(px, pz) {
+    for (const d of this.dots) if (!d.shown && Math.hypot(d.x - px, d.z - pz) < 10) { this.paintDot(d); this.revealed = true; }
   }
 
   // Objective markers for the current state of the run.

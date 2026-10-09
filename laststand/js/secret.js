@@ -19,7 +19,7 @@ const C2 = { x0: -144.2, x1: -135.1, z0: 9.8, z1: 12.0 };         // west corrid
 const C3 = { x0: -144.2, x1: -142.0 };                            // last corridor, toward the valley
 const TRIG_A = -139.5, TRIG_B = -138.5;                           // hysteresis on x inside C2
 const X0 = (C3.x0 + C3.x1) / 2 + O.x;                             // valley centre line
-const STATUE = { x: X0, z: -188, h: 58 };                         // ~40 m standing above the rocks: 20x+ a person
+const STATUE = { x: X0, z: -208, h: 116 };                        // ~116 m, twice the original 58 m, set further back so the whole figure still fits the view
 const LAKE = { z0: -108, z1: -152, y: -0.65 };
 const CH = 3.2;                                                   // corridor height
 
@@ -379,6 +379,7 @@ function valley(W) {
   }
   B.box('rock', X0, 0, -240, 300, 5, 180, 0, ROCK, { uv: 10, skip: ['bottom'] });   // plateau, top at y = 2.5
   B.box('concrete', X0, 2.6, -165, 46, 0.2, 18, 0, [0.62, 0.58, 0.54], { uv: 3 });  // forecourt
+  B.box('concrete', X0, 2.6, STATUE.z + 23, 80, 0.2, 22, 0, [0.62, 0.58, 0.54], { uv: 3 });  // inner forecourt at the statue's feet
   // rock ridge in front of the statue's base: hides where the figure meets the ground
   for (let i = 0; i < 26; i++) {
     const x = X0 + (r() - 0.5) * 44, h = 2 + r() * 3.5, w = 3 + r() * 6;
@@ -406,7 +407,7 @@ function valley(W) {
   for (const [dx, dz, s] of [[-26, 10, 2.1], [-35, -6, 2.4], [24, 12, 2.0], [33, -4, 2.5], [-45, 24, 1.8], [44, 22, 1.9], [-14, 30, 1.5], [15, 32, 1.6]]) W.props.trees.push({ p: [X0 + dx, 2.5, STATUE.z + dz], s, type: s > 2 ? 'peepal' : undefined });
   for (let i = 0; i < 10; i++) { const z = -20 - r() * 70; W.props.trees.push({ p: [X0 + (r() < 0.5 ? -1 : 1) * (18 + r() * (hw(z) - 26)), 0, z], s: 1.1 + r() * 0.6 }); }
   // golden light from behind the statue, spilling on rocks, trees and water
-  for (const s of [-1, 1]) W.lights.push({ x: X0 + s * 26, y: 14, z: STATUE.z - 6, color: 0xffb040, intensity: 60, dist: 120, major: true, valley: true });
+  for (const s of [-1, 1]) W.lights.push({ x: X0 + s * 40, y: 24, z: STATUE.z - 6, color: 0xffb040, intensity: 70, dist: 150, major: true, valley: true });
   W.lights.push({ x: X0, y: 5, z: STATUE.z + 14, color: 0xffc070, intensity: 22, dist: 70, major: true, valley: true });
   W.special.secret = { X0, statue: STATUE, lake: LAKE };
 }
@@ -461,19 +462,19 @@ export class Secret {
     this.layers = [];
     const k = H / 50;
     const L1 = add(new THREE.Mesh(new THREE.PlaneGeometry(150 * k, 170 * k), additive(coreTexture(), 0xffb058, 0.72)), -7, baseY + H * 0.56, 1);
-    const L2 = add(new THREE.Mesh(new THREE.PlaneGeometry(240 * k, 240 * k), additive(raysTexture(), 0xffd090, 0.4)), -6, baseY + H * 0.6, 1);
-    const L3 = add(new THREE.Mesh(new THREE.PlaneGeometry(30, 320), additive(columnTexture(), 0xffc070, 0.11)), -8, baseY + 165, 1);
+    const L2 = add(new THREE.Mesh(new THREE.PlaneGeometry(240 * k, 240 * k), additive(raysTexture(), 0xffd090, 0.46)), -6, baseY + H * 0.6, 1);
+    const L3 = add(new THREE.Mesh(new THREE.PlaneGeometry(30 * k, 320 * k), additive(columnTexture(), 0xffc070, 0.11)), -8, baseY + 165 * k, 1);
     // golden rim: light wrapping around the body from behind (follows the figure, not the picture)
     const L4 = add(new THREE.Mesh(new THREE.PlaneGeometry(Wd * 1.16, H * 1.08), additive(T(sc.rim), 0xffb060, 0.22)), -0.8, baseY + H / 2 + 1.2, 2);
     // the artwork already carries its own golden lighting: show it as painted (unlit),
     // the night haze (fog) still settles on it with distance
     const ft = T(sc.c); ft.anisotropy = 8;
     const statueMat = new THREE.MeshBasicMaterial({ map: ft, transparent: true, alphaTest: 0.03, depthWrite: true, toneMapped: false, color: 0xf2f0ec });
-    const fig = add(new THREE.Mesh(reliefGeometry(Wd, H, sc.depth, 2.6), statueMat), 0, baseY + H / 2, 3);
+    const fig = add(new THREE.Mesh(reliefGeometry(Wd, H, sc.depth, 2.6 * H / 58), statueMat), 0, baseY + H / 2, 3);
     // mist in front of the base and across the lake
-    const M1 = add(new THREE.Mesh(new THREE.PlaneGeometry(90, 16), additive(bandTexture(255, 190, 110), 0xffffff, 0.55)), 8, 5, 4);
+    const M1 = add(new THREE.Mesh(new THREE.PlaneGeometry(90 * k * 0.7, 16 * k * 0.7), additive(bandTexture(255, 190, 110), 0xffffff, 0.55)), 8, 5, 4);
     const M2 = add(new THREE.Mesh(new THREE.PlaneGeometry(240, 26), additive(bandTexture(120, 140, 200), 0xffffff, 0.16)), 40, 6, 4);
-    this.layers = [[L1, 0.72], [L2, 0.4], [L3, 0.11], [L4, 0.22], [M1, 0.55], [M2, 0.16]];
+    this.layers = [[L1, 0.72], [L2, 0.46], [L3, 0.11], [L4, 0.22], [M1, 0.55], [M2, 0.16]];
     this.rays = L2; this.fig = fig;
     // far golden horizon behind everything, lighting the back cliffs
     const hor = new THREE.Mesh(new THREE.PlaneGeometry(560, 170), additive(bandTexture(255, 170, 70), 0xffffff, 0.3));
@@ -562,6 +563,16 @@ export class Secret {
 
   shift(dir) {
     const P = this.g.player;
+    // anything chasing the player in the tunnel crosses over with them
+    for (const e of this.g.enemies.list) {
+      if (e.dead || !e.tunnel) continue;
+      if (Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) < 14 && Math.abs(e.pos.y - P.pos.y) < 3) {
+        e.pos.x += O.x * dir; e.pos.y += O.y * dir; e.pos.z += O.z * dir;
+        if (e.lastSeen) { e.lastSeen.x += O.x * dir; e.lastSeen.z += O.z * dir; }
+        if (e.st) e.st.peak = (e.st.peak ?? e.pos.y) + O.y * dir;
+        e.frozen = false;
+      }
+    }
     P.pos.x += O.x * dir; P.pos.y += O.y * dir; P.pos.z += O.z * dir;
     P.smoothY += O.y * dir; P.state.peak = (P.state.peak ?? P.pos.y) + O.y * dir;
     this.g.camera.position.x += O.x * dir; this.g.camera.position.y += O.y * dir; this.g.camera.position.z += O.z * dir;
