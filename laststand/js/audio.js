@@ -135,7 +135,7 @@ const R = {
 };
 
 export class Audio {
-  constructor() { this.ctx = null; this.b = {}; this.enabled = true; this.loops = {}; this.radios = []; }
+  constructor() { this.ctx = null; this.b = {}; this.enabled = true; this.loops = {}; this.radios = []; this.tracks = {}; }
 
   init() {
     if (this.ctx) return;
@@ -174,6 +174,7 @@ export class Audio {
     set('static', () => R.staticNoise(2.5));
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
     this._loadGunSounds();
+    this._loadUserAudio();
   }
 
   // Custom fire sounds: drop assets/sounds/<name>.mp3 (or .wav / .ogg). Missing files keep the generated sound.
@@ -191,6 +192,80 @@ export class Audio {
       })();
     }
   }
+
+  // decodeAudioData: promise form, with the callback form older iPhone Safari needs
+  _decode(ab) {
+    return new Promise((res, rej) => { const p = this.ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+  }
+
+  // The user's zombie / Shivji audio (MANIFEST.userAudio). One-shots are decoded into buffers;
+  // loops become tracks that fade in and out. Big loops stream from an <audio> element instead
+  // of being decoded whole, so phones don't run out of memory. Missing files: nothing happens.
+  _loadUserAudio() {
+    const BIG = 1.5e6;
+    for (const [key, spec] of Object.entries(MANIFEST.userAudio)) {
+      (async () => {
+        for (const name of spec.names) for (const ext of MANIFEST.userAudioExts) {
+          const url = ASSET_ROOT + spec.dir + encodeURIComponent(name) + ext;
+          try {
+            const head = await fetch(url, { method: 'HEAD' });
+            if (!head.ok) continue;
+            const size = +head.headers.get('content-length') || 0;
+            if (spec.loop && size > BIG) { this._track(key, null, url); return; }
+            const buf = await this._decode(await (await fetch(url)).arrayBuffer());
+            if (spec.loop) this._track(key, buf, url); else this.b[key] = [buf];
+            return;
+          } catch (e) { /* missing or not decodable: try the next name */ }
+        }
+      })();
+    }
+  }
+
+  _track(key, buffer, url) {
+    const ctx = this.ctx, g = ctx.createGain();
+    g.gain.value = 0; g.connect(this.music);
+    const t = { g, buffer, el: null, src: null, on: false, vol: 0, stopT: 0 };
+    if (!buffer) {
+      const el = t.el = new window.Audio();
+      el.src = url; el.loop = true; el.preload = 'auto'; el.crossOrigin = 'anonymous'; el.playsInline = true; el.setAttribute('playsinline', '');
+      try { ctx.createMediaElementSource(el).connect(g); } catch (e) { return; }
+      // iPhone Safari only lets an <audio> element start from a tap: prime it (silently) on the next one
+      const unlock = () => {
+        for (const ev of ['touchend', 'click', 'keydown']) window.removeEventListener(ev, unlock, true);
+        if (t.on) return;
+        const p = el.play();
+        if (p && p.then) p.then(() => { if (!t.on) el.pause(); }).catch(() => {});
+      };
+      for (const ev of ['touchend', 'click', 'keydown']) window.addEventListener(ev, unlock, true);
+    }
+    this.tracks[key] = t;
+  }
+
+  hasTrack(key) { return !!this.tracks[key]; }
+
+  // Fade a looping track toward vol over sec seconds. It starts from the top when it was silent
+  // and stops once it has faded to 0. Calling it again with the same volume does nothing.
+  fade(key, vol, sec = 2) {
+    const t = this.tracks[key];
+    if (!t || !this.ctx || (vol === t.vol && !(vol <= 0 && sec <= 0 && t.on))) return;
+    t.vol = vol;
+    const now = this.ctx.currentTime, gp = t.g.gain;
+    gp.cancelScheduledValues(now); gp.setValueAtTime(gp.value, now);
+    if (sec > 0) gp.linearRampToValueAtTime(vol, now + sec); else gp.setValueAtTime(vol, now);
+    clearTimeout(t.stopT);
+    if (vol > 0 && !t.on) {
+      t.on = true;
+      if (t.buffer) { const s = t.src = this.ctx.createBufferSource(); s.buffer = t.buffer; s.loop = true; s.connect(t.g); s.start(); }
+      else { try { t.el.currentTime = 0; } catch (e) { /* not loaded yet */ } t.el.play().catch(() => {}); }
+    } else if (vol <= 0 && t.on) {
+      const stop = () => { if (t.vol > 0) return; t.on = false; if (t.src) { try { t.src.stop(); } catch (e) { /* stopped */ } t.src = null; } if (t.el) t.el.pause(); };
+      if (sec > 0) t.stopT = setTimeout(stop, sec * 1000 + 200); else stop();
+    }
+  }
+
+  // pause menu: <audio> elements keep running while the context is suspended, so hold them too
+  pauseTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.pause(); } }
+  resumeTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.play().catch(() => {}); } }
 
   has(name) { return !!(this.b[name] && this.b[name].length); }
 
@@ -304,6 +379,7 @@ export class Audio {
   }
 
   stopAll() {
+    for (const k in this.tracks) this.fade(k, 0, 0);
     for (const r of this.radios) r.stop();
     for (const k in this.loops) { try { this.loops[k].stop(); } catch (e) { /* already stopped */ } }
     this.loops = {};
