@@ -173,6 +173,23 @@ export class Audio {
     set('horn', R.horn); set('bell', R.bell); set('beep', () => R.beep(1200)); set('beepLow', () => R.beep(500, 0.2)); set('splash', R.splash);
     set('static', () => R.staticNoise(2.5));
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
+    this._loadGunSounds();
+  }
+
+  // Custom fire sounds: drop assets/sounds/<name>.mp3 (or .wav / .ogg). Missing files keep the generated sound.
+  _loadGunSounds() {
+    for (const [file, key] of Object.entries(MANIFEST.gunSounds)) {
+      (async () => {
+        for (const ext of ['.mp3', '.wav', '.ogg']) {
+          try {
+            const res = await fetch(ASSET_ROOT + 'sounds/' + file + ext);
+            if (!res.ok) continue;
+            this.b[key] = [await this.ctx.decodeAudioData(await res.arrayBuffer())];
+            return;
+          } catch (e) { /* not a valid audio file, try the next extension */ }
+        }
+      })();
+    }
   }
 
   // Play a one-shot. pos = [x,y,z] for 3D, otherwise 2D.

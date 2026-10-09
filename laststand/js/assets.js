@@ -10,6 +10,7 @@ export const MANIFEST = {
   kamakhya: 'kamakhya',                               // temple image / logo
   photos: Array.from({ length: 15 }, (_, i) => 'photos/photo' + String(i + 1).padStart(2, '0')),
   banners: Array.from({ length: 5 }, (_, i) => 'banners/banner' + String(i + 1).padStart(2, '0')),
+  gunSounds: { pistol: 'pistol', revolver: 'revolver', dunali: 'shotgun', rifle: 'rifle' }, // sounds/<file>.mp3 -> sound key
   songs: Array.from({ length: 6 }, (_, i) => 'music/song' + String(i + 1).padStart(2, '0') + '.mp3'),
 };
 const EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
