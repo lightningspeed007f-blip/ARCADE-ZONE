@@ -14,10 +14,10 @@ export const MANIFEST = {
   songs: Array.from({ length: 6 }, (_, i) => 'music/song' + String(i + 1).padStart(2, '0') + '.mp3'),
   // the user's zombie / Shivji audio: sound key -> folder + accepted file names (first match wins)
   userAudio: {
-    zombieChase:  { dir: 'sounds/', names: ['zombiechase', 'zombie chase', 'zombie_chase'], loop: true },          // zombies on your heels
-    zombieByeBye: { dir: 'sounds/', names: ['zombie bye bye', 'zombiebyebye', 'zombie_bye_bye'] },                // a zombie kills you
-    zombieScream: { dir: 'sounds/', names: ['zombie scream', 'zombiescream', 'zombie_scream'] },                  // far-off screams
-    shivMusic:    { dir: 'music/', names: ['Shiv Ji background music', 'shiv ji background music', 'shivji_music'], loop: true }, // the Shivdham reveal
+    zombieChase:  { dirs: ['music/', 'sounds/'], names: ['zombiechase', 'zombie chase', 'zombie_chase'], loop: true },                      // zombies on your heels
+    zombieByeBye: { dirs: ['music/', 'sounds/'], names: ['zombiebye', 'zombie bye bye', 'zombiebyebye', 'zombie_bye_bye'] },               // a zombie kills you
+    zombieScream: { dirs: ['music/', 'sounds/'], names: ['zombiescream', 'zombie scream', 'zombie_scream'] },                              // far-off screams
+    shivMusic:    { dirs: ['music/', 'sounds/'], names: ['shivjibackground', 'Shiv Ji background music', 'shiv ji background music', 'shivji_music'], loop: true }, // the Shivdham reveal
   },
   userAudioExts: ['.mp3', '.m4a', '.wav', '.ogg'],
 };
