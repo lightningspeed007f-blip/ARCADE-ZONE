@@ -39,7 +39,7 @@ const BRICK = [0.62, 0.5, 0.44], STONE = [0.55, 0.52, 0.5], ROCK = [0.46, 0.42, 
 // order as the Shivdham colossus (260 m): from the path you have to look up to see their faces.
 const FIGS = {
   k1: { x: KX0 - 66, z: Z(-66), h: 150, look: [KX0, Z(-30)], rim: 0xff6a40, core: 0xff9050 },
-  k3: { x: KX0, z: Z(-100), h: 135, look: [KX0, Z(-60)], rim: 0xffb060, core: 0xffb868 },
+  k3: { x: KX0, z: Z(-100), h: 60, look: [KX0, Z(-60)], rim: 0xffb060, core: 0xffb868 },
   k2: { x: KX0, z: Z(-212), h: 215, look: [KX0, Z(-60)], rim: 0xff8a50, core: 0xffa060, main: true },
 };
 const SKY = { x: KX0, y: 780, z: Z(-360), h: 560 };               // maakaali4, high over the valley (clear above the great colossus)
