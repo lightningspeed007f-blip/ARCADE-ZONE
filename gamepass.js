@@ -108,15 +108,67 @@
   function hasPass(game) { return get('sessionStorage', 'gz_pass_' + game) === '1'; }
   function endAllPasses() { for (var g in GAMES) del('sessionStorage', 'gz_pass_' + g); }
 
+  /* ---------- ADMIN MODE (the owner's own demo phone) ----------
+     Turned on from the Staff page (organizer.html, behind the staff PIN) and remembered on
+     THIS phone only (localStorage). While it is on, locked games open without a code, so the
+     owner can demo them again and again. Nothing is written to codes, Player IDs or any other
+     phone: other players keep needing a code for every game, exactly as before.
+     The stored value is tied to this phone's Player ID, so copying it to another phone does nothing.
+     Honest limit: this is a browser-only game with no server, so this is a convenience lock,
+     not real security. Someone with developer tools on THIS phone could still change it. */
+  var ADMIN_KEY = 'gz_admin_v1';
+  function adminToken(dev, salt) { return String(cyrb53(CONFIG.SECRET + '|ADMIN|' + dev + '|' + salt)); }
+  function isAdmin() {
+    try {
+      var a = JSON.parse(get('localStorage', ADMIN_KEY) || 'null');
+      return !!(a && a.s && a.t === adminToken(deviceId(), a.s));
+    } catch (e) { return false; }
+  }
+  // Only works while the staff PIN is unlocked (see checkPin). Returns true when changed.
+  function setAdmin(on) {
+    if (on) {
+      if (!staffOk()) return false;
+      var salt = String(Date.now()) + String(Math.random()).slice(2, 8);
+      set('localStorage', ADMIN_KEY, JSON.stringify({ s: salt, t: adminToken(deviceId(), salt) }));
+    } else del('localStorage', ADMIN_KEY);   // switching it OFF never needs the PIN
+    showAdminBadge();
+    return true;
+  }
+  var badge = null;
+  function showAdminBadge() {
+    var on = isAdmin();
+    if (!on) { if (badge && badge.parentNode) badge.parentNode.removeChild(badge); badge = null; return; }
+    if (badge || !document.body) return;
+    badge = document.createElement('div');
+    badge.id = 'gzAdminBadge';
+    badge.textContent = 'ADMIN ∞';
+    // On game pages the badge only shows; it never takes a tap away from the game.
+    // In the Game Zone / StoryMode lobbies a tap offers to leave Admin Mode.
+    var lobby = !gameKey;
+    badge.style.cssText = 'position:fixed;left:calc(6px + env(safe-area-inset-left));bottom:calc(6px + env(safe-area-inset-bottom));' +
+      'z-index:2147483001;padding:2px 8px;border-radius:10px;font:700 10px/16px Orbitron,Rajdhani,system-ui,sans-serif;letter-spacing:1px;' +
+      'color:#ffcf3f;background:rgba(5,6,10,.72);border:1px solid rgba(255,207,63,.55);opacity:.85;' +
+      (lobby ? 'cursor:pointer;' : 'pointer-events:none;');
+    badge.title = 'Admin Mode is on for this phone: locked games open without a code.';
+    if (lobby) badge.addEventListener('click', function (e) {
+      e.stopPropagation(); e.preventDefault();
+      if (window.confirm('Admin Mode is ON for this phone (unlimited plays).\n\nTurn Admin Mode OFF and go back to normal player mode?')) setAdmin(false);
+    });
+    document.body.appendChild(badge);
+  }
+
   window.GamePass = {
     CONFIG: CONFIG, GAMES: GAMES, makeCode: makeCode, checkCode: checkCode,
     deviceId: deviceId, hasPass: hasPass, endAllPasses: endAllPasses, locked: false,
-    checkPin: checkPin, staffOk: staffOk, staffLogout: staffLogout, autoLock: autoLock
+    checkPin: checkPin, staffOk: staffOk, staffLogout: staffLogout, autoLock: autoLock,
+    isAdmin: isAdmin, setAdmin: setAdmin
   };
 
   /* ---------- the lock screen ---------- */
   var me = document.currentScript;
   var game = me && me.getAttribute('data-game');
+  var gameKey = game && GAMES[game] ? game : null;
+  if (document.body) showAdminBadge(); else document.addEventListener('DOMContentLoaded', showAdminBadge);
   if (!game || !GAMES[game]) return;
   // Staff who unlocked the Staff page can open the Spin organizer without a player code
   if (game === 'spin' && /[?&]organizer/.test(location.search) && staffOk()) return;
@@ -199,10 +251,11 @@
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
   }
 
-  if (!hasPass(game)) {
+  // Admin Mode (owner's phone): no lock screen, no code used, nothing recorded
+  if (!hasPass(game) && !isAdmin()) {
     window.GamePass.locked = true;
     if (document.body) lock(); else document.addEventListener('DOMContentLoaded', lock);
   }
   // Coming back with the browser's Back/Forward button after the pass ended → lock again
-  window.addEventListener('pageshow', function () { if (!hasPass(game)) lock(); });
+  window.addEventListener('pageshow', function () { if (!hasPass(game) && !isAdmin()) lock(); });
 })();

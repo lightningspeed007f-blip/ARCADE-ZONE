@@ -97,7 +97,8 @@ export class Input {
           if (d > R) { dx *= R / d; dy *= R / d; }
           this.move.x = dx / R; this.move.y = -dy / R;
           // push far forward = sprint
-          this.joySprint = -dy / R > 0.95 && d >= R;
+          // (a little hysteresis: once running, small thumb wobble at the rim doesn't stop and restart it)
+          this.joySprint = this.joySprint ? -dy / R > 0.8 && d >= R * 0.88 : -dy / R > 0.95 && d >= R;
           joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
         }
         for (const L of [this._lookTouch, this._fireTouch]) {

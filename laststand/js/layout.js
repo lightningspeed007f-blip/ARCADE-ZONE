@@ -42,6 +42,7 @@ export const BUS_ADDA = { t: 0.5, side: -1 };     // along SE road
 // Named zones for the subtle area title that fades in.
 export const ZONES = [
   { name: 'गुप्त शिवधाम', en: 'THE HIDDEN SHIVDHAM', x0: -1250, x1: -800, z0: -400, z1: -2 },
+  { name: 'गुप्त कालीधाम', en: 'THE HIDDEN KALIDHAM', x0: -500, x1: 300, z0: -1700, z1: -1076 },
   { name: 'माँ कामाख्या मंदिर', en: 'MAA KAMAKHYA MANDIR', x0: -138, x1: -116, z0: 17, z1: 37.5 },
   { name: 'आलिया मार्केट', en: 'ALIA MARKET', x0: -172, x1: -95, z0: 36, z1: 72 },
   { name: 'जायस सिटी स्टेशन', en: 'JAIS CITY STATION', x0: -180, x1: -100, z0: -195, z1: -150 },

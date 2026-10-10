@@ -464,7 +464,7 @@ export class Vehicles {
   // ================= fire =================
   update(dt) {
     const g = this.g, cam = g.camera.position;
-    const valley = g.secret && g.secret.mode;
+    const valley = g.inValley ? g.inValley() : g.secret && g.secret.mode;
     if (this.hotMat) { const f = 0.55 + Math.sin(g.time * 9) * 0.12 + Math.sin(g.time * 23) * 0.08 + Math.random() * 0.1; this.hotMat.color.setRGB(0.95 * f, 0.32 * f, 0.06 * f); }
     if (this.glowMat) this.glowMat.opacity = 0.62 + Math.sin(g.time * 7.3) * 0.08 + Math.random() * 0.06;
     if (valley) return;

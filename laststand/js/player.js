@@ -104,8 +104,11 @@ export class Player {
       this.stepAcc += dt * freq * 2;
       if (this.stepAcc >= 1) {
         this.stepAcc = 0;
-        const surf = this.surfaceAt(world);
-        this.audio.play('step_' + surf, { vol: this.crouched ? 0.25 : sprinting ? 0.75 : 0.5, verb: false });
+        // no footstep sounds while a tunnel's music is playing (Shivdham, Kalidham)
+        if (!(world.stepsMuted && world.stepsMuted())) {
+          const surf = this.surfaceAt(world);
+          this.audio.play('step_' + surf, { vol: this.crouched ? 0.25 : sprinting ? 0.75 : 0.5, verb: false });
+        }
       }
     }
     this.noise = !moving ? 0 : this.crouched ? 1.5 : sprinting ? 11 : 5;

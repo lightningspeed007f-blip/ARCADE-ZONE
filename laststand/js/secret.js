@@ -31,7 +31,7 @@ const BRICK = [0.62, 0.5, 0.44], STONE = [0.55, 0.52, 0.5], ROCK = [0.5, 0.47, 0
 function canvas(w, h, read = false) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d', read ? { willReadFrequently: true } : undefined)]; }
 function tex(c, srgb = true) { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
 
-function rockTexture() {
+export function rockTexture() {
   const [c, x] = canvas(512, 512);
   x.fillStyle = '#5b5552'; x.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 40; i++) { // strata
@@ -55,7 +55,7 @@ function radial(size, stops) {
 }
 
 // Golden core: not a clean disc — stretched upward, with soft lobes and grain.
-function coreTexture() {
+export function coreTexture() {
   const [c, x] = canvas(512, 512);
   x.globalCompositeOperation = 'lighter';
   const blob = (cx, cy, rx, ry, a) => {
@@ -72,7 +72,7 @@ function coreTexture() {
 }
 
 // Fan of light rays with random widths, faded toward the edge.
-function raysTexture() {
+export function raysTexture() {
   const S = 1024, [c, x] = canvas(S, S);
   x.translate(S / 2, S / 2);
   x.globalCompositeOperation = 'lighter';
@@ -94,7 +94,7 @@ function raysTexture() {
   return tex(c);
 }
 
-function bandTexture(r, g, b) { // soft horizontal band for haze / mist
+export function bandTexture(r, g, b) { // soft horizontal band for haze / mist
   const [c, x] = canvas(256, 128);
   const v = x.createLinearGradient(0, 0, 0, 128);
   v.addColorStop(0, `rgba(${r},${g},${b},0)`); v.addColorStop(0.55, `rgba(${r},${g},${b},0.85)`); v.addColorStop(1, `rgba(${r},${g},${b},0)`);
@@ -106,7 +106,7 @@ function bandTexture(r, g, b) { // soft horizontal band for haze / mist
   return tex(c);
 }
 
-function columnTexture() {
+export function columnTexture() {
   const [c, x] = canvas(64, 512);
   const v = x.createLinearGradient(0, 512, 0, 0);
   v.addColorStop(0, 'rgba(255,210,130,0.9)'); v.addColorStop(0.5, 'rgba(255,190,100,0.35)'); v.addColorStop(1, 'rgba(255,180,90,0)');
@@ -140,7 +140,7 @@ function halfMoonTexture() {
 
 // ---------- the statue: the user's image turned into a glowing colossus ----------
 // Separable box blur (3 passes ~ gaussian) on a float map.
-function blurF(src, w, h, r) {
+export function blurF(src, w, h, r) {
   r = Math.max(1, Math.round(r));
   let a = Float32Array.from(src), t = new Float32Array(w * h);
   for (let pass = 0; pass < 3; pass++) {
@@ -199,7 +199,7 @@ function figureMask(img) {
   return { m, w, h };
 }
 
-function statueCanvases(img) {
+export function statueCanvases(img) {
   const k = Math.min(1, 1024 / Math.max(img.width, img.height));
   const W = Math.max(8, Math.round(img.width * k)), H = Math.max(8, Math.round(img.height * k));
   const [c, x] = canvas(W, H, true);
@@ -230,7 +230,7 @@ function statueCanvases(img) {
   return { c, rim, depth, aspect: W / H };
 }
 
-function reliefGeometry(w, h, depthCanvas, depth) {
+export function reliefGeometry(w, h, depthCanvas, depth) {
   const g = new THREE.PlaneGeometry(w, h, 40, 72);
   const dx = depthCanvas.getContext('2d').getImageData(0, 0, depthCanvas.width, depthCanvas.height).data;
   const pos = g.attributes.position, uv = g.attributes.uv;
@@ -563,7 +563,7 @@ export class Secret {
 
   reset() {
     this.opened = false; this.lidT = 0; this.revealed = false; this.glowK = 0.2;
-    this.armed = false; this.lastZ = null; this._musicIn = false;
+    this.armed = false; this.lastZ = null; this._musicIn = false; this.musicOn = false;
     // the valley is empty again until he appears
     this.triggered = false; this.magic = null; this.magicK = 0; this.revealU.value = 0;
     this.fig.visible = false; this.pillar.visible = false; this.burst.visible = false;
@@ -642,6 +642,7 @@ export class Secret {
     // Shivji music: slow swell after the reveal, dips under a chase, fades out when you go back
     const music = this.mode && this.revealed && !P.dead ? (g.chaseOn ? 0.28 : 0.62) : 0;
     g.audio.fade('shivMusic', music, music > 0 ? (this._musicIn ? 2.5 : 9) : 3);
+    this.musicOn = music > 0 && g.audio.hasTrack('shivMusic');     // footsteps are silent while it plays
     if (music > 0) this._musicIn = true; else if (!this.mode) this._musicIn = false;
   }
 

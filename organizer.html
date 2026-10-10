@@ -78,6 +78,16 @@
       <a class="btn wide" style="text-align:center;margin-top:10px;" href="spin.html?organizer">OPEN SPIN ORGANIZER</a>
     </div>
 
+    <div class="card" id="adminCard">
+      <h3>📱 Admin Mode — this phone only</h3>
+      <p class="muted">For the owner's own demo phone. While it is ON, locked games open on <b>this phone</b> without a code,
+        as many times as you like. No codes are used and no other phone or player is affected.
+        It stays on after closing the browser. A small <b style="color:var(--gold)">ADMIN ∞</b> badge shows in the corner while it is on.</p>
+      <p class="info" id="adminState" style="margin:10px 0;"></p>
+      <button class="btn primary wide" id="adminBtn"></button>
+      <p class="muted" style="margin-top:8px;">To switch it off later: open this page again, or tap the ADMIN ∞ badge in the Game Zone.</p>
+    </div>
+
     <div class="card">
       <h3>Codes made on this phone</h3>
       <div class="log" id="log"></div>
@@ -165,6 +175,21 @@ function renderLog(){
   const n = log.filter(r => new Date(r.time).toDateString() === today).length;
   $('total').textContent = `Codes made today: ${n}`;
 }
+
+// Admin Mode (see gamepass.js): needs the staff PIN to switch on, never to switch off
+function renderAdmin(){
+  const on = GP.isAdmin();
+  $('adminState').innerHTML = on ? '<b style="color:var(--gold)">ON</b> — unlimited plays on this phone (Player ID ' + GP.deviceId() + ')' : 'OFF — this phone follows the normal code rules';
+  $('adminBtn').textContent = on ? 'TURN ADMIN MODE OFF' : 'TURN ADMIN MODE ON FOR THIS PHONE';
+  $('adminBtn').className = on ? 'btn wide' : 'btn primary wide';
+}
+$('adminBtn').addEventListener('click', () => {
+  const on = GP.isAdmin();
+  if (!on && !confirm('Turn on Admin Mode on THIS phone?\n\nOnly do this on your own demo phone, never on a player\'s phone.')) return;
+  if (!GP.setAdmin(!on)) { lockStaff(); return; }   // PIN expired: unlock again first
+  renderAdmin();
+});
+renderAdmin();
 
 $('mins').textContent = GP.CONFIG.CODE_VALID_MIN;
 show();

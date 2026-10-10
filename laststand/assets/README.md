@@ -15,6 +15,8 @@ laststand/assets/
   sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3   ← gun fire sounds
   music/zombiechase.mp3  zombiebye.mp3  zombiescream.mp3     ← zombie sounds
   music/shivjibackground.mp3                                 ← the Shivdham reveal music
+  maakaali1.png  maakaali3.JPG  maakaali2.png  maakaali4.JPG  ← the hidden Kalidham (see below)
+  music/maakaalisong.mp3                                     ← the Kalidham music
 ```
 
 ## Shivji (`shivji.png`)
@@ -85,3 +87,20 @@ Put them in `music/` (or `sounds/`). Any of `.mp3`, `.m4a`, `.wav`, `.ogg` works
 | `shivjibackground` (also `Shiv Ji background music`, `shivji_music`) | Swells in slowly (about 9 s) when you round the blind corner halfway through the hidden tunnel and Shivji comes into view; dips under a chase, fades out if you go back. |
 
 A missing file keeps the game's built-in sound (or silence for the death sound and the music).
+
+## The hidden Kalidham (Maa Kaali) — `maakaali1` … `maakaali4`, `music/maakaalisong`
+A second trapdoor (a red one) lies on the east side of the Maa Kamakhya Mandir courtyard, between the
+peepal chabutra and the compound wall. Stairs lead to a torch-lit tunnel; round its blind corner it opens
+into a valley far north of Jais (the Shivdham is not touched by any of this).
+
+| File | Where |
+|------|-------|
+| `maakaali1` | 1st, as you walk out: a colossus on the left of the path |
+| `maakaali3` | 2nd: a colossus on the right bank by the ghat (its painted checkerboard background is cut out automatically) |
+| `maakaali2` | 3rd: the great colossus on the island behind the lake, in the golden glow |
+| `maakaali4` | High in the sky above the valley, see-through at its dark edges, with a faint glow. It fades in a few steps after you leave the tunnel. |
+| `music/maakaalisong` | Swells in once you are round the tunnel's blind corner; footsteps go quiet while it plays (they also go quiet while the Shivji music plays). |
+
+Transparent PNGs work best for the three standing images. The exact names above are tried first
+(`maakaali3.JPG` / `maakaali4.JPG` with capital JPG, as uploaded), then the other extensions.
+The images load in the background after the town is ready, so they don't slow the loading screen.
