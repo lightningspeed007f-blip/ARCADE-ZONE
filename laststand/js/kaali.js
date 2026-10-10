@@ -8,14 +8,17 @@
 //     so neither is ever in view from the other;
 //   * the user's four images, in the order they asked for, as you walk out of the tunnel:
 //       1. maakaali1 — a colossus on the left of the path,
-//       2. maakaali3 — a colossus in the centre, by the ghat,
+//       2. maakaali3 — a colossus on the right bank, by the ghat,
 //       3. maakaali2 — the great colossus on the island, behind the lake, in the golden glow,
 //       4. maakaali4 — high in the night sky above the valley, see-through, with a faint glow.
+//   * the valley is empty when you walk out; a few steps onto the path they appear out of thin air,
+//     like Shivji: first the great one in the middle, then the left and right ones, last the sky.
 //   * music/maakaalisong swells in once you are round the blind corner; footsteps are silent
 //     while it plays.
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
 import { ASSET_ROOT } from './assets.js';
+import { FIRE } from './explosives.js';
 import { coreTexture, raysTexture, columnTexture, bandTexture, blurF, statueCanvases, reliefGeometry } from './secret.js';
 
 // ---------- fixed geometry (the Shivdham tunnel mirrored east, a few metres south) ----------
@@ -39,10 +42,13 @@ const BRICK = [0.62, 0.5, 0.44], STONE = [0.55, 0.52, 0.5], ROCK = [0.46, 0.42, 
 // order as the Shivdham colossus (260 m): from the path you have to look up to see their faces.
 const FIGS = {
   k1: { x: KX0 - 66, z: Z(-66), h: 150, look: [KX0, Z(-30)], rim: 0xff6a40, core: 0xff9050 },
-  k3: { x: KX0, z: Z(-100), h: 135, look: [KX0, Z(-60)], rim: 0xffb060, core: 0xffb868 },
+  k3: { x: KX0 + 68, z: Z(-100), h: 135, look: [KX0, Z(-60)], rim: 0xffb060, core: 0xffb868 },
   k2: { x: KX0, z: Z(-212), h: 215, look: [KX0, Z(-60)], rim: 0xff8a50, core: 0xffa060, main: true },
 };
 const SKY = { x: KX0, y: 780, z: Z(-360), h: 560 };               // maakaali4, high over the valley (clear above the great colossus)
+// When each one appears (seconds after the valley's magic starts): gathering light, flash at `at`,
+// then drawn in feet to crown. The sky image fades in after the last of them.
+const APPEAR = { k2: 0, k1: 7.5, k3: 7.5 }, GATHER = 3, DRAW = 5, SKY_AT = 16;
 
 // Uploaded file names first (exact case — GitHub Pages is case-sensitive), then the usual variants.
 const FILES = {
@@ -313,7 +319,7 @@ export class Kaali {
     this.mode = false; this.underground = false; this.opened = false; this.lidT = 0;
     this.musicOn = false; this._musicIn = false;
     this.skyK = 0; this.revealed = false;
-    this.figs = {};
+    this.figs = {}; this.magic = null;
   }
 
   build() {
@@ -353,13 +359,19 @@ export class Kaali {
       grp.position.set(F.x, 0, F.z);
       grp.rotation.y = Math.atan2(F.look[0] - F.x, F.look[1] - F.z);
       scene.add(grp);
-      const add = (mesh, z, y, order, op) => { mesh.position.set(0, y, z); mesh.renderOrder = order; grp.add(mesh); if (op !== undefined) this.layers.push([mesh, op]); return mesh; };
+      // [mesh, opacity, figure it belongs to (hidden until that figure appears)]
+      const add = (mesh, z, y, order, op) => { mesh.position.set(0, y, z); mesh.renderOrder = order; grp.add(mesh); if (op !== undefined) this.layers.push([mesh, op, key]); return mesh; };
       const s = F.main ? 1 : 0.62;
       add(new THREE.Mesh(new THREE.PlaneGeometry(150 * k * s, 170 * k * s), additive(core, F.core, F.main ? 0.7 : 0.5)), -7, baseY + H * 0.56, 1, F.main ? 0.7 : 0.5);
       if (F.main) this.rays = add(new THREE.Mesh(new THREE.PlaneGeometry(170 * k, 170 * k), additive(rays, 0xffc890, 0.4)), -6, baseY + H * 0.6, 1, 0.4);
       add(new THREE.Mesh(new THREE.PlaneGeometry(30 * k * s, 320 * k * s), additive(col, 0xffb070, 0.1)), -8, baseY + 165 * k * s, 1, 0.1);
       add(new THREE.Mesh(new THREE.PlaneGeometry(90 * k * 0.7, 16 * k * 0.7), additive(mistT, 0xffffff, 0.5)), 8, 4, 4, 0.5);
-      this.figs[key] = { F, grp, H, baseY, yaw0: grp.rotation.y, fig: null };
+      // the appearance: a pillar of light and a blinding burst at the figure
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 24, 1, true), additive(col, 0xffb080, 0));
+      pillar.material.side = THREE.DoubleSide; pillar.position.set(F.x, 0, F.z); pillar.renderOrder = 5; pillar.visible = false; scene.add(pillar);
+      const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: g.tex.glow, color: 0xffd0a0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false, transparent: true, opacity: 0 }));
+      burst.position.set(F.x, baseY + H * 0.45, F.z); burst.visible = false; burst.renderOrder = 6; scene.add(burst);
+      this.figs[key] = { F, grp, H, baseY, yaw0: grp.rotation.y, fig: null, Wd: H, revU: { value: 0 }, k: 0, pillar, burst };
     }
     // mist across the lake, the far horizon glow behind everything, haze over the path
     const M2 = new THREE.Mesh(new THREE.PlaneGeometry(240, 26), additive(mistB, 0xffffff, 0.16));
@@ -408,10 +420,25 @@ export class Kaali {
     const f = this.figs[key], H = f.H, Wd = H * sc.aspect;
     const rimMat = new THREE.MeshBasicMaterial({ map: tex(sc.rim), color: f.F.rim, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
     const rim = new THREE.Mesh(new THREE.PlaneGeometry(Wd * 1.16, H * 1.08), rimMat);
-    rim.position.set(0, f.baseY + H / 2 + 1.2, -0.8); rim.renderOrder = 2; f.grp.add(rim); this.layers.push([rim, 0.24]);
+    rim.position.set(0, f.baseY + H / 2 + 1.2, -0.8); rim.renderOrder = 2; f.grp.add(rim); this.layers.push([rim, 0.24, key]);
     // shown as painted (unlit); the night haze (fog) still settles on it with distance
     const ft = tex(sc.c); ft.anisotropy = 8;
     const mat = new THREE.MeshBasicMaterial({ map: ft, transparent: true, alphaTest: 0.03, depthWrite: true, toneMapped: false, color: 0xf2f0ec });
+    // "out of thin air", as in the Shivdham: drawn in by light from the feet up to the crown.
+    // revU 0 = not there at all, 1 = whole. A grain of noise breaks the line and its edge burns gold.
+    const RU = f.revU;
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uReveal = RU;
+      sh.fragmentShader = 'uniform float uReveal;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+        float rn = fract(sin(dot(floor(vMapUv * vec2(70.0, 120.0)), vec2(12.9898, 78.233))) * 43758.5453);
+        float rv = vMapUv.y * 0.82 + rn * 0.18;
+        float rth = uReveal * 1.25 - 0.1;
+        if (rv > rth) discard;
+        float redge = smoothstep(rth - 0.07, rth, rv) * step(uReveal, 0.999);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.7, 1.15, 0.6), redge);`);
+    };
+    mat.customProgramCacheKey = () => 'kaaliReveal';
+    f.Wd = Wd;
     const fig = new THREE.Mesh(reliefGeometry(Wd, H, sc.depth, 2.6 * H / 58), mat);
     fig.position.set(0, f.baseY + H / 2, 0); fig.renderOrder = 3; f.grp.add(fig);
     f.fig = fig;
@@ -436,6 +463,9 @@ export class Kaali {
   reset() {
     this.opened = false; this.lidT = 0; this._musicIn = false; this.musicOn = false;
     this.skyK = 0; this.revealed = false;
+    // the valley is empty again until they appear
+    this.magic = null;
+    for (const key in this.figs) { const f = this.figs[key]; f.k = 0; f.revU.value = 0; f.pillar.visible = false; f.burst.visible = false; }
     this.g.audio.fade('kaaliMusic', 0, 0);
     this.lid.rotation.z = 0; this.leak.visible = true; this.lidBox.enabled = true;
     this.setMode(false);
@@ -495,23 +525,90 @@ export class Kaali {
       if (this.rays) this.rays.rotation.z += dt * 0.012;
       // the face in the sky always looks down at you
       this.sky.lookAt(g.camera.position);
-      // she appears in the sky a few steps after you walk out of the tunnel
-      if (!this.revealed && p.z < ZM - 3.2) {
-        this.revealed = true;
-        g.audio.play('magic', { vol: 0.8, verbAmt: 1.3, rate: 0.85 });
-        g.audio.play('bell', { vol: 0.4, rate: 0.45, verbAmt: 1.5 });
-        g.banner('जय माँ काली', 'MAA KAALI WATCHES FROM THE SKY', 'divine');
+      // the valley is empty when you walk out of the tunnel; a few steps onto the path they appear
+      if (!this.magic && !this.revealed && p.z < ZM - 3.2) {
+        this.magic = { t: 0, flashed: {} };
+        g.audio.play('magic', { vol: 0.9, verbAmt: 1.3, rate: 0.85 });
+        g.audio.play('bell', { vol: 0.35, rate: 0.45, verbAmt: 1.5 });
       }
+      if (this.magic) this.appear(dt);
+      // last of all, she appears in the sky
       if (this.revealed && this.skyK < 1) { this.skyK = Math.min(1, this.skyK + dt / 7); this.applySky(); }
       const t = g.time;
-      for (const [mesh, op] of this.layers) mesh.material.opacity = op;
-      if (this.layers[0]) this.layers[0][0].material.opacity = this.layers[0][1] * (0.94 + Math.sin(t * 0.7) * 0.06);
+      for (const [mesh, op, key] of this.layers) mesh.material.opacity = op * (key ? this.figs[key].k : 1);
+      if (this.layers[0]) this.layers[0][0].material.opacity *= 0.94 + Math.sin(t * 0.7) * 0.06;
     }
     // Maa Kaali song: swells in once you are round the blind corner, dips under a chase, fades out if you go back
     const music = this.mode && !P.dead ? (g.chaseOn ? 0.28 : 0.62) : 0;
     g.audio.fade('kaaliMusic', music, music > 0 ? (this._musicIn ? 2.5 : 9) : 3);
     if (music > 0) this._musicIn = true; else if (!this.mode) this._musicIn = false;
     this.musicOn = music > 0 && g.audio.hasTrack('kaaliMusic');     // footsteps are silent while it plays
+  }
+
+  // ---- the appearance, out of thin air: middle first, then left and right, then the sky ----
+  appear(dt) {
+    const g = this.g, m = this.magic, X = g.explosives, P = g.player.pos;
+    m.t += dt;
+    for (const key in APPEAR) {
+      const f = this.figs[key], F = f.F, H = f.H, t = m.t - APPEAR[key];
+      if (t < 0) continue;
+      // 1) gathering: motes of fire-gold light swirl in toward the empty spot and a pillar of light grows
+      if (t < GATHER + 0.6) {
+        const n = Math.floor((f.acc = (f.acc || 0) + dt * 55)); f.acc -= n;
+        const R = H / 215;
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2, r = (25 + Math.random() * 55) * R, y = Math.random() * 60 * R;
+          const x = F.x + Math.cos(a) * r, z = F.z + 8 + Math.sin(a) * r * 0.6;
+          X.fire.emit(x, y, z, -Math.cos(a) * r * 0.3 - Math.sin(a) * 9, 5 + Math.random() * 9, -Math.sin(a) * r * 0.18 + Math.cos(a) * 6, 2.4 + Math.random(), 3 + Math.random() * 3, 0.8, FIRE.gold, FIRE.white, 0.9, 1, 0.3);
+        }
+        if (Math.random() < dt * 15) X.fire.emit(P.x + (Math.random() - 0.5) * 8, 0.2 + Math.random() * 2, P.z + (Math.random() - 0.5) * 8, 0, 0.6 + Math.random(), -2 - Math.random() * 3, 3, 0.18, 0.05, FIRE.gold, FIRE.white, 1, 0.3, 0.1);
+        const k = clamp(t / GATHER, 0, 1);
+        f.pillar.visible = true; f.pillar.scale.set(1 + k * H * 0.065, 900, 1 + k * H * 0.065);
+        f.pillar.material.opacity = 0.05 + k * 0.45;
+        g.player.shake = Math.max(g.player.shake, 0.05 + k * 0.1);
+      }
+      // 2) the flash
+      if (t >= GATHER && !m.flashed[key]) {
+        m.flashed[key] = true;
+        if (!m.flashT || m.t - m.flashT > 0.5) {         // the left and right ones flash together: one flash, one boom
+          m.flashT = m.t;
+          const fl = document.getElementById('flash');
+          if (fl) { fl.classList.remove('show'); void fl.offsetWidth; fl.classList.add('show'); }
+          g.audio.play('explosion', { vol: 0.65, rate: 0.42, verbAmt: 1.5, vary: 0 });
+          g.audio.play('bell', { vol: 0.85, rate: 0.5, verbAmt: 1.6 });
+          g.audio.play('bell', { vol: 0.45, rate: 0.75, verbAmt: 1.6, delay: 1.4 });
+          g.player.shake = Math.max(g.player.shake, 0.6);
+        }
+        f.burst.visible = true;
+      }
+      if (m.flashed[key]) {
+        const k = t - GATHER;
+        f.burst.scale.setScalar((80 + k * 420) * H / 260); f.burst.material.opacity = Math.max(0, 1 - k / 1.6);
+        if (k > 1.6) f.burst.visible = false;
+        // 3) drawn in by light, feet to crown, the glow behind rising with it
+        const u = clamp(k / DRAW, 0, 1);
+        f.revU.value = u * u * (3 - 2 * u);
+        f.k = clamp(k / 4, 0, 1);
+        f.pillar.material.opacity = Math.max(0, 0.5 - k * 0.12);
+        if (f.pillar.material.opacity <= 0) f.pillar.visible = false;
+        // sparks along the line where the figure is appearing
+        if (u < 1) {
+          const ey = f.baseY + clamp((f.revU.value * 1.25 - 0.1) / 0.82, 0, 1) * H, yaw = f.grp.rotation.y, c = Math.cos(yaw), s = Math.sin(yaw);
+          for (let i = 0; i < 4; i++) {
+            const lx = (Math.random() - 0.5) * f.Wd * 0.55;
+            X.fire.emit(F.x + lx * c + 6 * s, ey, F.z - lx * s + 6 * c, (Math.random() - 0.5) * 6, 2 + Math.random() * 6, 3, 1.2 + Math.random(), 4 + Math.random() * 4, 1, FIRE.white, FIRE.gold, 1, -2, 0.3);
+          }
+        }
+      }
+    }
+    // 4) last, she appears in the sky
+    if (m.t >= SKY_AT && !this.revealed) {
+      this.revealed = true;
+      g.audio.play('magic', { vol: 0.8, verbAmt: 1.3, rate: 0.7 });
+      g.audio.play('bell', { vol: 0.5, rate: 0.4, verbAmt: 1.6 });
+      g.banner('जय माँ काली', 'MAA KAALI WATCHES FROM THE SKY', 'divine');
+    }
+    if (m.t > SKY_AT + 1) this.magic = null;
   }
 
   shift(dir) {

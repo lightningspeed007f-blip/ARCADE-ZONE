@@ -96,9 +96,9 @@ into a valley far north of Jais (the Shivdham is not touched by any of this).
 | File | Where |
 |------|-------|
 | `maakaali1` | 1st, as you walk out: a colossus on the left of the path |
-| `maakaali3` | 2nd: a colossus in the centre by the ghat (its painted checkerboard background is cut out automatically) |
+| `maakaali3` | 2nd: a colossus on the right bank by the ghat (its painted checkerboard background is cut out automatically) |
 | `maakaali2` | 3rd: the great colossus on the island behind the lake, in the golden glow |
-| `maakaali4` | High in the sky above the valley, see-through at its dark edges, with a faint glow. It fades in a few steps after you leave the tunnel. |
+| `maakaali4` | High in the sky above the valley, see-through at its dark edges, with a faint glow. The valley is empty when you walk out; a few steps on, the figures appear out of thin air (like Shivji): first `maakaali2` in the middle, then `maakaali1` and `maakaali3` left and right, and last `maakaali4` fades in over the sky. |
 | `music/maakaalisong` | Swells in once you are round the tunnel's blind corner; footsteps go quiet while it plays (they also go quiet while the Shivji music plays). |
 
 Transparent PNGs work best for the three standing images. The exact names above are tried first
