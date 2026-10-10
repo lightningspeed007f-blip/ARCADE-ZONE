@@ -170,6 +170,24 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.55);
 }
 @keyframes tickerRL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ===================== STORY MODE BUTTON ===================== */
+.story-btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  margin-top: 10px; padding: 9px 20px 9px 16px;
+  border-radius: 30px; cursor: pointer;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 14px; letter-spacing: 3px;
+  color: #ffe6b0;
+  background: linear-gradient(180deg, rgba(120,24,40,0.85), rgba(40,8,18,0.92));
+  border: 1.5px solid rgba(255,190,90,0.85);
+  box-shadow: 0 0 18px rgba(255,90,60,0.45), inset 0 0 12px rgba(255,190,90,0.25);
+  text-shadow: 0 0 8px rgba(255,170,80,0.8);
+  animation: storyGlow 2.4s ease-in-out infinite;
+  position: relative; z-index: 6;
+}
+.story-btn svg { width: 20px; height: 20px; color: #ffcf6a; filter: drop-shadow(0 0 5px currentColor); }
+.story-btn:active { transform: scale(0.96); }
+@keyframes storyGlow { 50% { box-shadow: 0 0 30px rgba(255,120,60,0.7), inset 0 0 16px rgba(255,190,90,0.35); } }
 </style>
 <link rel="stylesheet" href="intro/intro.css">
 </head>
@@ -197,6 +215,10 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   <header>
     <h1>GAME ZONE</h1>
     <p>Swipe to choose, tap to play</p>
+    <button class="story-btn" id="storyBtn" aria-label="Open StoryMode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>
+      STORY MODE
+    </button>
   </header>
 
   <div class="stage" id="stage"></div>
@@ -278,12 +300,9 @@ var ICONS = {
 };
 
 /* GAME LIST — add a new game by adding one line here.
-   img = card artwork in the repo (if it fails to load, the neon icon shows instead) */
+   img = card artwork in the repo (if it fails to load, the neon icon shows instead)
+   The Last Night and Jais: Last Stand are opened from the StoryMode lobby (storymode.html). */
 var GAMES = [
-  { href: "horror.html", locked: true,       img: "card_horror.jpg", icon: ICONS.horror, name: "The Last Night", tag: "Horror", color: "#ff3b5c",
-    desc: "One night in a house that belongs to the dead. Find a way out before morning." },
-  { href: "laststand.html",    img: "card_laststand.jpg", icon: ICONS.sight, name: "Jais: Last Stand", tag: "Survival", color: "#e8b04a",
-    desc: "One life in Jais at night. Find the key and fuse, reach Guru Gorakhnath Dham." },
   { href: "jais_express.html", img: "card_jais.jpg",   icon: ICONS.auto,   name: "Jais Express",   tag: "Racing", color: "#ff9a1f",
     desc: "Drive your auto through Jais. Dodge traffic, grab coins." },
   { href: "spin.html", locked: true,         img: "card_spin.jpg",   icon: ICONS.wheel,  name: "Spin The Wheel", tag: "Luck",   color: "#ffcf3f",
@@ -310,7 +329,7 @@ var stage = document.getElementById("stage");
 var target = Number(getStore("localStorage", "gz_last") || 0) || 0;  // card that should face front
 var pos = target;                                                    // where the cylinder is right now
 var cardW = 180, cardH = 248, radius = 140;
-var launching = false, launchT = 0;
+var launching = false, launchT = 0, storyGo = false;
 var lastInteract = Date.now();
 var introHold = false;   // true while the cinematic intro (intro/intro.js) is moving the cards
 
@@ -425,7 +444,7 @@ function drawCards() {
   var a = activeIndex();
   for (var i = 0; i < N; i++) {
     var q = cardPose(i, pos), s = q.s;
-    if (launching && i === a) s *= 1 + launchT * 0.6;
+    if (launching && !storyGo && i === a) s *= 1 + launchT * 0.6;
     var c = cards[i];
     c.style.transform = "translateX(" + q.x.toFixed(1) + "px) scale(" + s.toFixed(3) + ") perspective(900px) rotateY(" + q.ry.toFixed(1) + "deg)";
     c.style.opacity = q.o.toFixed(3);
@@ -473,6 +492,20 @@ function openGame() {
   document.body.className += " leaving";
   setTimeout(function () { location.href = GAMES[a].href; }, 450);
 }
+
+/* ===================== STORY MODE ===================== */
+/* The Last Night and Jais: Last Stand open from their own lobby (storymode.html) */
+function openStoryMode(e) {
+  if (e) e.stopPropagation();
+  if (launching || splashOpen || introHold) return;
+  launching = true; launchT = 0; storyGo = true;
+  blip(300, 0.35, 0.12, "sawtooth");
+  buzz(30);
+  fadeOutMusic(400);
+  document.body.className += " leaving";
+  setTimeout(function () { location.href = "storymode.html"; }, 450);
+}
+document.getElementById("storyBtn").addEventListener("click", openStoryMode);
 
 /* ===================== SWIPE / TAP ===================== */
 var pressing = false, dragging = false, startX = 0, startPos = 0, lastX = 0, lastT = 0, vel = 0, pressedCard = null;
@@ -583,7 +616,7 @@ document.querySelector("header h1").addEventListener("click", function () {
 
 window.addEventListener("pageshow", function () {
   endPasses();
-  launching = false; launchT = 0;
+  launching = false; launchT = 0; storyGo = false;
   document.body.className = document.body.className.replace(/\s*leaving/g, "");
   startVideo();
   if (!splashOpen) startMusic();

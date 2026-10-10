@@ -228,7 +228,7 @@ export class Arsenal {
     this.reserve = { '9mm': 0, '.32': 0, '12G': 0, '7.62': 0, rocket: 0 };
     this.cur = 'lathi';
     this.cool = 0; this.reloadT = 0; this.switchT = 0; this.adsT = 0;
-    this.kick = 0; this.bloom = 0; this.swingT = 0; this.shotsFired = 0;
+    this.kick = 0; this.bloom = 0; this.swingT = 0; this.shotsFired = 0; this.sprintT = 0;
     this.sway = { x: 0, y: 0 };
     this.lastYaw = null;
     for (const k in this.models) this.models[k].visible = k === 'lathi';
@@ -315,10 +315,14 @@ export class Arsenal {
     const bob = player.bobAmt * (1 - a * 0.8);
     x += Math.cos(player.bobT) * 0.012 * bob + this.sway.x * (1 - a * 0.7);
     y += Math.abs(Math.sin(player.bobT)) * 0.012 * bob - this.sway.y * 0.5;
-    if (ctx.sprinting) { x += 0.04; y -= 0.05; }
+    // the running pose blends in and out: sprint can switch on/off on consecutive frames (stamina at
+    // its limit, a thumb at the joystick's rim), and snapping straight between the two poses made the
+    // gun / lathi flicker while running
+    this.sprintT = clamp((this.sprintT || 0) + (ctx.sprinting ? dt : -dt) * 7, 0, 1);
+    const sk = this.sprintT * this.sprintT * (3 - 2 * this.sprintT);
+    x += 0.04 * sk; y -= 0.05 * sk;
     z += this.kick * 0.06;
-    let rx = this.kick * 0.25, ry = 0, rz = 0;
-    if (ctx.sprinting) { ry = 0.5; rx = -0.2; }
+    let rx = lerp(this.kick * 0.25, -0.2, sk), ry = 0.5 * sk, rz = 0;
     // reload: dip and tilt
     if (this.reloadT > 0) {
       const t = 1 - this.reloadT / w.reload;
