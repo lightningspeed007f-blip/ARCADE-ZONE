@@ -20,8 +20,13 @@
   var GAMES = {
     horror: 'The Last Night',
     dharma: 'Dharma Quiz',
-    spin:   'Spin The Wheel'
+    spin:   'Spin The Wheel',
+    jais:   'Jais Express'
   };
+  // Games unlocked ONCE per phone: after one valid code the phone stays unlocked for good
+  // (it does not relock when the player goes back to the Game Zone). Every other game needs a
+  // fresh code each visit.
+  var ONE_TIME = { jais: true };
 
   /* ---------- safe storage ---------- */
   function get(t, k) { try { return window[t].getItem(k); } catch (e) { return null; } }
@@ -105,8 +110,19 @@
     reset();
   }
 
-  function hasPass(game) { return get('sessionStorage', 'gz_pass_' + game) === '1'; }
-  function endAllPasses() { for (var g in GAMES) del('sessionStorage', 'gz_pass_' + g); }
+  /* The one-time unlock is tied to this phone's Player ID, so copying the stored value to
+     another phone (which has a different ID) does nothing. */
+  function unlockToken(game) { return String(cyrb53(CONFIG.SECRET + '|ONCE|' + game + '|' + deviceId())); }
+  function hasPass(game) {
+    if (ONE_TIME[game]) return get('localStorage', 'gz_once_' + game) === unlockToken(game);
+    return get('sessionStorage', 'gz_pass_' + game) === '1';
+  }
+  function grantPass(game) {
+    if (ONE_TIME[game]) set('localStorage', 'gz_once_' + game, unlockToken(game));
+    else set('sessionStorage', 'gz_pass_' + game, '1');
+  }
+  // Ends the per-visit passes. One-time unlocks are kept.
+  function endAllPasses() { for (var g in GAMES) if (!ONE_TIME[g]) del('sessionStorage', 'gz_pass_' + g); }
 
   /* ---------- ADMIN MODE (the owner's own demo phone) ----------
      Turned on from the Staff page (organizer.html, behind the staff PIN) and remembered on
@@ -158,7 +174,7 @@
   }
 
   window.GamePass = {
-    CONFIG: CONFIG, GAMES: GAMES, makeCode: makeCode, checkCode: checkCode,
+    CONFIG: CONFIG, GAMES: GAMES, ONE_TIME: ONE_TIME, makeCode: makeCode, checkCode: checkCode,
     deviceId: deviceId, hasPass: hasPass, endAllPasses: endAllPasses, locked: false,
     checkPin: checkPin, staffOk: staffOk, staffLogout: staffLogout, autoLock: autoLock,
     isAdmin: isAdmin, setAdmin: setAdmin
@@ -210,12 +226,14 @@
       '<div class="gz-card" role="dialog" aria-modal="true" aria-labelledby="gzTitle">' +
         '<div class="gz-lock">🔒</div>' +
         '<h2 id="gzTitle">' + GAMES[game].toUpperCase() + '</h2>' +
-        '<p>This game is locked. Show this Player ID at the counter to get your code:</p>' +
+        '<p>' + (ONE_TIME[game] ? 'This game needs a one-time code. Show this Player ID at the counter to get yours:' : 'This game is locked. Show this Player ID at the counter to get your code:') + '</p>' +
         '<div class="gz-id" id="gzId"></div>' +
         '<input id="gzCode" type="tel" inputmode="numeric" maxlength="7" placeholder="------" autocomplete="off" aria-label="6-digit code">' +
         '<div class="gz-err" id="gzErr" role="alert"></div>' +
         '<div class="gz-row"><a href="index.html">← BACK</a><button class="gz-go" id="gzGo">UNLOCK</button></div>' +
-        '<p style="font-size:12px;color:#7d88a3;margin-top:12px">Each code works once, on this phone only, for about ' + CONFIG.CODE_VALID_MIN + ' minutes.</p>' +
+        '<p style="font-size:12px;color:#7d88a3;margin-top:12px">' + (ONE_TIME[game]
+          ? 'Enter it once — this phone then stays unlocked and never needs another code for this game. The code works on this phone only, for about ' + CONFIG.CODE_VALID_MIN + ' minutes.'
+          : 'Each code works once, on this phone only, for about ' + CONFIG.CODE_VALID_MIN + ' minutes.') + '</p>' +
       '</div>';
     // Nothing typed or tapped on the lock screen reaches the game underneath
     ['click', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'keyup', 'wheel'].forEach(function (t) {
@@ -234,7 +252,7 @@
     if (usedCodes().indexOf(code) >= 0) { err.textContent = 'This code was already used. Ask for a new one.'; return; }
     if (!checkCode(deviceId(), game, code)) { err.textContent = 'Wrong or expired code. Check your Player ID and ask for a new code.'; return; }
     markUsed(code);
-    set('sessionStorage', 'gz_pass_' + game, '1');
+    grantPass(game);
     unlock();
   }
 

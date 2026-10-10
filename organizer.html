@@ -94,8 +94,8 @@
       <p class="muted" id="total" style="margin-top:8px;"></p>
     </div>
 
-    <p class="muted">Jais Express and Tap The Panda are free — no code needed.
-      Each code works once, only on the phone with that Player ID, for about <span id="mins"></span> minutes.</p>
+    <p class="muted">Tap The Panda is free — no code needed. <b>Jais Express</b> needs a code only the first time on a phone:
+      once entered, that phone stays unlocked for good. For the other games, each code works once, only on the phone with that Player ID, for about <span id="mins"></span> minutes.</p>
   </div>
 </div>
 
@@ -138,7 +138,7 @@ GP.autoLock(() => { if (unlocked) lockStaff(); }, 5);
 // One button per locked game
 Object.keys(GP.GAMES).forEach(k => {
   const b = document.createElement('button');
-  b.textContent = GP.GAMES[k] + (k === 'spin' ? ' (entry)' : '');
+  b.textContent = GP.GAMES[k] + (k === 'spin' ? ' (entry)' : GP.ONE_TIME[k] ? ' (once)' : '');
   b.className = k === selGame ? 'on' : '';
   b.addEventListener('click', () => {
     selGame = k;
@@ -157,7 +157,7 @@ function make(){
   log.unshift({ code, dev, game: selGame, time: Date.now() });
   saveLog(log);
   $('codeBig').textContent = code.slice(0, 3) + ' ' + code.slice(3);
-  $('codeInfo').textContent = `${GP.GAMES[selGame]} • Player ID ${dev} • works once, ~${GP.CONFIG.CODE_VALID_MIN} min`;
+  $('codeInfo').textContent = `${GP.GAMES[selGame]} • Player ID ${dev} • ${GP.ONE_TIME[selGame] ? 'one-time unlock for this phone' : 'works once'}, ~${GP.CONFIG.CODE_VALID_MIN} min`;
   $('out').hidden = false;
   $('dev').value = '';
   renderLog();
