@@ -8,6 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060d'/%3E%3Cpath d='M12 42V22q0-8 9-8h17q8 0 12 11l3 17M24 42V24h15l5 11' fill='none' stroke='%23ff9a1f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='18' cy='47' r='6' fill='none' stroke='%23ff9a1f' stroke-width='3'/%3E%3Ccircle cx='51' cy='48' r='5' fill='none' stroke='%23ff9a1f' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="profile.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
 :root {
@@ -133,6 +134,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; outline: none;
 }
 .name-row input:focus { border-color: var(--orange); }
+.name-row { justify-content: center; }
+.row .nm .tg { font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--muted); margin-left: 5px; letter-spacing: 1px; }
+.row.me .nm .tg { color: var(--gold); }
 .btn {
   width: 100%; padding: 15px; border-radius: 14px;
   font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 15px; letter-spacing: 2px; color: #170b00;
@@ -222,7 +226,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     <img class="poster" id="poster" src="card_jais.jpg" alt="Jais Express">
     <div class="title-fallback hidden" id="titleFallback">JAIS EXPRESS</div>
     <p class="howto"><b>Tap left / right</b> or swipe to change lanes<br><b>Swipe up</b> or press <b>NITRO</b> to boost and smash through traffic</p>
-    <div class="name-row"><input id="nameInput" maxlength="12" placeholder="YOUR NAME" autocomplete="off"></div>
+    <div class="name-row"><button type="button" id="playerChip"></button></div>
     <button class="btn" id="startBtn">START DRIVE</button>
     <div class="err" id="nameErr"></div>
     <div class="ghost-note" id="ghostNote"></div>
@@ -402,7 +406,7 @@ function fsUrl(path) { return "https://firestore.googleapis.com/v1/projects/" + 
 function parseDoc(f) {
   const v = x => !x ? undefined : (x.stringValue !== undefined ? x.stringValue : (x.integerValue !== undefined ? Number(x.integerValue) : x.doubleValue));
   return { name: v(f.name) || "DRIVER", score: Number(v(f.score)) || 0, distance: Number(v(f.distance)) || 0,
-           coins: Number(v(f.coins)) || 0, day: v(f.day) || "", ghost: v(f.ghost) || "" };
+           coins: Number(v(f.coins)) || 0, day: v(f.day) || "", ghost: v(f.ghost) || "", tag: v(f.tag) || "" };
 }
 async function fsQuery(q) {
   const r = await fetch(fsUrl(":runQuery"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ structuredQuery: q }) });
@@ -436,13 +440,17 @@ async function submitOnline(run) {
       distance: { integerValue: String(run.distance) }, coins: { integerValue: String(run.coins) },
       day: { stringValue: run.day }, ghost: { stringValue: run.ghost },
       createdAt: { timestampValue: new Date().toISOString() } } };
-    const r = await fetch(fsUrl("/" + COLLECTION), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (run.tag) body.fields.tag = { stringValue: run.tag };
+    const post = () => fetch(fsUrl("/" + COLLECTION), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    let r = await post();
+    // old Firestore rules (before player tags) reject the extra field: save the score without it
+    if (!r.ok && body.fields.tag && r.status >= 400 && r.status < 500) { delete body.fields.tag; r = await post(); }
     return r.ok;
   } catch (e) { return false; }
 }
 function saveLocal(run) {
   let runs = lsGet("jx_runs", []);
-  runs.push({ name: run.name, score: run.score, distance: run.distance, coins: run.coins, day: run.day });
+  runs.push({ name: run.name, tag: run.tag, score: run.score, distance: run.distance, coins: run.coins, day: run.day });
   const t = today();
   const keep = runs.filter(r => r.day === t).concat(runs.filter(r => r.day !== t).sort((a, b) => b.score - a.score).slice(0, 40));
   lsSet("jx_runs", keep.slice(-120));
@@ -450,6 +458,7 @@ function saveLocal(run) {
   if (!g || run.score > g.score) lsSet("jx_ghost", { name: run.name, score: run.score, ghost: run.ghost });
 }
 
+function sameRun(r, run) { return r.name === run.name && r.score === run.score && (!r.tag || !run.tag || r.tag === run.tag); }
 let boardTab = "today", boardCache = { today: [], all: [] };
 function renderBoard(targetId, badgeId, rows, highlight) {
   const box = $(targetId);
@@ -458,10 +467,10 @@ function renderBoard(targetId, badgeId, rows, highlight) {
   if (!rows.length) { box.innerHTML = '<div class="empty">No drives yet. Be the first on the board!</div>'; return; }
   let marked = false;
   box.innerHTML = rows.map((r, i) => {
-    const me = !marked && highlight && r.name === highlight.name && r.score === highlight.score;
+    const me = !marked && highlight && sameRun(r, highlight);
     if (me) marked = true;
     return '<div class="row r' + (i + 1) + (me ? " me" : "") + '"><span class="rk">#' + (i + 1) + '</span><span class="nm">' +
-           esc(r.name) + '</span><span class="sc">' + fmt(r.score) + '</span></div>';
+           esc(r.name) + (r.tag ? '<span class="tg">#' + esc(r.tag) + '</span>' : '') + '</span><span class="sc">' + fmt(r.score) + '</span></div>';
   }).join("");
 }
 async function refreshBoards(highlight) {
@@ -561,7 +570,7 @@ const CLOUDS = [{ x: 0.1, y: 0.2, w: 70, s: 0.0035 }, { x: 0.45, y: 0.35, w: 90,
 let state = "menu";              // menu | count | play | pause | over
 let lane, px, tx, dist, spd, slow, lives, score, coins, chain, combo, comboT, nitro, nitroT, inv, shake, curve = 0, roadPos = 0;
 let obstacles, pickups, banners, runT, ghostRec, lastRecT, stationAbs, lap, nearMisses, bannerDone, skyImg = null;
-let ghost = null, ghostDone = false, ladder = [], lastRank = 0, lastRun = null, playerName = "";
+let ghost = null, ghostDone = false, ladder = [], lastRank = 0, lastRun = null, playerName = "", playerTag = "";
 const MAX_LIVES = 3;
 
 function resetRun() {
@@ -617,7 +626,7 @@ window.addEventListener("keydown", e => {
     if (k === "arrowup" || k === "w" || k === " ") { e.preventDefault(); fireNitro(); }
     if (k === "p" || k === "escape") pauseGame();
   } else if (state === "pause" && (k === "p" || k === "escape")) resumeGame();
-  else if (state === "menu" && k === "enter" && document.activeElement === $("nameInput")) startRun();
+
 });
 $("nitroBtn").addEventListener("click", e => { e.stopPropagation(); fireNitro(); });
 
@@ -1089,7 +1098,6 @@ function showScreen(id) {
   ["startScreen", "overScreen", "pauseScreen"].forEach(s => $(s).classList.toggle("hidden", s !== id));
   $("hud").classList.toggle("hidden", !!id);
 }
-function validName(n) { return /^[A-Z0-9 ]{2,12}$/.test(n); }
 
 async function prepareGhost() {
   ghost = null;
@@ -1103,11 +1111,9 @@ async function prepareGhost() {
 let starting = false;
 async function startRun() {
   if (starting || (state !== "menu" && state !== "over")) return;
-  const n = ($("nameInput").value || "").trim().toUpperCase().replace(/\s+/g, " ");
-  if (!validName(n)) { $("nameErr").textContent = "Enter a name: 2–12 letters or numbers."; $("nameInput").focus(); return; }
-  $("nameErr").textContent = ""; $("nameInput").blur();
-  playerName = n; lsSet("jx_name", n);
   starting = true;
+  const me = await GZProfile.require();   // name is asked only the very first time
+  playerName = me.name; playerTag = me.tag;
   await prepareGhost();      // race the current #1 (or your own best)
   starting = false;
   audioCtx(); loadImages();
@@ -1135,7 +1141,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { if 
 
 async function gameOver() {
   state = "over"; stopMusic();
-  const run = { name: playerName, score: Math.floor(score), distance: Math.floor(dist), coins, day: today(), ghost: encodeGhost(ghostRec) };
+  const run = { name: playerName, tag: playerTag, score: Math.floor(score), distance: Math.floor(dist), coins, day: today(), ghost: encodeGhost(ghostRec) };
   lastRun = run;
   const best = lsGet("jx_best", 0), isBest = run.score > best;
   if (isBest) lsSet("jx_best", run.score);
@@ -1152,8 +1158,8 @@ async function gameOver() {
   if (isBest) setTimeout(() => fireConfetti(150), 800);
   const saved = await submitOnline(run);
   const all = await refreshBoards(run);
-  const idx = all.findIndex(r => r.name === run.name && r.score === run.score);
-  const tIdx = boardCache.today.findIndex(r => r.name === run.name && r.score === run.score);
+  const idx = all.findIndex(r => sameRun(r, run));
+  const tIdx = boardCache.today.findIndex(r => sameRun(r, run));
   let line = "";
   if (idx >= 0) line = "All-time rank <b>#" + (idx + 1) + "</b>";
   else if (all.length >= 20) line = "Top 20 needs <b>" + fmt(all[all.length - 1].score) + "</b>";
@@ -1187,7 +1193,7 @@ function frame(now) {
 
 window.addEventListener("resize", resize);
 resize();
-$("nameInput").value = lsGet("jx_name", "");
+GZProfile.mountChip($("playerChip"));
 refreshBoards().then(prepareGhost);
 requestAnimationFrame(frame);
 </script>

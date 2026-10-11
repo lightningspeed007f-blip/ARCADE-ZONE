@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="profile.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Tap The Panda - Arcade Zone</title>
@@ -155,6 +156,9 @@
     font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;user-select:text;-webkit-user-select:text;
   }
   .name-row input:focus{outline:2px solid var(--cyan);outline-offset:1px;}
+  .name-row{justify-content:center;max-width:none;}
+  .board li .nm .tg{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--muted);margin-left:4px;letter-spacing:1px;}
+  .board li.me .nm .tg{color:var(--gold);}
 
   /* Live scoreboard */
   .board{margin-top:12px;background:var(--panel);border:1.5px solid #223040;border-radius:16px;padding:10px 10px 8px;}
@@ -285,7 +289,7 @@ const store = {
 let best = store.get('tp_best', 0);
 let bestStreak = store.get('tp_bestStreak', 0);
 let muted = store.get('tp_muted', false);
-let playerName = store.get('tp_name', '');
+let playerName = '', playerTag = '';
 let boardLocal = store.get('tp_board', []);   // [{n:name, s:score, k:topStreak, t:time}]
 let boardOnline = null;                        // { today:[...], all:[...] } same shape, from the online scoreboard
 let boardTab = 'today';
@@ -515,7 +519,7 @@ function boardEntries(){
 // Board with the current player's live score slotted in while they play
 function rankedBoard(){
   const list = boardEntries();
-  const live = (running || paused || counting) ? { n: playerName || 'You', s: score, live: true } : null;
+  const live = (running || paused || counting) ? { n: playerName || 'You', g: playerTag, s: score, live: true } : null;
   if (live) list.push(live);
   list.sort((a, b) => b.s - a.s || (a.live ? -1 : b.live ? 1 : a.t - b.t));
   return { list, live };
@@ -531,7 +535,7 @@ function renderBoard(){
   }
   const myIdx = live ? list.indexOf(live) : -1;
   const row = (e, i) => `<li class="${i < 3 ? 'top' + (i + 1) : ''}${e.live ? ' me' : ''}">` +
-    `<span class="rk">#${i + 1}</span><span class="nm">${e.live ? '▶ ' : ''}${esc(e.n)}</span><span class="sc">${e.s}</span></li>`;
+    `<span class="rk">#${i + 1}</span><span class="nm">${e.live ? '▶ ' : ''}${esc(e.n)}${e.g ? '<span class="tg">#' + esc(e.g) + '</span>' : ''}</span><span class="sc">${e.s}</span></li>`;
   let html = list.slice(0, BOARD_ROWS).map(row).join('');
   if (myIdx >= BOARD_ROWS) html += '<li class="gap">⋯</li>' + row(live, myIdx);
   ol.innerHTML = html;
@@ -564,7 +568,10 @@ function saveScore(entry){
       name: { stringValue: entry.n }, score: { integerValue: String(entry.s) },
       streak: { integerValue: String(entry.k) }, day: { stringValue: today() },
       createdAt: { timestampValue: new Date(entry.t).toISOString() } } };
-    fetch(fsUrl('/' + COLLECTION), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) })
+    if (entry.g) body.fields.tag = { stringValue: entry.g };
+    const post = () => fetch(fsUrl('/' + COLLECTION), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+    // old Firestore rules (before player tags) reject the extra field: save the score without it
+    post().then(r => (!r.ok && body.fields.tag && r.status >= 400 && r.status < 500) ? (delete body.fields.tag, post()) : r)
       .then(loadOnline).catch(() => {});
   }
 }
@@ -575,7 +582,7 @@ function rankOf(entry){ return boardEntries().filter(e => e !== entry && e.s > e
 function fsUrl(path){ return 'https://firestore.googleapis.com/v1/projects/' + FIREBASE.projectId + '/databases/(default)/documents' + path + '?key=' + FIREBASE.apiKey; }
 function parseDoc(f){
   const v = x => !x ? undefined : (x.stringValue !== undefined ? x.stringValue : x.integerValue !== undefined ? Number(x.integerValue) : x.timestampValue !== undefined ? Date.parse(x.timestampValue) : x.doubleValue);
-  return { n: cleanName(v(f.name)) || 'Player', s: Math.max(0, Number(v(f.score)) | 0), k: Number(v(f.streak)) | 0, t: Number(v(f.createdAt)) || 0 };
+  return { n: cleanName(v(f.name)) || 'Player', g: GZProfile.validTag(v(f.tag)) ? v(f.tag) : '', s: Math.max(0, Number(v(f.score)) | 0), k: Number(v(f.streak)) | 0, t: Number(v(f.createdAt)) || 0 };
 }
 async function fsQuery(q){
   const r = await fetch(fsUrl(':runQuery'), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ structuredQuery: q }) });
@@ -617,14 +624,7 @@ function setTab(t){
   renderBoard();
 }
 
-function nameField(){
-  return `<div class="name-row"><label for="pName">PLAYER</label>
-    <input id="pName" maxlength="14" placeholder="Your name" autocomplete="off" value="${esc(playerName)}"></div>`;
-}
-function readName(){
-  const el = $('pName');
-  if (el) { playerName = cleanName(el.value); store.set('tp_name', playerName); }
-}
+function nameField(){ return `<div class="name-row"><button type="button" id="pChip"></button></div>`; }
 
 /* ================= SCREENS ================= */
 function showModal(title, body, btn, action, newBest=false){
@@ -634,6 +634,7 @@ function showModal(title, body, btn, action, newBest=false){
   $('mBadge').classList.toggle('hidden', !newBest);
   modalAction = action;
   modal.classList.remove('hidden');
+  GZProfile.mountChip($('pChip'));
   $('mBtn').focus({ preventScroll:true });
 }
 function hideModal(){ modal.classList.add('hidden'); }
@@ -652,8 +653,9 @@ function startScreen(){
 }
 
 function startGame(){
-  readName();
-  if (!playerName) { const el = $('pName'); if (el) { el.focus(); el.placeholder = 'Type your name first'; } return; }
+  const me = GZProfile.get();
+  if (!me) { GZProfile.require().then(startGame); return; }   // name is asked only the very first time
+  playerName = me.name; playerTag = me.tag;
   ac(); hideModal();
   lastRank = 0;
   clearTimeout(spawnTimer); clearTimeout(cdTimer); clearTimeout(slowTimer);
@@ -696,7 +698,7 @@ function endGame(){
 
   let rankLine = '';
   if (score > 0) {
-    const entry = { n: playerName || 'Player', s: score, k: bestRun, t: Date.now() };
+    const entry = { n: playerName || 'Player', g: playerTag, s: score, k: bestRun, t: Date.now() };
     saveScore(entry);
     const r = rankOf(entry);
     rankLine = `<p>Scoreboard rank: <b style="color:var(--cyan)">#${r}</b> ${boardTab === 'today' ? 'today' : 'all time'}</p>`;
