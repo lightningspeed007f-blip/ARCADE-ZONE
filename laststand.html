@@ -137,8 +137,7 @@ body.playing.touch #touch { display: block; }
 [data-act=use] { right: calc(40px + env(safe-area-inset-right)); bottom: 170px; }
 [data-act=crouch] { right: calc(186px + env(safe-area-inset-right)); bottom: 22px; }
 [data-act=sprint] { left: calc(22px + env(safe-area-inset-left)); top: 196px; }
-[data-act=swap] { right: calc(140px + env(safe-area-inset-right)); top: 74px; }
-body.nomini [data-act=swap] { right: calc(26px + env(safe-area-inset-right)); top: auto; bottom: 238px; }
+[data-act=swap] { right: calc(26px + env(safe-area-inset-right)); top: 66px; }
 [data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
 [data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
 /* jeep: DRIVE appears beside the jeep; pedals and steering replace the on-foot buttons while driving */
@@ -154,10 +153,11 @@ body.driving #touch [data-act=drive] .o { display: inline; }
 [data-act=steerR] { left: calc(118px + env(safe-area-inset-left)); bottom: 34px; }
 #touch .tb.drv { font-size: calc(13px * var(--btn)); }
 #minimap { position: absolute; right: calc(16px + env(safe-area-inset-right)); top: 14px; width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 2px 12px rgba(0,0,0,.6); opacity: .92; }
-body.touch #minimap { top: 62px; width: 112px; height: 112px; }
+/* phones: the minimap sits top-left, beside the EAT / TORCH / RUN column, so it never covers USE, SWAP or DRIVE on the right */
+body.touch #minimap { right: auto; left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; }
 body.nomini #minimap { display: none; }
-#touch [data-act=map] { right: calc(16px + env(safe-area-inset-right)); top: 62px; width: 112px; height: 112px; background: transparent; border-color: transparent; }
-body.nomini #touch [data-act=map] { width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 12px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
+#touch [data-act=map] { left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; background: transparent; border-color: transparent; }
+body.nomini #touch [data-act=map] { left: auto; width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 12px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
 body.nomini #touch [data-act=map]::after { content: 'MAP'; }
 #mapHint { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
 #pauseBtn { position: absolute; right: calc(18px + env(safe-area-inset-right)); top: 12px; width: 42px; height: 42px; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; font-weight: 700; }
@@ -316,7 +316,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li>EAT — eats food from your bag (the only way to heal).</li>
       <li>TORCH — flashlight (people can see you from further away).</li>
       <li>DRIVE — appears next to the jeep. Then ◀ ▶ steer, GAS, BRAKE (hold to reverse), EXIT. The left stick also drives.</li>
-      <li>Minimap (top right) — tap it to open the full map of Jais.</li>
+      <li>Minimap (top left on phones) — tap it to open the full map of Jais.</li>
       <li>Settings → EDIT BUTTON LAYOUT to move buttons.</li></ul></div>
     <div><h3>KEYBOARD &amp; MOUSE</h3><ul>
       <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · mouse look</li>
