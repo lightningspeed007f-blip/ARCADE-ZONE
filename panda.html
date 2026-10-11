@@ -260,13 +260,17 @@ const STREAK_SOUNDS = { 5:'streak5.mp3', 10:'streak10.mp3', 15:'streak15.mp3', 2
 const MILESTONE_TEXT = { 5:'NICE! 5x', 10:'ON FIRE! 2x POINTS', 15:'UNSTOPPABLE!', 20:'PANDAMONIUM! 3x' };
 const EMOJI = { panda:'🐼', gold:'🐼', bomb:'💣', ice:'❄️', heart:'❤️' };
 const KEYS = ['q','w','e','a','s','d','z','x','c'];
-const BOARD_ROWS = 10;
+const BOARD_ROWS = { today: 20, all: 5 };   // places on each board (TODAY starts fresh every day)
 // Shared live scoreboard for every phone — same Firebase project as Jais Express.
 // Clear apiKey to keep the scoreboard on this phone only.
 const FIREBASE = { apiKey: 'AIzaSyCki1mqUIMVZORNGCUqFwhmY22KSge9RpA', projectId: 'game-zone-1192f' };
 const COLLECTION = 'panda_scores';
 const ONLINE = !!(FIREBASE.apiKey && FIREBASE.projectId);
-const POLL_MS = 5000;       // how often the live board refreshes
+// The free Firebase plan allows 50,000 reads a day, so the board refreshes gently:
+const POLL_PLAY_MS = 30000;   // refresh every 30 s during a game
+const POLL_IDLE_MS = 60000;   // every 60 s on the menu
+const IDLE_MS = 120000;       // stop refreshing after 2 minutes with no taps
+const BUSY_MS = 300000;       // daily quota used up: wait 5 minutes before asking again
 
 /* ================= SETUP ================= */
 const $ = id => document.getElementById(id);
@@ -291,7 +295,8 @@ let bestStreak = store.get('tp_bestStreak', 0);
 let muted = store.get('tp_muted', false);
 let playerName = '', playerTag = '';
 let boardLocal = store.get('tp_board', []);   // [{n:name, s:score, k:topStreak, t:time}]
-let boardOnline = null;                        // { today:[...], all:[...] } same shape, from the online scoreboard
+let boardOnline = null;                        // { day, today:[...], all:[...] } same shape, from the online scoreboard
+let pending = store.get('tp_pending', []);     // online saves that failed, sent again once the board is back
 let boardTab = 'today';
 let lastRank = 0;
 
@@ -507,7 +512,9 @@ function hud(){
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const cleanName = n => String(n || '').replace(/\s+/g, ' ').trim().slice(0, 14);
 function startOfToday(){ const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
-function today(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dayOf(t){ const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function today(){ return dayOf(Date.now()); }
+const byScore = (a, b) => b.s - a.s || a.t - b.t;
 
 function boardEntries(){
   if (ONLINE && boardOnline) return boardOnline[boardTab].slice();
@@ -525,24 +532,32 @@ function rankedBoard(){
   return { list, live };
 }
 
+function boardStatus(){
+  if (!ONLINE) return 'Scores saved on this phone';
+  if (boardOnline) return 'Live scoreboard · all players · updates live';
+  if (Date.now() < busyUntil) return 'Live scoreboard is busy · showing this phone’s scores';
+  return 'Connecting to live scoreboard…';
+}
+
 function renderBoard(){
   const { list, live } = rankedBoard();
   const ol = $('boardList'), note = $('boardNote');
+  const rows = BOARD_ROWS[boardTab];
   if (!list.length) {
     ol.innerHTML = '<div class="empty">No scores yet — be the first!</div>';
-    note.textContent = ONLINE ? (boardOnline ? 'Live scoreboard · all players' : 'Connecting to live scoreboard…') : 'Scores saved on this phone';
+    note.textContent = boardStatus();
     return;
   }
   const myIdx = live ? list.indexOf(live) : -1;
   const row = (e, i) => `<li class="${i < 3 ? 'top' + (i + 1) : ''}${e.live ? ' me' : ''}">` +
     `<span class="rk">#${i + 1}</span><span class="nm">${e.live ? '▶ ' : ''}${esc(e.n)}${e.g ? '<span class="tg">#' + esc(e.g) + '</span>' : ''}</span><span class="sc">${e.s}</span></li>`;
-  let html = list.slice(0, BOARD_ROWS).map(row).join('');
-  if (myIdx >= BOARD_ROWS) html += '<li class="gap">⋯</li>' + row(live, myIdx);
+  let html = list.slice(0, rows).map(row).join('');
+  if (myIdx >= rows) html += '<li class="gap">⋯</li>' + row(live, myIdx);
   ol.innerHTML = html;
 
   if (live) {
     const rank = myIdx + 1;
-    if (lastRank && rank < lastRank && rank <= BOARD_ROWS && running) {
+    if (lastRank && rank < lastRank && rank <= rows && running) {
       if (rank === 1 && list.length > 1) banner('#1 ON THE BOARD!'); else if (rank <= 3) banner('UP TO #' + rank + '!');
     }
     lastRank = rank;
@@ -551,9 +566,7 @@ function renderBoard(){
       ? `<b>${ahead.s - score + 1}</b> more to pass ${esc(ahead.n)}`
       : (list.length > 1 ? '<b>You are #1!</b> Keep going' : 'Set the first score!');
   } else {
-    note.textContent = ONLINE
-      ? (boardOnline ? 'Live scoreboard · all players · updates live' : 'Connecting to live scoreboard…')
-      : 'Scores saved on this phone';
+    note.textContent = boardStatus();
   }
 }
 
@@ -562,21 +575,25 @@ function saveScore(entry){
   boardLocal.sort((a, b) => b.s - a.s);
   boardLocal = boardLocal.slice(0, 100);
   store.set('tp_board', boardLocal);
-  if (ONLINE) {
-    if (boardOnline) { boardOnline.today.push(entry); boardOnline.all.push(entry); }
-    const body = { fields: {
-      name: { stringValue: entry.n }, score: { integerValue: String(entry.s) },
-      streak: { integerValue: String(entry.k) }, day: { stringValue: today() },
-      createdAt: { timestampValue: new Date(entry.t).toISOString() } } };
-    if (entry.g) body.fields.tag = { stringValue: entry.g };
-    const post = () => fetch(fsUrl('/' + COLLECTION), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
-    // old Firestore rules (before player tags) reject the extra field: save the score without it
-    post().then(r => (!r.ok && body.fields.tag && r.status >= 400 && r.status < 500) ? (delete body.fields.tag, post()) : r)
-      .then(loadOnline).catch(() => {});
+  // Only scores that make today's top 20 go online: fewer saves, and the TODAY board stays small to read
+  if (ONLINE && worthSaving(entry)) {
+    if (boardOnline) addToOnline(entry);
+    sendScore(entry);
   }
 }
 // Rank of a finished score on the board shown now (1 = top)
 function rankOf(entry){ return boardEntries().filter(e => e !== entry && e.s > entry.s).length + 1; }
+
+// Does this score earn a place on the online board? Unknown board (not loaded yet) → save it to be safe.
+function worthSaving(e){
+  if (!boardOnline) return true;
+  const beats = (list, rows) => list.length < rows || e.s > list[rows - 1].s;
+  return dayOf(e.t) === boardOnline.day ? beats(boardOnline.today, BOARD_ROWS.today) : beats(boardOnline.all, BOARD_ROWS.all);
+}
+function addToOnline(e){
+  if (dayOf(e.t) === boardOnline.day) boardOnline.today = boardOnline.today.concat(e).sort(byScore).slice(0, BOARD_ROWS.today);
+  boardOnline.all = boardOnline.all.concat(e).sort(byScore).slice(0, BOARD_ROWS.all);
+}
 
 /* ---- Firestore (REST) ---- */
 function fsUrl(path){ return 'https://firestore.googleapis.com/v1/projects/' + FIREBASE.projectId + '/databases/(default)/documents' + path + '?key=' + FIREBASE.apiKey; }
@@ -586,29 +603,88 @@ function parseDoc(f){
 }
 async function fsQuery(q){
   const r = await fetch(fsUrl(':runQuery'), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ structuredQuery: q }) });
-  if (!r.ok) throw new Error('query failed');
+  if (!r.ok) { const err = new Error('query failed'); err.status = r.status; throw err; }
   const data = await r.json();
   return data.filter(d => d.document).map(d => parseDoc(d.document.fields || {}));
 }
-let loading = false;
+
+// Save one score online. If the database is busy or the phone is offline, keep it and try again later.
+async function sendScore(entry){
+  const body = { fields: {
+    name: { stringValue: entry.n }, score: { integerValue: String(entry.s) },
+    streak: { integerValue: String(entry.k) }, day: { stringValue: dayOf(entry.t) },
+    createdAt: { timestampValue: new Date(entry.t).toISOString() } } };
+  if (entry.g) body.fields.tag = { stringValue: entry.g };
+  const post = () => fetch(fsUrl('/' + COLLECTION), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+  try {
+    let r = await post();
+    // old Firestore rules (before player tags) reject the extra field: save the score without it
+    if (!r.ok && body.fields.tag && r.status >= 400 && r.status < 500 && r.status !== 429) { delete body.fields.tag; r = await post(); }
+    if (r.ok) return;
+    if (r.status === 429) busyUntil = Date.now() + BUSY_MS;
+    if (r.status !== 429 && r.status < 500) return;   // refused by the rules: retrying won't help
+  } catch (e) {}
+  pending = pending.concat(entry).slice(-10);
+  store.set('tp_pending', pending);
+}
+let flushing = false;
+async function flushPending(){
+  if (flushing || !pending.length) return;
+  flushing = true;
+  const list = pending;
+  pending = []; store.set('tp_pending', pending);
+  for (const e of list) {
+    if (!worthSaving(e)) continue;
+    addToOnline(e);
+    await sendScore(e);
+  }
+  flushing = false;
+  renderBoard();
+}
+
+// TODAY board: top 20 straight from the database. That needs a composite index (day + score);
+// until it exists, read today's scores and sort them here (small, since only top-20 scores are saved).
+let todayOrdered = true;
+async function loadToday(day){
+  const from = [{ collectionId: COLLECTION }];
+  const where = { fieldFilter: { field: { fieldPath: 'day' }, op: 'EQUAL', value: { stringValue: day } } };
+  if (todayOrdered) {
+    try { return await fsQuery({ from, where, orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: BOARD_ROWS.today }); }
+    catch (e) { if (e.status !== 400) throw e; todayOrdered = false; }
+  }
+  return (await fsQuery({ from, where, limit: 300 })).sort(byScore).slice(0, BOARD_ROWS.today);
+}
+let loading = false, lastLoad = 0, busyUntil = 0, lastActive = Date.now();
 async function loadOnline(){
-  if (!ONLINE || loading) return;
-  loading = true;
+  if (!ONLINE || loading || Date.now() < busyUntil) return;
+  loading = true; lastLoad = Date.now();
+  const day = today();
   try {
     const [t, a] = await Promise.all([
-      fsQuery({ from: [{ collectionId: COLLECTION }], where: { fieldFilter: { field: { fieldPath: 'day' }, op: 'EQUAL', value: { stringValue: today() } } }, limit: 300 }),
-      fsQuery({ from: [{ collectionId: COLLECTION }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 50 })
+      loadToday(day),
+      fsQuery({ from: [{ collectionId: COLLECTION }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: BOARD_ROWS.all })
     ]);
-    boardOnline = { today: t.sort((x, y) => y.s - x.s), all: a };
-    renderBoard();
-  } catch (e) {}
+    boardOnline = { day, today: t, all: a };
+    flushPending();
+  } catch (e) {
+    if (e.status === 429) busyUntil = Date.now() + BUSY_MS;   // daily quota used up
+  }
   loading = false;
+  renderBoard();
+}
+// Refresh only while someone is actually using the page, and not more often than needed
+function refreshIfDue(){
+  if (document.hidden || Date.now() - lastActive > IDLE_MS) return;
+  if (Date.now() - lastLoad >= ((running || counting) ? POLL_PLAY_MS : POLL_IDLE_MS)) loadOnline();
 }
 function connectOnline(){
   if (!ONLINE) return;
   loadOnline();
-  // Poll so other players' scores show up while you play
-  setInterval(() => { if (!document.hidden) loadOnline(); }, POLL_MS);
+  setInterval(refreshIfDue, 5000);
+  const wake = () => { lastActive = Date.now(); refreshIfDue(); };
+  document.addEventListener('pointerdown', wake, { passive: true });
+  document.addEventListener('keydown', wake);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
 }
 
 // Same-phone live updates (e.g. a second tab showing the board)
