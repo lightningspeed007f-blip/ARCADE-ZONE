@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "panda_scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "score", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
