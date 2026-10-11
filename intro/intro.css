@@ -85,7 +85,7 @@ body.iz-bump .app { animation: izBump 0.2s ease-out; }
 @keyframes izBump { 0% { transform: translateY(0); } 35% { transform: translateY(4px); } 100% { transform: translateY(0); } }
 
 /* Replay button: mirrors the sound button, top-left */
-.sound-btn.iz-replay { left: 14px; right: auto; width: 38px; height: 38px; top: 18px; opacity: 0.7; }
+.sound-btn.iz-replay { left: 14px; right: auto; width: 38px; height: 38px; top: 78px; opacity: 0.7; }
 .sound-btn.iz-replay:hover, .sound-btn.iz-replay:focus-visible { opacity: 1; }
 .sound-btn.iz-replay svg { width: 18px; height: 18px; }
 body.iz-on .iz-replay { display: none; }
