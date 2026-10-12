@@ -74,7 +74,10 @@
 
     <div class="card">
       <h3>🎡 Spin The Wheel spins</h3>
-      <p class="muted">Players need an entry code (above) to open the wheel. Spins themselves are still sold in the Spin organizer panel (prizes, stock, claim checks).</p>
+      <p class="muted">No entry code. Take ₹ for the spin, then type this staff code on the player's phone.
+        It is the same code every time and gives <b>1 spin</b> each time; for an extra spin, type it again. Don't let players see it.</p>
+      <div class="code" id="spinCode"></div>
+      <p class="muted">Prizes, stock and claim checks are in the Spin organizer panel.</p>
       <a class="btn wide" style="text-align:center;margin-top:10px;" href="spin.html?organizer">OPEN SPIN ORGANIZER</a>
     </div>
 
@@ -138,7 +141,7 @@ GP.autoLock(() => { if (unlocked) lockStaff(); }, 5);
 // One button per locked game
 Object.keys(GP.GAMES).forEach(k => {
   const b = document.createElement('button');
-  b.textContent = GP.GAMES[k] + (k === 'spin' ? ' (entry)' : '');
+  b.textContent = GP.GAMES[k];
   b.className = k === selGame ? 'on' : '';
   b.addEventListener('click', () => {
     selGame = k;
@@ -192,6 +195,7 @@ $('adminBtn').addEventListener('click', () => {
 renderAdmin();
 
 $('mins').textContent = GP.CONFIG.CODE_VALID_MIN;
+$('spinCode').textContent = GP.CONFIG.SPIN_CODE.slice(0, 3) + ' ' + GP.CONFIG.SPIN_CODE.slice(3);
 show();
 </script>
 </body>

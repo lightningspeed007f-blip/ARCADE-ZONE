@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Spin & Win</title>
-<script src="gamepass.js" data-game="spin"></script>
+<script src="gamepass.js"></script>
 <meta name="apple-mobile-web-app-title" content="Spin & Win">
 <meta name="application-name" content="Spin & Win">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
@@ -468,9 +468,9 @@
   <div class="card">
     <span class="icon">🎟️</span>
     <h2>GET SPINS</h2>
-    <p>Pay ₹<span class="price"></span> per spin at the counter and tell staff your ID:</p>
+    <p>Pay ₹<span class="price"></span> per spin at the counter. Staff will type the spin code here.</p>
     <div class="dev-big" id="devBig">----</div>
-    <input class="inp" id="codeInput" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="6-digit code">
+    <input class="inp" id="codeInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Staff code">
     <p class="err" id="codeErr"></p>
     <div class="row">
       <button class="btn" data-close="codeOverlay">CANCEL</button>
@@ -512,17 +512,9 @@
  
       <section class="org-sec">
         <h3>🎟 Sell spins</h3>
-        <label for="orgDev">Player's ID (shown on their screen)</label>
-        <input class="inp" id="orgDev" inputmode="numeric" maxlength="4" placeholder="e.g. 4821" autocomplete="off">
-        <label>How many spins did they pay for?</label>
-        <div class="counts" id="counts"></div>
-        <button class="btn primary wide" id="genBtn">MAKE CODE</button>
-        <p class="err" id="genErr" style="margin-top:8px !important;"></p>
-        <div class="code-out" id="codeOut" hidden>
-          <b id="codeBig"></b>
-          <small id="codeInfo"></small>
-        </div>
-        <div class="divider">Or, with the player's phone in your hand:</div>
+        <p class="hint">Take ₹<span class="price"></span> per spin, then type the staff spin code on the player's phone
+          (tap GET SPINS). Same code every time, 1 spin each time. Staff code: <b id="orgSpinCode"></b></p>
+        <div class="divider">Or add spins straight to this phone:</div>
         <div class="row">
           <button class="btn" data-add="1">+1 here</button>
           <button class="btn" data-add="2">+2 here</button>
@@ -547,7 +539,7 @@
           <button class="btn" data-stock="teddyStock" data-d="-1">−</button><b id="stTeddy">0</b><button class="btn" data-stock="teddyStock" data-d="1">+</button></div>
         <div class="stock-row"><span>🖼️ Posters</span>
           <button class="btn" data-stock="posterStock" data-d="-1">−</button><b id="stPoster">0</b><button class="btn" data-stock="posterStock" data-d="1">+</button></div>
-        <p class="hint">When a prize reaches 0, new codes show it as SOLD OUT on the player's wheel.</p>
+        <p class="hint">When a prize reaches 0, new spins show it as SOLD OUT on the player's wheel.</p>
       </section>
  
       <section class="org-sec">
@@ -568,10 +560,9 @@
    ========================================================= */
 const CONFIG = {
   ORGANIZER_PIN: '241176',          // your organizer PIN
-  SECRET: 'MKG-change-this-2026',    // any random words; makes codes impossible to guess
+  SECRET: 'MKG-change-this-2026',    // any random words; makes claim codes impossible to guess
   PRICE: 10,                         // ₹ per spin
-  CODE_VALID_MIN: 10,                // spin codes work for about this many minutes
-  MAX_SPINS_PER_CODE: 5,
+  SPIN_CODE: window.GamePass ? GamePass.CONFIG.SPIN_CODE : '786110',  // set in gamepass.js; same code every spin
   START_TEDDY_STOCK: 3,
   START_POSTER_STOCK: 20,
   CENTER_IMAGE: 'center.png',        // your image for the middle of the wheel
@@ -616,10 +607,6 @@ function cyrb53(str){
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 function h4(str){ return String(cyrb53(CONFIG.SECRET + '|' + str) % 10000).padStart(4, '0'); }
-function slotNow(){ return Math.floor(Date.now() / (CONFIG.CODE_VALID_MIN * 60000)); }
-function spinCodeFor(dev, count, t, p, slot, nonce){
-  return String(nonce) + h4(`S|${dev}|${count}|${t}|${p}|${slot}|${nonce}`);
-}
 function claimHash(dev, type, spinNo){ return h4(`C|${dev}|${type}|${spinNo}`); }
  
 /* ---------- state ---------- */
@@ -860,7 +847,7 @@ function updateUI(){
   } else {
     spinBtn.textContent = spinning ? 'SPINNING…' : 'GET SPINS';
     spinBtn.classList.add('need-code');
-    $('subStatus').textContent = spinning ? 'Good luck!' : `₹${CONFIG.PRICE} per spin. Pay at the counter to get your code.`;
+    $('subStatus').textContent = spinning ? 'Good luck!' : `₹${CONFIG.PRICE} per spin. Pay at the counter to get your spin.`;
   }
   renderHistory();
 }
@@ -898,35 +885,21 @@ function openCode(){
   setTimeout(() => $('codeInput').focus(), 300);
 }
  
+// One fixed staff code: every correct entry adds 1 spin. Extra spin → staff type it again.
 function redeem(){
   const code = $('codeInput').value.replace(/\D/g, '');
   const err = $('codeErr');
-  if(code.length !== 6){ err.textContent = 'Enter the 6-digit code from the counter.'; return; }
-  if(player.used.includes(code)){ err.textContent = 'This code was already used. Ask for a new one.'; return; }
-  const nonce = code.slice(0, 2), s = slotNow();
-  for(const slot of [s, s - 1, s + 1]){
-    for(let c = 1; c <= CONFIG.MAX_SPINS_PER_CODE; c++){
-      for(const t of [1, 0]){
-        for(const p of [1, 0]){
-          if(spinCodeFor(player.deviceId, c, t, p, slot, nonce) === code){
-            player.credits += c;
-            player.teddyOn = !!t;
-            player.posterOn = !!p;
-            player.used.unshift(code);
-            player.used = player.used.slice(0, 200);
-            savePlayer();
-            renderWheel();
-            updateUI();
-            bumpCredits();
-            closeOv('codeOverlay');
-            buzz(40);
-            return;
-          }
-        }
-      }
-    }
-  }
-  err.textContent = 'Wrong or expired code. Check your ID and ask staff for a new code.';
+  if(code !== CONFIG.SPIN_CODE){ err.textContent = 'Wrong code. Ask staff at the counter.'; $('codeInput').value = ''; return; }
+  player.credits += 1;
+  player.teddyOn = org.teddyStock > 0;
+  player.posterOn = org.posterStock > 0;
+  org.spinsSold += 1;
+  savePlayer(); saveOrg();
+  renderWheel();
+  updateUI();
+  bumpCredits();
+  closeOv('codeOverlay');
+  buzz(40);
 }
 $('redeemBtn').addEventListener('click', redeem);
 $('codeInput').addEventListener('keydown', e => { if(e.key === 'Enter') redeem(); });
@@ -945,7 +918,7 @@ function renderOdds(){
 $('oddsBtn').addEventListener('click', () => { renderOdds(); openOv('oddsOverlay'); });
  
 /* ---------- organizer ---------- */
-let orgUnlocked = false, tapCount = 0, tapTimer = null, selCount = 1;
+let orgUnlocked = false, tapCount = 0, tapTimer = null;
  
 $('adminTrigger').addEventListener('click', () => {
   tapCount++;
@@ -976,21 +949,8 @@ $('orgLockBtn').addEventListener('click', lockOrg);
 // Organizer panel locks itself after 5 minutes without a tap
 if(window.GamePass) GamePass.autoLock(() => { if(orgUnlocked) lockOrg(); }, 5);
  
-(function buildCounts(){
-  const box = $('counts');
-  for(let i = 1; i <= CONFIG.MAX_SPINS_PER_CODE; i++){
-    const b = document.createElement('button');
-    b.className = 'btn' + (i === 1 ? ' active' : '');
-    b.textContent = i;
-    b.addEventListener('click', () => {
-      selCount = i;
-      box.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
-    });
-    box.appendChild(b);
-  }
-})();
- 
 function renderOrg(){
+  $('orgSpinCode').textContent = CONFIG.SPIN_CODE;
   $('stTeddy').textContent = org.teddyStock;
   $('stPoster').textContent = org.posterStock;
   const toffees = org.given.toffee1 + org.given.toffee2 * 2;
@@ -1004,26 +964,6 @@ function renderOrg(){
     ? 'Poster numbers given: ' + org.posterLog.map(p => '#' + p.no).join(', ')
     : '';
 }
- 
-$('genBtn').addEventListener('click', () => {
-  const dev = $('orgDev').value.replace(/\D/g, '');
-  $('genErr').textContent = '';
-  if(dev.length !== 4){ $('genErr').textContent = 'Type the 4-digit ID from the player\'s screen.'; return; }
-  const t = org.teddyStock > 0 ? 1 : 0, p = org.posterStock > 0 ? 1 : 0, slot = slotNow();
-  let code, tries = 0;
-  do{
-    code = spinCodeFor(dev, selCount, t, p, slot, 10 + Math.floor(Math.random() * 90));
-    tries++;
-  } while(org.issued.includes(code) && tries < 50);
-  org.issued.unshift(code);
-  org.issued = org.issued.slice(0, 300);
-  org.spinsSold += selCount;
-  saveOrg();
-  $('codeBig').textContent = code.slice(0, 3) + ' ' + code.slice(3);
-  $('codeInfo').textContent = `ID ${dev} • ${selCount} spin${selCount > 1 ? 's' : ''} • collect ₹${selCount * CONFIG.PRICE} • works for ~${CONFIG.CODE_VALID_MIN} min`;
-  $('codeOut').hidden = false;
-  renderOrg();
-});
  
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
   const n = parseInt(b.dataset.add, 10);
@@ -1096,7 +1036,6 @@ $('resetBtn').addEventListener('click', () => {
   org = orgDefaults();
   saveOrg();
   renderOrg();
-  $('codeOut').hidden = true;
   $('verifyOut').hidden = true;
 });
  

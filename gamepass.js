@@ -8,6 +8,9 @@
    3. The player types the code. It works only once, only on that phone.
       Going back to the Game Zone ends the pass; the next player needs a new code.
 
+   Spin The Wheel has no entry code: staff type the one fixed SPIN_CODE
+   (below) on the player's phone, and each time it gives one spin.
+
    Use in a game page (inside <head>):
      <script src="gamepass.js" data-game="horror"></script>
    ========================================================= */
@@ -15,12 +18,12 @@
   var CONFIG = {
     ORGANIZER_PIN: '241176',             // PIN for organizer.html
     SECRET: 'MKG-30d5ae327473d2e3911a2bdd',  // random words that make codes impossible to guess
-    CODE_VALID_MIN: 10                   // a code works for about this many minutes
+    CODE_VALID_MIN: 10,                  // a code works for about this many minutes
+    SPIN_CODE: '786110'                  // Spin The Wheel: staff type this same code for every spin
   };
   var GAMES = {
     horror: 'The Last Night',
-    dharma: 'Dharma Quiz',
-    spin:   'Spin The Wheel'
+    dharma: 'Dharma Quiz'
   };
 
   /* ---------- safe storage ---------- */
@@ -170,8 +173,6 @@
   var gameKey = game && GAMES[game] ? game : null;
   if (document.body) showAdminBadge(); else document.addEventListener('DOMContentLoaded', showAdminBadge);
   if (!game || !GAMES[game]) return;
-  // Staff who unlocked the Staff page can open the Spin organizer without a player code
-  if (game === 'spin' && /[?&]organizer/.test(location.search) && staffOk()) return;
 
   var gate = null;
   var realPlay = HTMLMediaElement.prototype.play;
