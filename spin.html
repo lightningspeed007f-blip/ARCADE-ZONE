@@ -23,6 +23,7 @@
     --poster:#6c4dff;
     --toffee:#f2a541;
     --toffee2:#ff8c1a;
+    --stationery:#1fb5a8;
     --sorry:#2b333d;
     --text:#eef2f6;
     --muted:#8a97a6;
@@ -267,6 +268,7 @@
   .modal.win h2{ color:var(--lime); text-shadow:0 0 16px rgba(182,255,60,0.5); }
   .modal.poster h2{ color:#a996ff; text-shadow:0 0 16px rgba(108,77,255,0.6); }
   .modal.toffee h2{ color:var(--toffee); }
+  .modal.stationery h2{ color:var(--stationery); }
   .modal.lose h2{ color:var(--muted); }
  
   .claim-box{
@@ -427,6 +429,7 @@
     <span><i class="dot" style="background:var(--teddy)"></i>Teddy</span>
     <span><i class="dot" style="background:var(--poster)"></i>Poster</span>
     <span><i class="dot" style="background:var(--toffee)"></i>Toffee</span>
+    <span><i class="dot" style="background:var(--stationery)"></i>Stationery</span>
     <span><i class="dot" style="background:var(--sorry)"></i>No prize</span>
     <button class="link-btn" id="oddsBtn">Prize chances</button>
   </div>
@@ -578,11 +581,11 @@ const SEGMENTS = [
   { type:'poster',  label:'POSTER',    emoji:'🖼️',   color:'#6c4dff', weight:8,  sound:'poster.mp3' },
   { type:'toffee2', label:'2 TOFFEES', emoji:'🍬🍬', color:'#ff8c1a', weight:8,  sound:'toffee2.mp3' },
   { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:19.9, sound:'sorry3.mp3' },
-  { type:'toffee1', label:'1 TOFFEE',  emoji:'🍬',   color:'#f2a541', weight:14, sound:'toffee3.mp3' }
+  { type:'stationery', label:'STATIONERY', emoji:'✏️', color:'#1fb5a8', weight:14, sound:'toffee3.mp3' }
 ];
  
-const PRIZE_NAMES = { teddy:'Teddy Bear', poster:'Poster', toffee2:'2 Toffees', toffee1:'1 Toffee', sorry:'No prize' };
-const PRIZE_EMOJI = { teddy:'🧸', poster:'🖼️', toffee2:'🍬', toffee1:'🍬', sorry:'❌' };
+const PRIZE_NAMES = { teddy:'Teddy Bear', poster:'Poster', toffee2:'2 Toffees', toffee1:'1 Toffee', stationery:'Stationery Kit', sorry:'No prize' };
+const PRIZE_EMOJI = { teddy:'🧸', poster:'🖼️', toffee2:'🍬', toffee1:'🍬', stationery:'✏️', sorry:'❌' };
 const SEG = 360 / SEGMENTS.length;
 const $ = id => document.getElementById(id);
  
@@ -618,7 +621,7 @@ savePlayer();
  
 function orgDefaults(){
   return { teddyStock:CONFIG.START_TEDDY_STOCK, posterStock:CONFIG.START_POSTER_STOCK, spinsSold:0,
-           issued:[], claims:{}, posterCount:0, posterLog:[], given:{ teddy:0, poster:0, toffee2:0, toffee1:0 } };
+           issued:[], claims:{}, posterCount:0, posterLog:[], given:{ teddy:0, poster:0, toffee2:0, toffee1:0, stationery:0 } };
 }
 let org = load(O_KEY, orgDefaults);
 const saveOrg = () => store(O_KEY, org);
@@ -805,6 +808,7 @@ function showResult(entry, fresh){
     poster:  ['poster', '🖼️', 'POSTER WIN!',  'You won a Poster! Show this pass at the counter to get your poster number.', ['#6c4dff','#a996ff','#ffcf3f']],
     toffee2: ['toffee', '🍬', 'SWEET WIN!',   'You won 2 Toffees! Show this pass at the counter.', ['#f2a541','#ffcf3f']],
     toffee1: ['toffee', '🍬', 'SWEET!',       'You won 1 Toffee! Show this pass at the counter.', ['#f2a541','#ffcf3f']],
+    stationery: ['stationery', '✏️', 'STATIONERY WIN!', 'You won a Stationery Kit! Show this pass at the counter.', ['#1fb5a8','#ffcf3f']],
     sorry:   ['lose',   '🎯', 'SO CLOSE!',    'No prize this time. Thank you for playing!', null]
   }[entry.type];
  
@@ -909,7 +913,7 @@ function renderOdds(){
   const total = SEGMENTS.reduce((a, s) => a + effWeight(s), 0);
   const groups = {};
   SEGMENTS.forEach(s => { groups[s.type] = (groups[s.type] || 0) + effWeight(s); });
-  $('oddsList').innerHTML = ['teddy', 'poster', 'toffee2', 'toffee1', 'sorry'].map(t => {
+  $('oddsList').innerHTML = ['teddy', 'poster', 'toffee2', 'toffee1', 'stationery', 'sorry'].map(t => {
     const pct = groups[t] / total * 100;
     const shown = pct === 0 ? 'SOLD OUT' : (pct < 2 ? pct.toFixed(1) : Math.round(pct)) + '%';
     return `<div class="stat"><span>${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]}</span><b>${shown}</b></div>`;
@@ -959,7 +963,8 @@ function renderOrg(){
     <div class="stat"><span>Cash you should have</span><b>₹${org.spinsSold * CONFIG.PRICE}</b></div>
     <div class="stat"><span>🧸 Teddies given</span><b>${org.given.teddy}</b></div>
     <div class="stat"><span>🖼️ Posters given</span><b>${org.given.poster}</b></div>
-    <div class="stat"><span>🍬 Toffees given</span><b>${toffees}</b></div>`;
+    <div class="stat"><span>🍬 Toffees given</span><b>${toffees}</b></div>
+    <div class="stat"><span>✏️ Stationery kits given</span><b>${org.given.stationery || 0}</b></div>`;
   $('posterLog').textContent = org.posterLog.length
     ? 'Poster numbers given: ' + org.posterLog.map(p => '#' + p.no).join(', ')
     : '';
@@ -988,7 +993,7 @@ $('verifyBtn').addEventListener('click', () => {
     return;
   }
   const hash = digits.slice(-4), spinNo = parseInt(digits.slice(0, -4), 10);
-  const type = ['teddy', 'poster', 'toffee2', 'toffee1'].find(tp => claimHash(dev, tp, spinNo) === hash);
+  const type = ['teddy', 'poster', 'toffee2', 'toffee1', 'stationery'].find(tp => claimHash(dev, tp, spinNo) === hash);
   if(!type){
     out.innerHTML = '<span class="big">❌ NOT VALID</span>This pass is fake or was typed wrong. Check the ID and code again.';
     return;
@@ -1014,7 +1019,7 @@ $('verifyBtn').addEventListener('click', () => {
     org.teddyStock--;
     if(org.teddyStock < 0){ warn = '<br>⚠️ Teddy stock is finished. Offer a replacement prize.'; org.teddyStock = 0; }
   }
-  org.given[type]++;
+  org.given[type] = (org.given[type] || 0) + 1;
   org.claims[key] = rec;
   saveOrg();
   renderOrg();
