@@ -137,7 +137,7 @@ body.playing.touch #touch { display: block; }
 [data-act=use] { right: calc(40px + env(safe-area-inset-right)); bottom: 170px; }
 [data-act=crouch] { right: calc(186px + env(safe-area-inset-right)); bottom: 22px; }
 [data-act=sprint] { left: calc(22px + env(safe-area-inset-left)); top: 196px; }
-[data-act=swap] { right: calc(26px + env(safe-area-inset-right)); top: 66px; }
+[data-act=swap] { right: calc(70px + env(safe-area-inset-right)); top: 8px; }
 [data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
 [data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
 /* jeep: DRIVE appears beside the jeep; pedals and steering replace the on-foot buttons while driving */
@@ -157,7 +157,7 @@ body.driving #touch [data-act=drive] .o { display: inline; }
 body.touch #minimap { right: auto; left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; }
 body.nomini #minimap { display: none; }
 #touch [data-act=map] { left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; background: transparent; border-color: transparent; }
-body.nomini #touch [data-act=map] { left: auto; width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 12px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
+body.nomini #touch [data-act=map] { left: auto; width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 76px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
 body.nomini #touch [data-act=map]::after { content: 'MAP'; }
 #mapHint { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
 #pauseBtn { position: absolute; right: calc(18px + env(safe-area-inset-right)); top: 12px; width: 42px; height: 42px; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; font-weight: 700; }
