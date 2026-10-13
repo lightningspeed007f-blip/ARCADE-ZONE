@@ -97,7 +97,7 @@
       <p class="muted" id="total" style="margin-top:8px;"></p>
     </div>
 
-    <p class="muted">Jais Express and Tap The Panda are free — no code needed.
+    <p class="muted">Jais Express and Tap The Panda use the fixed staff code <b id="staffCode"></b> (same every time).
       Each code works once, only on the phone with that Player ID, for about <span id="mins"></span> minutes.</p>
   </div>
 </div>
@@ -106,7 +106,8 @@
 const $ = id => document.getElementById(id);
 const GP = window.GamePass;
 const LOG_KEY = 'gz_org_log';
-let selGame = Object.keys(GP.GAMES)[0];
+const CODE_GAMES = Object.keys(GP.GAMES).filter(k => !GP.FIXED_GAMES[k]);
+let selGame = CODE_GAMES[0];
 let unlocked = GP.staffOk();
 
 function loadLog(){ try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { return []; } }
@@ -138,8 +139,8 @@ $('lockBtn').addEventListener('click', lockStaff);
 // Phone left on the counter? The staff page locks itself after 5 minutes without a tap.
 GP.autoLock(() => { if (unlocked) lockStaff(); }, 5);
 
-// One button per locked game
-Object.keys(GP.GAMES).forEach(k => {
+// One button per game that needs a one-time code
+CODE_GAMES.forEach(k => {
   const b = document.createElement('button');
   b.textContent = GP.GAMES[k];
   b.className = k === selGame ? 'on' : '';
@@ -195,6 +196,7 @@ $('adminBtn').addEventListener('click', () => {
 renderAdmin();
 
 $('mins').textContent = GP.CONFIG.CODE_VALID_MIN;
+$('staffCode').textContent = GP.CONFIG.STAFF_CODE;
 $('spinCode').textContent = GP.CONFIG.SPIN_CODE.slice(0, 3) + ' ' + GP.CONFIG.SPIN_CODE.slice(3);
 show();
 </script>

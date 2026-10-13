@@ -11,6 +11,9 @@
    Spin The Wheel has no entry code: staff type the one fixed SPIN_CODE
    (below) on the player's phone, and each time it gives one spin.
 
+   Jais Express and Tap The Panda (FIXED_GAMES below) use one fixed staff code
+   (STAFF_CODE) instead: no Player ID, the same code works every time.
+
    Use in a game page (inside <head>):
      <script src="gamepass.js" data-game="horror"></script>
    ========================================================= */
@@ -19,12 +22,17 @@
     ORGANIZER_PIN: '241176',             // PIN for organizer.html
     SECRET: 'MKG-30d5ae327473d2e3911a2bdd',  // random words that make codes impossible to guess
     CODE_VALID_MIN: 10,                  // a code works for about this many minutes
-    SPIN_CODE: '786110'                  // Spin The Wheel: staff type this same code for every spin
+    SPIN_CODE: '786110',                 // Spin The Wheel: staff type this same code for every spin
+    STAFF_CODE: '786110'                 // Jais Express + Tap The Panda: fixed code, never changes
   };
   var GAMES = {
     horror: 'The Last Night',
-    dharma: 'Dharma Quiz'
+    dharma: 'Dharma Quiz',
+    jais:   'Jais Express',
+    panda:  'Tap The Panda'
   };
+  // These games open with the fixed STAFF_CODE (no Player ID, no one-time code)
+  var FIXED_GAMES = { jais: true, panda: true };
 
   /* ---------- safe storage ---------- */
   function get(t, k) { try { return window[t].getItem(k); } catch (e) { return null; } }
@@ -161,7 +169,7 @@
   }
 
   window.GamePass = {
-    CONFIG: CONFIG, GAMES: GAMES, makeCode: makeCode, checkCode: checkCode,
+    CONFIG: CONFIG, GAMES: GAMES, FIXED_GAMES: FIXED_GAMES, makeCode: makeCode, checkCode: checkCode,
     deviceId: deviceId, hasPass: hasPass, endAllPasses: endAllPasses, locked: false,
     checkPin: checkPin, staffOk: staffOk, staffLogout: staffLogout, autoLock: autoLock,
     isAdmin: isAdmin, setAdmin: setAdmin
@@ -174,6 +182,7 @@
   if (document.body) showAdminBadge(); else document.addEventListener('DOMContentLoaded', showAdminBadge);
   if (!game || !GAMES[game]) return;
 
+  var fixed = !!FIXED_GAMES[game];
   var gate = null;
   var realPlay = HTMLMediaElement.prototype.play;
   // While locked, games may not start their music/video behind the lock screen
@@ -211,19 +220,21 @@
       '<div class="gz-card" role="dialog" aria-modal="true" aria-labelledby="gzTitle">' +
         '<div class="gz-lock">🔒</div>' +
         '<h2 id="gzTitle">' + GAMES[game].toUpperCase() + '</h2>' +
-        '<p>This game is locked. Show this Player ID at the counter to get your code:</p>' +
-        '<div class="gz-id" id="gzId"></div>' +
+        (fixed
+          ? '<p>This game is locked. Pay at the counter and staff will type the code.</p>'
+          : '<p>This game is locked. Show this Player ID at the counter to get your code:</p>' +
+            '<div class="gz-id" id="gzId"></div>') +
         '<input id="gzCode" type="tel" inputmode="numeric" maxlength="7" placeholder="------" autocomplete="off" aria-label="6-digit code">' +
         '<div class="gz-err" id="gzErr" role="alert"></div>' +
         '<div class="gz-row"><a href="index.html">← BACK</a><button class="gz-go" id="gzGo">UNLOCK</button></div>' +
-        '<p style="font-size:12px;color:#7d88a3;margin-top:12px">Each code works once, on this phone only, for about ' + CONFIG.CODE_VALID_MIN + ' minutes.</p>' +
+        (fixed ? '' : '<p style="font-size:12px;color:#7d88a3;margin-top:12px">Each code works once, on this phone only, for about ' + CONFIG.CODE_VALID_MIN + ' minutes.</p>') +
       '</div>';
     // Nothing typed or tapped on the lock screen reaches the game underneath
     ['click', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'keyup', 'wheel'].forEach(function (t) {
       gate.addEventListener(t, function (e) { e.stopPropagation(); });
     });
     document.body.appendChild(gate);
-    document.getElementById('gzId').textContent = deviceId();
+    if (!fixed) document.getElementById('gzId').textContent = deviceId();
     document.getElementById('gzGo').addEventListener('click', tryUnlock);
     document.getElementById('gzCode').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryUnlock(); });
   }
@@ -232,6 +243,12 @@
     var code = document.getElementById('gzCode').value.replace(/\D/g, '');
     var err = document.getElementById('gzErr');
     if (code.length !== 6) { err.textContent = 'Enter the 6-digit code from the counter.'; return; }
+    if (fixed) {
+      if (code !== CONFIG.STAFF_CODE) { err.textContent = 'Wrong code. Ask the staff at the counter.'; return; }
+      set('sessionStorage', 'gz_pass_' + game, '1');
+      unlock();
+      return;
+    }
     if (usedCodes().indexOf(code) >= 0) { err.textContent = 'This code was already used. Ask for a new one.'; return; }
     if (!checkCode(deviceId(), game, code)) { err.textContent = 'Wrong or expired code. Check your Player ID and ask for a new code.'; return; }
     markUsed(code);
