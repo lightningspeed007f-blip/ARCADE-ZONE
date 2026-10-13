@@ -189,6 +189,27 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
 .story-btn svg { width: 20px; height: 20px; color: #ffcf6a; filter: drop-shadow(0 0 5px currentColor); }
 .story-btn:active { transform: scale(0.96); }
 @keyframes storyGlow { 50% { box-shadow: 0 0 30px rgba(255,120,60,0.7), inset 0 0 16px rgba(255,190,90,0.35); } }
+/* ===================== PREMIUM ZONE BUTTON (next to StoryMode) ===================== */
+.mode-row { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.mode-row .story-btn, .mode-row .premium-btn { padding: 7px 10px 7px 8px; font-size: 10.5px; letter-spacing: 0.8px; gap: 5px; white-space: nowrap; }
+.mode-row .story-btn svg, .mode-row .premium-btn svg { width: 16px; height: 16px; }
+.premium-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding: 9px 16px 9px 13px;
+  border-radius: 30px; cursor: pointer; position: relative; z-index: 6; overflow: hidden;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 2.5px;
+  color: #2a1b02;
+  background: linear-gradient(135deg, #8a6416 0%, #f5d46b 22%, #fff1b8 38%, #d4af37 55%, #8a6416 78%, #f5d46b 100%);
+  background-size: 200% 100%;
+  border: 1.5px solid #fff1b8;
+  box-shadow: 0 0 18px rgba(245,212,107,0.55), inset 0 1px 0 rgba(255,255,255,0.6);
+  animation: premiumSheen 4s linear infinite, premiumGlow 2.4s ease-in-out infinite;
+}
+.premium-btn svg { color: #3a2604; }
+.premium-btn .lk { font-size: 10px; margin-left: -1px; }
+.premium-btn:active { transform: scale(0.96); }
+@keyframes premiumSheen { to { background-position: 200% 0; } }
+@keyframes premiumGlow { 50% { box-shadow: 0 0 32px rgba(255,225,130,0.85), inset 0 1px 0 rgba(255,255,255,0.6); } }
 /* ===================== PLAYER BADGE + INSTAGRAM ===================== */
 .me-btn {
   position: fixed; top: 16px; left: 14px; z-index: 20;
@@ -262,10 +283,16 @@ header p { color: #c4cce0; font-size: 15px; letter-spacing: 1px; }
   <header>
     <h1>GAME ZONE</h1>
     <p>Swipe to choose, tap to play</p>
-    <button class="story-btn" id="storyBtn" aria-label="Open StoryMode">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>
-      STORY MODE
-    </button>
+    <div class="mode-row">
+      <button class="story-btn" id="storyBtn" aria-label="Open StoryMode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>
+        STORY MODE
+      </button>
+      <button class="premium-btn" id="premiumBtn" aria-label="Open Premium Zone (locked, staff code)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z"/><rect x="3" y="19.5" width="18" height="2" rx="1"/></svg>
+        PREMIUM <span class="lk">🔒</span>
+      </button>
+    </div>
   </header>
 
   <div class="stage" id="stage"></div>
@@ -555,6 +582,21 @@ function openStoryMode(e) {
   setTimeout(function () { location.href = "storymode.html"; }, 450);
 }
 document.getElementById("storyBtn").addEventListener("click", openStoryMode);
+
+/* ===================== PREMIUM ZONE ===================== */
+/* Golden ₹50 wheel (premium.html). Locked by the same staff spin code as Spin The Wheel. */
+function openPremium(e) {
+  if (e) e.stopPropagation();
+  if (launching || splashOpen || introHold) return;
+  if (window.GZProfile && !GZProfile.get()) { GZProfile.require().then(function () { openPremium(); }); return; }
+  launching = true; launchT = 0; storyGo = true;
+  blip(300, 0.35, 0.12, "sawtooth");
+  buzz(30);
+  fadeOutMusic(400);
+  document.body.className += " leaving";
+  setTimeout(function () { location.href = "premium.html"; }, 450);
+}
+document.getElementById("premiumBtn").addEventListener("click", openPremium);
 
 /* ===================== SWIPE / TAP ===================== */
 var pressing = false, dragging = false, startX = 0, startPos = 0, lastX = 0, lastT = 0, vel = 0, pressedCard = null;

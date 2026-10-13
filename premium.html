@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Premium Zone</title>
+<script src="gamepass.js"></script>
+<meta name="apple-mobile-web-app-title" content="Premium Zone">
+<meta name="application-name" content="Premium Zone">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;900&family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#0b0804;
+    --bg-2:#17110a;
+    --panel:#1d150b;
+    --line:#5a4320;
+    --gold:#d4af37;
+    --gold-hi:#fff1b8;
+    --gold-mid:#f5d46b;
+    --gold-deep:#8a6416;
+    --accent:#c9971f;
+    --accent-2:#f5d46b;
+    --lime:#ffe28a;
+    --text:#fff8e6;
+    --muted:#bba57a;
+    --danger:#ff6b5a;
+    --gold-grad:linear-gradient(135deg, #8a6416 0%, #f5d46b 22%, #fff1b8 38%, #d4af37 55%, #8a6416 78%, #f5d46b 100%);
+  }
+ 
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  [hidden]{display:none !important;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(245,212,107,0.22) 0%, transparent 55%),
+      radial-gradient(circle at 50% 0%, #2a1d0c 0%, var(--bg-1) 60%),
+      repeating-linear-gradient(135deg, rgba(212,175,55,0.035) 0 2px, transparent 2px 18px);
+    color:var(--text);
+    font-family:'Rajdhani', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 14px;
+    overflow-x:hidden;
+  }
+  button{font-family:inherit;}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--lime); outline-offset:2px;}
+ 
+  #bgVideo{
+    position:fixed; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:-1; opacity:0.18; filter:sepia(1) saturate(1.6) hue-rotate(-8deg); pointer-events:none;
+  }
+ 
+  .mute-btn{
+    position:fixed; top:16px; right:16px; z-index:60;
+    background:rgba(29,21,11,0.85); border:1px solid var(--gold);
+    color:var(--gold-mid); font-size:18px;
+    width:42px; height:42px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; backdrop-filter:blur(4px);
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  }
+ 
+  .start-screen{
+    position:fixed; inset:0; background:radial-gradient(circle at 50% 40%, #2a1d0c, #070502 70%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:100; cursor:pointer; transition:opacity 0.4s ease;
+  }
+  .start-screen.hidden{ opacity:0; pointer-events:none; }
+  .start-box{ text-align:center; padding:20px; }
+  .start-box .crown{ font-size:54px; display:block; margin-bottom:6px; filter:drop-shadow(0 0 14px rgba(245,212,107,0.7)); }
+  .start-box h2{ font-family:'Cinzel Decorative', serif; font-size:26px; letter-spacing:2px; background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:12px; }
+  .start-box p{ font-size:16px; color:var(--muted); margin-bottom:20px; }
+  .start-btn-fake{
+    font-family:'Orbitron', sans-serif; font-size:16px; font-weight:800;
+    padding:12px 30px; background:var(--gold-grad); color:#2a1b02; border-radius:30px; box-shadow:0 0 24px rgba(245,212,107,0.45); display:inline-block;
+  }
+ 
+  .stage{
+    width:100%; max-width:420px;
+    display:flex; flex-direction:column; align-items:center; position:relative;
+  }
+ 
+  .eyebrow{
+    font-family:'Cinzel', serif; font-weight:700; font-size:12px; letter-spacing:4px;
+    color:var(--gold-mid); margin-bottom:6px; user-select:none; cursor:default;
+  }
+  h1{
+    font-family:'Cinzel Decorative', serif; font-weight:900; font-size:32px;
+    margin:0 0 4px; text-align:center; letter-spacing:2px;
+    background:var(--gold-grad); background-size:200% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 18px rgba(245,212,107,0.35));
+    animation:goldSheen 5s linear infinite;
+  }
+  @keyframes goldSheen{ to{ background-position:200% 0; } }
+  .sub{ color:var(--muted); font-size:15px; margin-bottom:12px; text-align:center; min-height:20px; }
+ 
+  /* Player info chips */
+  .topbar{ display:flex; gap:8px; justify-content:center; margin-bottom:22px; flex-wrap:wrap; }
+  .chip{
+    font-family:'Orbitron', sans-serif; font-size:11.5px; letter-spacing:1px;
+    padding:7px 13px; border-radius:20px;
+    background:rgba(29,21,11,0.85); border:1px solid var(--gold-deep); color:var(--muted);
+    box-shadow:inset 0 0 10px rgba(245,212,107,0.12);
+  }
+  .chip b{ color:var(--text); font-size:13px; margin-left:4px; }
+  .chip.credits b{ color:var(--lime); }
+  .chip.credits.bump{ animation:bump 0.5s ease; }
+  @keyframes bump{ 40%{ transform:scale(1.18); border-color:var(--lime);} }
+ 
+  .wheel-wrap{
+    position:relative; width:310px; height:310px; margin:8px 0 30px;
+    filter:drop-shadow(0 18px 34px rgba(0,0,0,0.7)) drop-shadow(0 0 26px rgba(212,175,55,0.35));
+  }
+  .ring{
+    position:absolute; inset:-14px; border-radius:50%;
+    background:conic-gradient(from 0deg, #8a6416, #fff1b8, #d4af37, #6b4c0e, #f5d46b, #fff8dc, #b8860b, #8a6416);
+    animation:ringspin 9s linear infinite;
+    box-shadow:0 0 0 2px #4a3408, 0 0 30px rgba(245,212,107,0.55), inset 0 0 12px rgba(0,0,0,0.6);
+  }
+  @keyframes ringspin{ to{ transform:rotate(360deg);} }
+  /* dark velvet band between the gold rim and the wheel, where the bulbs sit */
+  .rim{
+    position:absolute; inset:-4px; border-radius:50%;
+    background:radial-gradient(circle, #1a1208 70%, #0c0803 100%);
+    box-shadow:inset 0 0 0 2px rgba(255,241,184,0.55), inset 0 0 18px rgba(0,0,0,0.9);
+  }
+ 
+  /* Fairground bulbs on the ring */
+  .bulbs{ position:absolute; inset:0; pointer-events:none; z-index:3; }
+  .bulb{
+    position:absolute; top:50%; left:50%;
+    width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff, #ffe9a0 45%, #d4af37); box-shadow:0 0 9px #f5d46b, 0 0 3px #fff;
+    animation:bulb 1.2s ease-in-out infinite;
+  }
+  .bulb:nth-child(even){ animation-delay:0.6s; }
+  @keyframes bulb{ 0%,100%{ opacity:1;} 50%{ opacity:0.2;} }
+  .wheel-wrap.party .bulb{ animation-duration:0.22s; }
+  .wheel-wrap.spinning .bulb{ animation-duration:0.5s; }
+ 
+  .pointer{
+    position:absolute; top:-16px; left:50%;
+    transform:translateX(-50%); transform-origin:50% 0;
+    width:0; height:0;
+    border-left:14px solid transparent; border-right:14px solid transparent;
+    border-top:30px solid #f5d46b;
+    filter:drop-shadow(0 0 0 #6b4c0e) drop-shadow(0 2px 2px rgba(0,0,0,0.7)) drop-shadow(0 0 10px rgba(255,225,130,0.9));
+    z-index:5;
+  }
+  .pointer::after{
+    content:'💎'; position:absolute; left:50%; top:-44px; transform:translateX(-50%);
+    font-size:16px; filter:drop-shadow(0 0 6px rgba(255,255,255,0.9));
+  }
+  .pointer.tick{ animation:tick 0.12s ease-out; }
+  @keyframes tick{
+    0%{ transform:translateX(-50%) rotate(-24deg); }
+    100%{ transform:translateX(-50%) rotate(0deg); }
+  }
+ 
+  .wheel{
+    position:absolute; inset:8px; border-radius:50%;
+    border:5px solid #d4af37;
+    box-shadow:0 0 0 2px #5c4210, inset 0 0 0 2px rgba(255,241,184,0.6), inset 0 0 50px rgba(0,0,0,0.5);
+    will-change:transform;
+  }
+  /* thin divider lines between sections */
+  .wheel::before{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    background:var(--dividers, none);
+  }
+  /* glossy light across the wheel face */
+  .wheel::after{
+    content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    background:radial-gradient(ellipse at 35% 20%, rgba(255,255,255,0.22), transparent 55%);
+  }
+ 
+  .seg-icon{
+    position:absolute; top:50%; left:50%;
+    width:60px; height:56px; margin:-28px 0 0 -30px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:22px; text-align:center; color:#fff8e6;
+    text-shadow:0 2px 4px rgba(0,0,0,0.7); line-height:1; z-index:1;
+  }
+  .seg-icon span.label{
+    font-family:'Cinzel', serif; font-weight:900; font-size:8px; letter-spacing:0.4px; margin-top:4px;
+    color:#fff1b8; text-shadow:0 1px 2px #000, 0 0 6px rgba(0,0,0,0.8);
+  }
+  .seg-icon.soldout{ opacity:0.5; filter:grayscale(1); }
+ 
+  .hub{
+    position:absolute; top:50%; left:50%;
+    width:74px; height:74px; margin:-37px 0 0 -37px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #3a2a10, #120c04 70%);
+    border:4px solid #d4af37;
+    box-shadow:0 0 0 3px #5c4210, 0 0 0 5px #f5d46b, 0 0 26px rgba(245,212,107,0.6), inset 0 2px 6px rgba(255,241,184,0.35);
+    z-index:4; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px; cursor:pointer;
+  }
+  .hub img{ display:none; width:100%; height:100%; object-fit:cover;
+    /* turn the centre panda gold */
+    filter:sepia(1) saturate(2.6) hue-rotate(-10deg) brightness(1.05) contrast(1.08); }
+  .hub.has-img::after{
+    content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    background:linear-gradient(135deg, rgba(255,241,184,0.45), rgba(212,175,55,0.15) 45%, rgba(138,100,22,0.35));
+    mix-blend-mode:overlay;
+  }
+  .hub.has-img img{ display:block; }
+  .hub.has-img span{ display:none; }
+ 
+  .spin-btn{
+    font-family:'Orbitron', sans-serif; font-weight:800; font-size:18px; letter-spacing:2px;
+    color:#2a1b02;
+    background:var(--gold-grad); background-size:200% 100%;
+    animation:goldSheen 4s linear infinite;
+    border:none; padding:16px 40px;
+    clip-path:polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    cursor:pointer;
+    box-shadow:0 10px 28px rgba(212,175,55,0.45), inset 0 2px 0 rgba(255,255,255,0.5);
+    transition:transform 0.15s ease, filter 0.2s ease;
+  }
+  .spin-btn.need-code{ color:#2a1b02; }
+  .spin-btn:active{ transform:scale(0.96); }
+  .spin-btn:disabled{ filter:grayscale(0.6) brightness(0.7); cursor:not-allowed; }
+ 
+  .legend{
+    display:flex; gap:12px; margin-top:20px; font-size:12.5px; color:var(--muted);
+    flex-wrap:wrap; justify-content:center; align-items:center;
+  }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .link-btn{
+    background:none; border:none; color:var(--accent-2); font-size:12.5px;
+    text-decoration:underline; cursor:pointer; padding:2px;
+  }
+ 
+  /* My spins history */
+  .history{ margin-top:16px; text-align:center; }
+  .history small{ color:var(--muted); font-size:12px; display:block; margin-bottom:6px; }
+  .hrow{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .hchip{
+    width:34px; height:34px; border-radius:9px; font-size:16px;
+    background:var(--panel); border:1px solid var(--gold-deep); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .hchip.win{ border-color:var(--gold-mid); box-shadow:0 0 8px rgba(245,212,107,0.35); }
+  .hchip.lose{ opacity:0.55; }
+ 
+  .mascot{
+    position:absolute; bottom:-26px; right:-26px;
+    width:78px; height:78px; display:block; z-index:10;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(245,212,107,0.65));
+    transform-origin:bottom center;
+    animation:pandaBounce 1.4s ease-in-out infinite;
+    cursor:pointer; will-change:transform;
+  }
+  .mascot:active{ transform:scale(1.2) rotate(10deg); }
+  @keyframes pandaBounce{
+    0%, 100%{ transform:translateY(0px) rotate(-5deg) scale(1); }
+    50%{ transform:translateY(-14px) rotate(6deg) scale(1.06); }
+  }
+  .mascot.cheering{ animation:pandaCheer 0.22s ease-in-out infinite alternate !important; }
+  @keyframes pandaCheer{
+    0%{ transform:translateY(0px) rotate(-15deg) scale(1.1); }
+    100%{ transform:translateY(-22px) rotate(15deg) scale(1.18); }
+  }
+ 
+  /* Overlays & cards */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(6,8,11,0.8); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.25s ease;
+    z-index:50; padding:20px;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .modal, .card{
+    position:relative;
+    background:linear-gradient(180deg, #2a1e0c, #120c04);
+    border:2px solid var(--gold); border-radius:18px;
+    box-shadow:0 0 0 4px rgba(90,67,32,0.6), 0 0 40px rgba(212,175,55,0.3);
+    padding:28px 22px 24px; text-align:center;
+    width:100%; max-width:330px;
+    transform:scale(0.8) translateY(20px);
+    transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .overlay.show .modal, .overlay.show .card{ transform:scale(1) translateY(0); }
+  .modal .icon, .card .icon{ font-size:52px; margin-bottom:6px; display:block; }
+  .modal h2, .card h2{ font-family:'Cinzel', serif; font-weight:900; font-size:22px; letter-spacing:1px; margin:0 0 8px; color:var(--gold-mid); }
+  .modal p, .card p{ color:var(--muted); margin:0 0 16px; font-size:15px; line-height:1.35; }
+  .modal.win h2, .modal.grand h2{
+    background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 12px rgba(245,212,107,0.6));
+  }
+  .modal.grand{ box-shadow:0 0 0 4px rgba(90,67,32,0.6), 0 0 70px rgba(255,225,130,0.6); }
+ 
+  .claim-box{
+    background:rgba(0,0,0,0.45); border:1px dashed var(--gold-mid); border-radius:10px;
+    padding:12px 10px; margin-bottom:18px; color:var(--accent-2);
+    font-size:11px; letter-spacing:1.5px;
+  }
+  .claim-grid{ display:flex; justify-content:space-around; margin:8px 0 6px; }
+  .claim-grid small{ display:block; color:var(--muted); font-size:10px; letter-spacing:1px; }
+  .claim-grid b{
+    display:block; color:#fff; font-family:'Orbitron', sans-serif;
+    font-size:18px; letter-spacing:2px; margin-top:3px;
+  }
+  .claim-time{ color:#aaa; font-size:11px; letter-spacing:0.5px; }
+ 
+  .close-btn, .btn{
+    font-family:'Orbitron', sans-serif; font-weight:700; font-size:13px; letter-spacing:1.2px;
+    color:var(--text); background:var(--panel);
+    border:1px solid var(--gold-deep); border-radius:10px;
+    padding:12px 20px; cursor:pointer;
+  }
+  .btn.primary{ background:var(--gold-grad); color:#2a1b02; border-color:var(--gold); }
+  .btn.small{ padding:8px 12px; font-size:11px; }
+  .btn.danger{ color:var(--danger); border-color:rgba(255,90,90,0.4); background:transparent; }
+  .btn.wide{ width:100%; }
+  .btn:active, .close-btn:active{ transform:scale(0.97); }
+  .row{ display:flex; gap:8px; }
+  .row > *{ flex:1; }
+ 
+  .inp{
+    width:100%; font-family:'Orbitron', sans-serif; font-size:20px; letter-spacing:4px;
+    text-align:center; color:var(--text);
+    background:#0d0904; border:1px solid var(--gold-deep); border-radius:10px;
+    padding:12px 8px; margin-bottom:10px;
+  }
+  .inp::placeholder{ color:#6b5a3a; letter-spacing:2px; font-size:15px; }
+  .err{ color:var(--danger) !important; font-size:14px !important; min-height:18px; margin:0 0 10px !important; }
+  .dev-big{
+    font-family:'Orbitron', sans-serif; font-size:38px; font-weight:900; letter-spacing:8px;
+    color:var(--accent-2); margin:0 0 16px;
+  }
+ 
+  .stat{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 4px; border-bottom:1px solid var(--line); font-size:15px;
+  }
+  .stat span.pr{ display:flex; align-items:center; gap:8px; }
+  .stat:last-child{ border-bottom:none; }
+  .stat b{ font-family:'Orbitron', sans-serif; font-size:14px; }
+ 
+  /* Organizer panel */
+  .org-card{ max-width:400px; max-height:90vh; overflow-y:auto; text-align:left; }
+  .org-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .org-head h2{ margin:0; color:var(--accent-2); }
+  .org-sec{ border-top:1px solid var(--line); padding:16px 0; }
+  .org-sec h3{ font-family:'Orbitron', sans-serif; font-size:14px; letter-spacing:1px; margin:0 0 10px; }
+  .org-sec label{ display:block; color:var(--muted); font-size:13px; margin-bottom:6px; }
+  .counts{ display:flex; gap:6px; margin-bottom:10px; }
+  .counts button{ flex:1; padding:10px 0; }
+  .counts button.active{ background:var(--accent-2); color:#2a1b02; border-color:var(--accent-2); }
+  .code-out{
+    margin-top:12px; text-align:center; padding:14px 10px;
+    border:1px dashed var(--gold-mid); border-radius:12px; background:rgba(245,212,107,0.06);
+  }
+  .code-out b{
+    display:block; font-family:'Orbitron', sans-serif; font-size:38px; letter-spacing:6px; color:var(--lime);
+  }
+  .code-out small{ color:var(--muted); font-size:13px; }
+  .divider{ color:var(--muted); font-size:13px; text-align:center; margin:14px 0 8px; }
+  .verify-out{ margin-top:12px; padding:14px; border-radius:12px; text-align:center; font-size:15px; }
+  .verify-out.ok{ background:rgba(245,212,107,0.1); border:1px solid var(--gold-mid); }
+  .verify-out.bad{ background:rgba(255,90,90,0.1); border:1px solid var(--danger); }
+  .verify-out .big{ display:block; font-family:'Orbitron', sans-serif; font-size:22px; margin:4px 0; }
+  .verify-out .pno{ display:block; font-family:'Orbitron', sans-serif; font-size:44px; color:var(--gold-mid); }
+  .stock-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:16px; }
+  .stock-row span{ flex:1; }
+  .stock-row b{ font-family:'Orbitron', sans-serif; min-width:36px; text-align:center; }
+  .stock-row button{ width:40px; padding:8px 0; }
+  .hint{ color:var(--muted); font-size:13px; margin:6px 0 0; }
+  .toast{ color:var(--lime); font-size:14px; text-align:center; min-height:18px; margin-top:8px; }
+ 
+  .confetti{ position:absolute; inset:0; overflow:hidden; pointer-events:none; border-radius:18px; }
+  .confetti i{ position:absolute; top:-10%; width:8px; height:14px; opacity:0.9; animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(460px) rotate(540deg); opacity:0; } }
+ 
+  footer.ticker-wrap{
+    margin-top:26px; width:100%; max-width:420px; overflow:hidden; position:relative; display:flex;
+    mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+    -webkit-mask-image:linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+  .ticker-track{ display:flex; width:max-content; white-space:nowrap; animation:tickerLoop 14s linear infinite; }
+  .ticker-item{
+    font-family:'Noto Sans Devanagari', 'Rajdhani', sans-serif;
+    font-size:13.5px; font-weight:700; color:#ffd700; letter-spacing:1.5px; padding-right:50px;
+    text-shadow:0 0 8px rgba(255,215,0,0.8), 0 0 18px rgba(255,165,0,0.6);
+  }
+  @keyframes tickerLoop{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
+ 
+  .back-btn{
+    position:fixed; top:16px; left:16px; z-index:60;
+    height:42px; padding:0 14px; border-radius:21px; display:flex; align-items:center; gap:6px;
+    font-family:'Cinzel', serif; font-weight:700; font-size:12px; letter-spacing:1px; text-decoration:none;
+    color:var(--gold-mid); background:rgba(29,21,11,0.85); border:1px solid var(--gold);
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  }
+  .premium-tag{
+    display:inline-block; margin:2px 0 10px; padding:4px 14px; border-radius:20px;
+    font-family:'Cinzel', serif; font-weight:700; font-size:11px; letter-spacing:3px; color:#2a1b02;
+    background:var(--gold-grad);
+    box-shadow:0 0 14px rgba(245,212,107,0.45);
+  }
+  /* falling gold dust */
+  #dust{ position:fixed; inset:0; pointer-events:none; z-index:0; }
+  .stage{ z-index:1; }
+ 
+  @media (prefers-reduced-motion: reduce){
+    h1, .spin-btn, #dust,
+    .ring, .bulb, .mascot, .ticker-track{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+ 
+<video autoplay muted loop playsinline id="bgVideo">
+  <source src="bg.mp4" type="video/mp4">
+</video>
+<canvas id="dust"></canvas>
+ 
+<a class="back-btn" href="index.html" aria-label="Back to Game Zone">‹ ZONE</a>
+<button class="mute-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
+ 
+<div class="start-screen" id="startScreen">
+  <div class="start-box">
+    <span class="crown">👑</span>
+    <h2>PREMIUM ZONE</h2>
+    <p>Tap anywhere to enter the golden wheel</p>
+    <div class="start-btn-fake">TAP TO ENTER</div>
+  </div>
+</div>
+ 
+<div class="stage">
+  <div class="eyebrow" id="adminTrigger">✦ THE GOLDEN WHEEL ✦</div>
+  <h1>PREMIUM SPIN</h1>
+  <div class="premium-tag">EVERY SPIN WINS</div>
+  <div class="sub" id="subStatus"></div>
+ 
+  <div class="topbar">
+    <div class="chip">ID<b id="devChip">----</b></div>
+    <div class="chip credits" id="creditChip">SPINS<b id="creditNum">0</b></div>
+  </div>
+ 
+  <div class="wheel-wrap" id="wheelWrap">
+    <div class="ring"></div>
+    <div class="rim"></div>
+    <div class="bulbs" id="bulbs"></div>
+    <div class="pointer" id="pointer"></div>
+    <div class="wheel" id="wheel"></div>
+    <div class="hub" id="hub" aria-label="Spin">
+      <img id="hubImg" alt="">
+      <span>👑</span>
+    </div>
+ 
+    <!-- Golden panda -->
+    <svg class="mascot" id="mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gpGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fff1b8"/>
+          <stop offset="0.35" stop-color="#f5d46b"/>
+          <stop offset="0.65" stop-color="#d4af37"/>
+          <stop offset="1" stop-color="#8a6416"/>
+        </linearGradient>
+        <linearGradient id="gpDark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#b8860b"/>
+          <stop offset="1" stop-color="#5c4210"/>
+        </linearGradient>
+        <radialGradient id="gpFace" cx="0.4" cy="0.35" r="0.7">
+          <stop offset="0" stop-color="#fffbea"/>
+          <stop offset="0.7" stop-color="#ffe9a8"/>
+          <stop offset="1" stop-color="#e2b84a"/>
+        </radialGradient>
+      </defs>
+      <circle cx="30" cy="18" r="12" fill="url(#gpDark)" stroke="#fff1b8" stroke-width="1"/>
+      <circle cx="70" cy="18" r="12" fill="url(#gpDark)" stroke="#fff1b8" stroke-width="1"/>
+      <circle cx="50" cy="52" r="40" fill="url(#gpFace)" stroke="url(#gpGold)" stroke-width="2.5"/>
+      <circle cx="30" cy="42" r="13" fill="url(#gpDark)"/>
+      <circle cx="70" cy="42" r="13" fill="url(#gpDark)"/>
+      <circle cx="31" cy="43" r="4.5" fill="#fff"/>
+      <circle cx="69" cy="43" r="4.5" fill="#fff"/>
+      <circle cx="31" cy="44" r="2.2" fill="#111"/>
+      <circle cx="69" cy="44" r="2.2" fill="#111"/>
+      <ellipse cx="50" cy="60" rx="9" ry="7" fill="url(#gpDark)"/>
+      <circle cx="18" cy="62" r="9" fill="url(#gpDark)"/>
+      <circle cx="82" cy="62" r="9" fill="url(#gpDark)"/>
+      <!-- crown -->
+      <path d="M34 14 L38 2 L44 10 L50 0 L56 10 L62 2 L66 14 Z" fill="url(#gpGold)" stroke="#6b4c0e" stroke-width="1" stroke-linejoin="round"/>
+      <circle cx="50" cy="9" r="2" fill="#e6394a"/>
+      <circle cx="40" cy="11" r="1.4" fill="#3fb6ff"/>
+      <circle cx="60" cy="11" r="1.4" fill="#3fb6ff"/>
+      <!-- sparkle -->
+      <path d="M86 30 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 z" fill="#fff8dc"/>
+    </svg>
+  </div>
+ 
+  <button class="spin-btn" id="spinBtn">SPIN NOW</button>
+ 
+  <div class="legend">
+    <button class="link-btn" id="oddsBtn">Prizes &amp; chances</button>
+  </div>
+ 
+  <div class="history" id="historyWrap" hidden>
+    <small>Your premium spins (tap a prize to show its pass again)</small>
+    <div class="hrow" id="historyRow"></div>
+  </div>
+ 
+  <footer class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+      <span class="ticker-item">✨ Made With Love by Maa Kamakhya group &bull; माँ कामाख्या ग्रुप द्वारा सप्रेम निर्मित ✨</span>
+    </div>
+  </footer>
+</div>
+ 
+<!-- Result -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="confetti" id="confetti"></div>
+    <span class="icon" id="modalIcon">🏆</span>
+    <h2 id="modalTitle">JACKPOT!</h2>
+    <p id="modalText"></p>
+    <div class="claim-box" id="claimBox" hidden>
+      PREMIUM CLAIM PASS
+      <div class="claim-grid">
+        <div><small>CLAIM CODE</small><b id="claimCode">-</b></div>
+        <div><small>DEVICE ID</small><b id="claimDev">-</b></div>
+      </div>
+      <div class="claim-time" id="claimTime"></div>
+    </div>
+    <button class="close-btn" id="closeBtn">CLOSE</button>
+  </div>
+</div>
+ 
+<!-- Enter spin code -->
+<div class="overlay" id="codeOverlay">
+  <div class="card">
+    <span class="icon">👑</span>
+    <h2>GET PREMIUM SPINS</h2>
+    <p>Pay ₹<span class="price"></span> per premium spin at the counter. Staff will type the spin code here.</p>
+    <div class="dev-big" id="devBig">----</div>
+    <input class="inp" id="codeInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Staff code">
+    <p class="err" id="codeErr"></p>
+    <div class="row">
+      <button class="btn" data-close="codeOverlay">CANCEL</button>
+      <button class="btn primary" id="redeemBtn">REDEEM</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- Prize chances -->
+<div class="overlay" id="oddsOverlay">
+  <div class="card">
+    <h2>PRIZES &amp; CHANCES</h2>
+    <p>Every premium spin wins one of these.</p>
+    <div id="oddsList" style="text-align:left; margin-bottom:18px;"></div>
+    <button class="btn wide" data-close="oddsOverlay">CLOSE</button>
+  </div>
+</div>
+ 
+<!-- Organizer -->
+<div class="overlay" id="orgOverlay">
+  <div class="card org-card">
+    <div id="orgLock" style="text-align:center;">
+      <span class="icon">🔐</span>
+      <h2>PREMIUM ORGANIZER</h2>
+      <p>Enter your PIN</p>
+      <input class="inp" id="pinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+      <p class="err" id="pinErr"></p>
+      <div class="row">
+        <button class="btn" data-close="orgOverlay">CANCEL</button>
+        <button class="btn primary" id="pinBtn">UNLOCK</button>
+      </div>
+    </div>
+ 
+    <div id="orgMain" hidden>
+      <div class="org-head">
+        <h2>PREMIUM</h2>
+        <button class="btn small" id="orgLockBtn">🔒 LOCK</button>
+      </div>
+ 
+      <section class="org-sec">
+        <h3>👑 Sell premium spins</h3>
+        <p class="hint">Take ₹<span class="price"></span> per premium spin, then type the staff spin code on the player's phone
+          (tap GET SPINS). Same code as Spin The Wheel, 1 spin each time. Staff code: <b id="orgSpinCode"></b></p>
+        <div class="divider">Or add premium spins straight to this phone:</div>
+        <div class="row">
+          <button class="btn" data-add="1">+1 here</button>
+          <button class="btn" data-add="2">+2 here</button>
+          <button class="btn" data-add="3">+3 here</button>
+        </div>
+        <div class="toast" id="addToast"></div>
+      </section>
+ 
+      <section class="org-sec">
+        <h3>✅ Check a premium pass</h3>
+        <div class="row">
+          <input class="inp" id="vDev" inputmode="numeric" maxlength="4" placeholder="ID" autocomplete="off">
+          <input class="inp" id="vCode" inputmode="numeric" maxlength="12" placeholder="Claim code" autocomplete="off">
+        </div>
+        <button class="btn primary wide" id="verifyBtn">CHECK PASS</button>
+        <div class="verify-out" id="verifyOut" hidden></div>
+      </section>
+ 
+      <section class="org-sec">
+        <h3>📦 Prizes left</h3>
+        <div id="stockRows"></div>
+        <p class="hint">When a prize reaches 0, new spins show it as SOLD OUT on the player's wheel. Key chains and slime/clay are not counted.</p>
+      </section>
+ 
+      <section class="org-sec">
+        <h3>📊 Today</h3>
+        <div id="stats"></div>
+        <div style="margin-top:12px;"><button class="btn small danger" id="resetBtn">Reset premium organizer data</button></div>
+      </section>
+ 
+      <button class="btn wide" data-close="orgOverlay">CLOSE</button>
+    </div>
+  </div>
+</div>
+ 
+<script>
+/* =========================================================
+   PREMIUM ZONE — the golden ₹50 wheel. Every spin wins.
+   Uses the same staff spin code as Spin The Wheel (gamepass.js),
+   but keeps its own spins, stock and claim passes.
+   ========================================================= */
+const CONFIG = {
+  ORGANIZER_PIN: '241176',
+  SECRET: 'MKG-premium-gold-2026',   // makes premium claim codes impossible to guess
+  PRICE: 50,                          // ₹ per premium spin
+  SPIN_CODE: window.GamePass ? GamePass.CONFIG.SPIN_CODE : '786110',  // same code as Spin The Wheel
+  CENTER_IMAGE: 'center.png',
+  SPIN_MS: 5600
+};
+ 
+/* Prize chances (weights add up to 100 = percent). Every segment is a prize. */
+const SEGMENTS = [
+  { type:'bottle',   label:'STEEL BOTTLE', emoji:'🏆', color:'#17110a', weight:1,    sound:'teddy.mp3' },
+  { type:'keychain', label:'KEY CHAIN',    emoji:'🔑', color:'#7a1426', weight:38,   sound:'coin.mp3' },
+  { type:'apsara',   label:'APSARA KIT',   emoji:'✏️', color:'#15336e', weight:3.5,  sound:'streak10.mp3' },
+  { type:'slime',    label:'SLIME / CLAY', emoji:'🫧', color:'#0e5a3a', weight:37,   sound:'coin.mp3' },
+  { type:'rare',     label:'RARE DOLL',    emoji:'🐼', color:'#4e1f72', weight:3,    sound:'streak15.mp3' },
+  { type:'doll',     label:'DOLL SET',     emoji:'🪆', color:'#6b1838', weight:12.5, sound:'toffee2.mp3' },
+  { type:'car',      label:'TOY CAR',      emoji:'🏎️', color:'#0d4a5a', weight:5,    sound:'streak5.mp3' }
+];
+ 
+const PRIZE_NAMES = {
+  bottle:'Steel / Bruce 1100 Bottle', apsara:'Apsara Joy Kit', doll:'Doll Set',
+  rare:'Rare Doll Set / Small Panda', car:'Toy Car', keychain:'Key Chain', slime:'Slime / Clay'
+};
+const PRIZE_EMOJI = { bottle:'🏆', apsara:'✏️', doll:'🪆', rare:'🐼', car:'🏎️', keychain:'🔑', slime:'🫧' };
+const PRIZE_ORDER = ['bottle', 'apsara', 'rare', 'car', 'doll', 'slime', 'keychain'];
+// Prizes with counted stock (the rest never run out)
+const STOCKED = { bottle:2, apsara:5, rare:5, car:8, doll:15 };
+const SEG = 360 / SEGMENTS.length;
+const $ = id => document.getElementById(id);
+ 
+/* ---------- storage ---------- */
+function load(key, defaults){
+  const d = defaults();
+  try{ const raw = localStorage.getItem(key); if(raw) return Object.assign(d, JSON.parse(raw)); }catch(e){}
+  return d;
+}
+function store(key, obj){ try{ localStorage.setItem(key, JSON.stringify(obj)); }catch(e){} }
+ 
+/* ---------- codes ---------- */
+function cyrb53(str){
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for(let i=0, ch; i<str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507); h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507); h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+function h4(str){ return String(cyrb53(CONFIG.SECRET + '|' + str) % 10000).padStart(4, '0'); }
+function claimHash(dev, type, spinNo){ return h4(`PC|${dev}|${type}|${spinNo}`); }
+ 
+/* ---------- state ---------- */
+const P_KEY = 'mkg_premium_player_v1', O_KEY = 'mkg_premium_org_v1';
+let player = load(P_KEY, () => ({ deviceId:'', credits:0, off:{}, history:[], spinNo:0 }));
+if(!/^\d{4}$/.test(player.deviceId)) player.deviceId = window.GamePass ? GamePass.deviceId() : String(1000 + Math.floor(Math.random() * 9000));
+const savePlayer = () => store(P_KEY, player);
+savePlayer();
+ 
+function orgDefaults(){
+  const given = {};
+  PRIZE_ORDER.forEach(t => { given[t] = 0; });
+  return { stock:Object.assign({}, STOCKED), spinsSold:0, claims:{}, given };
+}
+let org = load(O_KEY, orgDefaults);
+org.stock = Object.assign({}, STOCKED, org.stock);
+const saveOrg = () => store(O_KEY, org);
+ 
+// Snapshot of what is sold out, taken when spins are added (same idea as Spin The Wheel)
+function snapshotStock(){
+  player.off = {};
+  Object.keys(STOCKED).forEach(t => { if(org.stock[t] <= 0) player.off[t] = true; });
+}
+ 
+/* ---------- audio ---------- */
+let isMuted = false, actx = null;
+const welcomeAudio = new Audio('welcome.mp3');
+const spinAudio = new Audio('spinning.mp3');
+spinAudio.loop = true;
+SEGMENTS.forEach(s => { s.audio = new Audio(s.sound); });
+const allAudio = () => [welcomeAudio, spinAudio, ...SEGMENTS.map(s => s.audio)];
+ 
+$('muteBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  isMuted = !isMuted;
+  allAudio().forEach(a => { a.muted = isMuted; });
+  $('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+});
+ 
+function tickSound(){
+  if(isMuted || !actx) return;
+  try{
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'triangle'; o.frequency.value = 2200;
+    g.gain.setValueAtTime(0.06, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.06);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + 0.07);
+  }catch(e){}
+}
+function buzz(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+ 
+const startScreen = $('startScreen');
+startScreen.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  if(!isMuted){ welcomeAudio.currentTime = 0; welcomeAudio.play().catch(() => {}); }
+});
+ 
+/* ---------- wheel ---------- */
+const wheel = $('wheel'), wheelWrap = $('wheelWrap'), pointer = $('pointer');
+const mascot = $('mascot'), spinBtn = $('spinBtn');
+ 
+const isAvailable = s => !player.off[s.type];
+const effWeight = s => isAvailable(s) ? s.weight : 0;
+ 
+function renderWheel(){
+  const stops = SEGMENTS.map((s, i) => `${isAvailable(s) ? s.color : '#2a241c'} ${i*SEG}deg ${(i+1)*SEG}deg`).join(', ');
+  // jewel colours with a soft dark centre and a gold glow toward the rim
+  wheel.style.background =
+    `radial-gradient(circle, rgba(0,0,0,0.35) 0 22%, transparent 48%, rgba(245,212,107,0.10) 80%, rgba(0,0,0,0.35) 100%),` +
+    `conic-gradient(${stops})`;
+  wheel.style.setProperty('--dividers',
+    `repeating-conic-gradient(from -0.7deg, rgba(245,212,107,0.95) 0deg 1.4deg, transparent 1.4deg ${SEG}deg)`);
+  wheel.querySelectorAll('.seg-icon').forEach(el => el.remove());
+  SEGMENTS.forEach((s, i) => {
+    const center = i*SEG + SEG/2;
+    const el = document.createElement('div');
+    el.className = 'seg-icon' + (isAvailable(s) ? '' : ' soldout');
+    el.innerHTML = `${s.emoji}<span class="label">${isAvailable(s) ? s.label : 'SOLD OUT'}</span>`;
+    el.style.transform = `rotate(${center}deg) translate(0, -98px) rotate(-${center}deg)`;
+    wheel.appendChild(el);
+  });
+}
+ 
+(function buildBulbs(){
+  const box = $('bulbs');
+  for(let i = 0; i < 24; i++){
+    const b = document.createElement('i');
+    b.className = 'bulb';
+    b.style.transform = `rotate(${i*15}deg) translate(0, -159px)`;
+    box.appendChild(b);
+  }
+})();
+ 
+(function centerImage(){
+  const img = $('hubImg');
+  img.onload = () => $('hub').classList.add('has-img');
+  img.onerror = () => $('hub').classList.remove('has-img');
+  img.src = CONFIG.CENTER_IMAGE;
+})();
+ 
+function weightedPick(){
+  const total = SEGMENTS.reduce((a, s) => a + effWeight(s), 0);
+  let r = Math.random() * total;
+  for(let i = 0; i < SEGMENTS.length; i++){
+    r -= effWeight(SEGMENTS[i]);
+    if(r < 0) return i;
+  }
+  return SEGMENTS.findIndex(s => s.type === 'keychain');
+}
+function pointerIndex(rot){
+  const a = ((360 - (rot % 360)) % 360 + 360) % 360;
+  return Math.floor(a / SEG) % SEGMENTS.length;
+}
+ 
+let rotation = 0, spinning = false;
+ 
+function spin(){
+  if(spinning) return;
+  if(player.credits <= 0){ openCode(); return; }
+ 
+  // Decide and save the result BEFORE the animation, so refreshing can't re-roll.
+  const idx = weightedPick();
+  const seg = SEGMENTS[idx];
+  player.credits--;
+  player.spinNo++;
+  const entry = {
+    type: seg.type, idx, spinNo: player.spinNo, time: Date.now(),
+    claim: `${player.spinNo}-${claimHash(player.deviceId, seg.type, player.spinNo)}`
+  };
+  player.history.unshift(entry);
+  player.history = player.history.slice(0, 30);
+  savePlayer();
+ 
+  spinning = true;
+  updateUI();
+  wheelWrap.classList.add('spinning');
+  mascot.classList.add('cheering');
+  try{ welcomeAudio.pause(); welcomeAudio.currentTime = 0; }catch(e){}
+  if(!isMuted){ try{ spinAudio.currentTime = 0; spinAudio.play().catch(() => {}); }catch(e){} }
+  if(seg.audio) try{ seg.audio.load(); }catch(e){}
+ 
+  const target = idx*SEG + SEG/2 + (Math.random() - 0.5) * SEG * 0.6;
+  const requiredMod = ((360 - target) % 360 + 360) % 360;
+  const prevMod = ((rotation % 360) + 360) % 360;
+  let end = rotation - prevMod + requiredMod + 360 * (6 + Math.floor(Math.random() * 2));
+  if(end <= rotation + 360) end += 360;
+ 
+  const start = rotation, t0 = performance.now();
+  let lastIdx = pointerIndex(start);
+ 
+  function frame(now){
+    const t = Math.min(1, (now - t0) / CONFIG.SPIN_MS);
+    const eased = 1 - Math.pow(1 - t, 4);
+    const r = start + (end - start) * eased;
+    wheel.style.transform = `rotate(${r}deg)`;
+    const pi = pointerIndex(r);
+    if(pi !== lastIdx){
+      lastIdx = pi;
+      pointer.classList.remove('tick'); void pointer.offsetWidth; pointer.classList.add('tick');
+      tickSound();
+      buzz(4);
+    }
+    if(t < 1) requestAnimationFrame(frame);
+    else { rotation = end; finish(entry); }
+  }
+  requestAnimationFrame(frame);
+}
+ 
+function finish(entry){
+  try{ spinAudio.pause(); spinAudio.currentTime = 0; }catch(e){}
+  mascot.classList.remove('cheering');
+  wheelWrap.classList.remove('spinning');
+  spinning = false;
+  updateUI();
+  showResult(entry, true);
+}
+ 
+/* ---------- result ---------- */
+const GOLD_CONFETTI = ['#fff1b8', '#f5d46b', '#d4af37', '#b8860b', '#fff8dc'];
+function launchConfetti(colors, n){
+  const box = $('confetti');
+  box.innerHTML = '';
+  for(let i = 0; i < (n || 40); i++){
+    const c = document.createElement('i');
+    c.style.left = Math.random()*100 + '%';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
+    c.style.animationDelay = (Math.random()*0.4) + 's';
+    box.appendChild(c);
+  }
+}
+ 
+function showResult(entry, fresh){
+  const seg = SEGMENTS[entry.idx] || SEGMENTS[1];
+  if(fresh && seg.audio && !isMuted){ seg.audio.currentTime = 0; seg.audio.play().catch(() => {}); }
+ 
+  const modal = $('modal'), icon = $('modalIcon'), title = $('modalTitle'), text = $('modalText');
+  modal.className = 'modal';
+  $('confetti').innerHTML = '';
+  $('claimBox').hidden = false;
+ 
+  const T = {
+    bottle:   ['grand', '🏆', 'GRAND JACKPOT!', 'You won the Steel / Bruce 1100 Bottle! Show this pass at the counter.'],
+    apsara:   ['grand', '✏️', 'ROYAL WIN!',     'You won the Apsara Joy Kit! Show this pass at the counter.'],
+    rare:     ['grand', '🐼', 'RARE WIN!',      'You won a Rare Doll Set / Small Panda! Show this pass at the counter.'],
+    car:      ['win',   '🏎️', 'SUPER WIN!',     'You won a Toy Car! Show this pass at the counter.'],
+    doll:     ['win',   '🪆', 'LOVELY WIN!',    'You won a Doll Set! Show this pass at the counter.'],
+    slime:    ['win',   '🫧', 'YOU WON!',       'You won Slime / Clay! Show this pass at the counter.'],
+    keychain: ['win',   '🔑', 'YOU WON!',       'You won a Key Chain! Show this pass at the counter.']
+  }[entry.type];
+ 
+  modal.classList.add(T[0]);
+  icon.textContent = T[1];
+  title.textContent = fresh ? T[2] : PRIZE_NAMES[entry.type].toUpperCase();
+  text.textContent = T[3];
+ 
+  $('claimCode').textContent = entry.claim;
+  $('claimDev').textContent = player.deviceId;
+  $('claimTime').textContent = new Date(entry.time).toLocaleString([], { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  if(fresh){
+    launchConfetti(GOLD_CONFETTI, T[0] === 'grand' ? 80 : 45);
+    buzz(T[0] === 'grand' ? [120, 60, 120, 60, 260] : [80, 60, 140]);
+    wheelWrap.classList.add('party');
+    setTimeout(() => wheelWrap.classList.remove('party'), 3000);
+  }
+  $('closeBtn').textContent = player.credits > 0 ? 'SPIN AGAIN' : 'CLOSE';
+  openOv('overlay');
+}
+ 
+$('closeBtn').addEventListener('click', () => {
+  closeOv('overlay');
+  if(player.credits > 0 && $('closeBtn').textContent === 'SPIN AGAIN') setTimeout(spin, 250);
+});
+ 
+/* ---------- player UI ---------- */
+function updateUI(){
+  $('devChip').textContent = player.deviceId;
+  $('devBig').textContent = player.deviceId;
+  $('creditNum').textContent = player.credits;
+  document.querySelectorAll('.price').forEach(e => e.textContent = CONFIG.PRICE);
+  spinBtn.disabled = spinning;
+  if(player.credits > 0){
+    spinBtn.textContent = 'SPIN NOW';
+    spinBtn.classList.remove('need-code');
+    $('subStatus').textContent = spinning ? 'Good luck!' : `You have ${player.credits} premium spin${player.credits > 1 ? 's' : ''}. Good luck!`;
+  } else {
+    spinBtn.textContent = spinning ? 'SPINNING…' : 'GET SPINS';
+    spinBtn.classList.add('need-code');
+    $('subStatus').textContent = spinning ? 'Good luck!' : `₹${CONFIG.PRICE} per premium spin. Pay at the counter to unlock.`;
+  }
+  renderHistory();
+}
+ 
+function renderHistory(){
+  const h = player.history.slice(0, 10);
+  const row = $('historyRow');
+  row.innerHTML = '';
+  $('historyWrap').hidden = h.length === 0;
+  h.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'hchip win';
+    b.textContent = PRIZE_EMOJI[e.type];
+    b.title = PRIZE_NAMES[e.type];
+    b.addEventListener('click', () => { if(!spinning) showResult(e, false); });
+    row.appendChild(b);
+  });
+}
+ 
+function bumpCredits(){
+  const c = $('creditChip');
+  c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump');
+}
+ 
+/* ---------- overlays ---------- */
+function openOv(id){ $(id).classList.add('show'); }
+function closeOv(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeOv(b.dataset.close)));
+ 
+/* ---------- redeem spin code ---------- */
+function openCode(){
+  $('codeInput').value = '';
+  $('codeErr').textContent = '';
+  openOv('codeOverlay');
+  setTimeout(() => $('codeInput').focus(), 300);
+}
+ 
+// Same fixed staff code as Spin The Wheel: every correct entry adds 1 premium spin.
+function redeem(){
+  const code = $('codeInput').value.replace(/\D/g, '');
+  const err = $('codeErr');
+  if(code !== CONFIG.SPIN_CODE){ err.textContent = 'Wrong code. Ask staff at the counter.'; $('codeInput').value = ''; return; }
+  player.credits += 1;
+  snapshotStock();
+  org.spinsSold += 1;
+  savePlayer(); saveOrg();
+  renderWheel();
+  updateUI();
+  bumpCredits();
+  closeOv('codeOverlay');
+  buzz(40);
+}
+$('redeemBtn').addEventListener('click', redeem);
+$('codeInput').addEventListener('keydown', e => { if(e.key === 'Enter') redeem(); });
+ 
+/* ---------- prize chances ---------- */
+function renderOdds(){
+  const total = SEGMENTS.reduce((a, s) => a + effWeight(s), 0);
+  const groups = {};
+  SEGMENTS.forEach(s => { groups[s.type] = (groups[s.type] || 0) + effWeight(s); });
+  $('oddsList').innerHTML = PRIZE_ORDER.map(t => {
+    const pct = groups[t] / total * 100;
+    const shown = pct === 0 ? 'SOLD OUT' : (pct < 10 && pct % 1 ? pct.toFixed(1) : Math.round(pct)) + '%';
+    return `<div class="stat"><span class="pr">${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]}</span><b>${shown}</b></div>`;
+  }).join('');
+}
+$('oddsBtn').addEventListener('click', () => { renderOdds(); openOv('oddsOverlay'); });
+ 
+/* ---------- organizer ---------- */
+let orgUnlocked = false, tapCount = 0, tapTimer = null;
+ 
+$('adminTrigger').addEventListener('click', () => {
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 2500);
+  if(tapCount >= 5){ tapCount = 0; openOrg(); }
+});
+ 
+function openOrg(){
+  $('orgLock').hidden = orgUnlocked;
+  $('orgMain').hidden = !orgUnlocked;
+  if(orgUnlocked) renderOrg();
+  else { $('pinInput').value = ''; $('pinErr').textContent = ''; setTimeout(() => $('pinInput').focus(), 300); }
+  openOv('orgOverlay');
+}
+function tryPin(){
+  // Shared guard: wrong PINs lock the box for a while (see gamepass.js)
+  const r = window.GamePass ? GamePass.checkPin($('pinInput').value)
+                            : { ok: $('pinInput').value === CONFIG.ORGANIZER_PIN, msg: 'Wrong PIN.' };
+  $('pinInput').value = '';
+  if(r.ok){ orgUnlocked = true; $('pinErr').textContent = ''; openOrg(); }
+  else $('pinErr').textContent = r.msg;
+}
+$('pinBtn').addEventListener('click', tryPin);
+$('pinInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryPin(); });
+function lockOrg(){ orgUnlocked = false; if(window.GamePass) GamePass.staffLogout(); closeOv('orgOverlay'); }
+$('orgLockBtn').addEventListener('click', lockOrg);
+// Organizer panel locks itself after 5 minutes without a tap
+if(window.GamePass) GamePass.autoLock(() => { if(orgUnlocked) lockOrg(); }, 5);
+ 
+function renderOrg(){
+  $('orgSpinCode').textContent = CONFIG.SPIN_CODE;
+  $('stockRows').innerHTML = Object.keys(STOCKED).map(t =>
+    `<div class="stock-row"><span>${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]}</span>` +
+    `<button class="btn" data-stock="${t}" data-d="-1">−</button><b>${org.stock[t]}</b>` +
+    `<button class="btn" data-stock="${t}" data-d="1">+</button></div>`).join('');
+  $('stats').innerHTML =
+    `<div class="stat"><span>Premium spins sold</span><b>${org.spinsSold}</b></div>` +
+    `<div class="stat"><span>Cash you should have</span><b>₹${org.spinsSold * CONFIG.PRICE}</b></div>` +
+    PRIZE_ORDER.map(t => `<div class="stat"><span>${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]} given</span><b>${org.given[t] || 0}</b></div>`).join('');
+}
+ 
+$('stockRows').addEventListener('click', e => {
+  const b = e.target.closest('[data-stock]');
+  if(!b) return;
+  const k = b.dataset.stock;
+  org.stock[k] = Math.max(0, org.stock[k] + parseInt(b.dataset.d, 10));
+  saveOrg();
+  renderOrg();
+});
+ 
+document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
+  const n = parseInt(b.dataset.add, 10);
+  player.credits += n;
+  snapshotStock();
+  org.spinsSold += n;
+  savePlayer(); saveOrg();
+  renderWheel(); updateUI(); renderOrg(); bumpCredits();
+  $('addToast').textContent = `Added ${n} premium spin${n > 1 ? 's' : ''} to this phone (ID ${player.deviceId}). Collect ₹${n * CONFIG.PRICE}.`;
+  setTimeout(() => { $('addToast').textContent = ''; }, 4000);
+}));
+ 
+$('verifyBtn').addEventListener('click', () => {
+  const out = $('verifyOut');
+  const dev = $('vDev').value.replace(/\D/g, '');
+  const digits = $('vCode').value.replace(/\D/g, '');
+  out.hidden = false;
+  out.className = 'verify-out bad';
+  if(dev.length !== 4 || digits.length < 5){
+    out.innerHTML = 'Type the 4-digit ID and the full claim code from the pass.';
+    return;
+  }
+  const hash = digits.slice(-4), spinNo = parseInt(digits.slice(0, -4), 10);
+  const type = PRIZE_ORDER.find(tp => claimHash(dev, tp, spinNo) === hash);
+  if(!type){
+    out.innerHTML = '<span class="big">❌ NOT VALID</span>This premium pass is fake or was typed wrong. Check the ID and code again.';
+    return;
+  }
+  const key = dev + '-' + spinNo;
+  const prev = org.claims[key];
+  if(prev){
+    const when = new Date(prev.time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    out.innerHTML = `<span class="big">⚠️ ALREADY GIVEN</span>${PRIZE_NAMES[type]} for this pass was given at ${when}.`;
+    return;
+  }
+  let warn = '';
+  if(type in STOCKED){
+    org.stock[type]--;
+    if(org.stock[type] < 0){ warn = '<br>⚠️ This prize is finished. Offer a replacement prize.'; org.stock[type] = 0; }
+  }
+  org.given[type] = (org.given[type] || 0) + 1;
+  org.claims[key] = { type, time: Date.now() };
+  saveOrg();
+  renderOrg();
+  out.className = 'verify-out ok';
+  out.innerHTML = `<span class="big">✅ VALID: ${PRIZE_EMOJI[type]} ${PRIZE_NAMES[type]}</span>Give the prize now.` + warn;
+  $('vCode').value = '';
+});
+ 
+$('resetBtn').addEventListener('click', () => {
+  if(!confirm('Reset premium organizer data? Sales, stock and claims start again.')) return;
+  org = orgDefaults();
+  saveOrg();
+  renderOrg();
+  $('verifyOut').hidden = true;
+});
+ 
+/* ---------- gold dust ---------- */
+(function goldDust(){
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = $('dust'), cx = cv.getContext('2d'), parts = [];
+  function size(){ cv.width = innerWidth; cv.height = innerHeight; }
+  size(); addEventListener('resize', size);
+  for(let i = 0; i < 40; i++) parts.push({ x:Math.random(), y:Math.random(), r:0.6 + Math.random()*1.8, v:0.0006 + Math.random()*0.0012, p:Math.random()*6.28 });
+  (function draw(t){
+    cx.clearRect(0, 0, cv.width, cv.height);
+    parts.forEach(d => {
+      d.y += d.v; if(d.y > 1.02){ d.y = -0.02; d.x = Math.random(); }
+      const a = 0.35 + 0.35 * Math.sin(t / 500 + d.p);
+      cx.beginPath(); cx.arc(d.x * cv.width + Math.sin(t / 1400 + d.p) * 12, d.y * cv.height, d.r, 0, 6.29);
+      cx.fillStyle = `rgba(245,212,107,${a})`; cx.shadowColor = '#f5d46b'; cx.shadowBlur = 6; cx.fill();
+    });
+    requestAnimationFrame(draw);
+  })(0);
+})();
+ 
+/* ---------- start ---------- */
+spinBtn.addEventListener('click', spin);
+$('hub').addEventListener('click', spin);
+renderWheel();
+updateUI();
+ 
+if(new URLSearchParams(location.search).has('organizer')){
+  if(window.GamePass && GamePass.staffOk()) orgUnlocked = true;   // already unlocked on the Staff page
+  startScreen.classList.add('hidden');
+  openOrg();
+}
+</script>
+ 
+</body>
+</html>
