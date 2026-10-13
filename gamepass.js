@@ -26,7 +26,6 @@
     STAFF_CODE: '786110'                 // Jais Express + Tap The Panda: fixed code, never changes
   };
   var GAMES = {
-    horror: 'The Last Night',
     dharma: 'Dharma Quiz',
     jais:   'Jais Express',
     panda:  'Tap The Panda'
