@@ -613,7 +613,7 @@
       <section class="org-sec">
         <h3>📦 Prizes left</h3>
         <div id="stockRows"></div>
-        <p class="hint">When a prize reaches 0, new spins show it as SOLD OUT on the player's wheel. Key chains and slime/clay are not counted.</p>
+        <p class="hint">When a prize reaches 0, new spins show it as SOLD OUT on the player's wheel. Key chains and BTS pen + sticker are not counted.</p>
       </section>
  
       <section class="org-sec">
@@ -647,7 +647,7 @@ const SEGMENTS = [
   { type:'bottle',   label:'STEEL BOTTLE', emoji:'🏆', color:'#17110a', weight:1,    sound:'teddy.mp3' },
   { type:'keychain', label:'KEY CHAIN',    emoji:'🔑', color:'#7a1426', weight:38,   sound:'coin.mp3' },
   { type:'apsara',   label:'APSARA KIT',   emoji:'✏️', color:'#15336e', weight:3.5,  sound:'streak10.mp3' },
-  { type:'slime',    label:'SLIME / CLAY', emoji:'🫧', color:'#0e5a3a', weight:37,   sound:'coin.mp3' },
+  { type:'bts',      label:'BTS PEN + STICKER', emoji:'💜', color:'#0e5a3a', weight:37,   sound:'coin.mp3' },
   { type:'rare',     label:'RARE DOLL',    emoji:'🐼', color:'#4e1f72', weight:3,    sound:'streak15.mp3' },
   { type:'doll',     label:'DOLL SET',     emoji:'🪆', color:'#6b1838', weight:12.5, sound:'toffee2.mp3' },
   { type:'car',      label:'TOY CAR',      emoji:'🏎️', color:'#0d4a5a', weight:5,    sound:'streak5.mp3' }
@@ -655,10 +655,10 @@ const SEGMENTS = [
  
 const PRIZE_NAMES = {
   bottle:'Steel / Bruce 1100 Bottle', apsara:'Apsara Joy Kit', doll:'Doll Set',
-  rare:'Rare Doll Set / Small Panda', car:'Toy Car', keychain:'Key Chain', slime:'Slime / Clay'
+  rare:'Rare Doll Set / Small Panda', car:'Toy Car', keychain:'Key Chain', bts:'BTS Pen + Sticker'
 };
-const PRIZE_EMOJI = { bottle:'🏆', apsara:'✏️', doll:'🪆', rare:'🐼', car:'🏎️', keychain:'🔑', slime:'🫧' };
-const PRIZE_ORDER = ['bottle', 'apsara', 'rare', 'car', 'doll', 'slime', 'keychain'];
+const PRIZE_EMOJI = { bottle:'🏆', apsara:'✏️', doll:'🪆', rare:'🐼', car:'🏎️', keychain:'🔑', bts:'💜' };
+const PRIZE_ORDER = ['bottle', 'apsara', 'rare', 'car', 'doll', 'bts', 'keychain'];
 // Prizes with counted stock (the rest never run out)
 const STOCKED = { bottle:2, apsara:5, rare:5, car:8, doll:15 };
 const SEG = 360 / SEGMENTS.length;
@@ -894,7 +894,7 @@ function showResult(entry, fresh){
     rare:     ['grand', '🐼', 'RARE WIN!',      'You won a Rare Doll Set / Small Panda! Show this pass at the counter.'],
     car:      ['win',   '🏎️', 'SUPER WIN!',     'You won a Toy Car! Show this pass at the counter.'],
     doll:     ['win',   '🪆', 'LOVELY WIN!',    'You won a Doll Set! Show this pass at the counter.'],
-    slime:    ['win',   '🫧', 'YOU WON!',       'You won Slime / Clay! Show this pass at the counter.'],
+    bts:      ['win',   '💜', 'YOU WON!',       'You won a BTS Pen + Sticker! Show this pass at the counter.'],
     keychain: ['win',   '🔑', 'YOU WON!',       'You won a Key Chain! Show this pass at the counter.']
   }[entry.type];
  
