@@ -646,7 +646,7 @@ const CONFIG = {
 const SEGMENTS = [
   { type:'bottle',   label:'STEEL BOTTLE', emoji:'🏆', color:'#17110a', weight:1,    sound:'teddy.mp3' },
   { type:'keychain', label:'KEY CHAIN',    emoji:'🔑', color:'#7a1426', weight:38,   sound:'coin.mp3' },
-  { type:'apsara',   label:'APSARA KIT',   emoji:'✏️', color:'#15336e', weight:3.5,  sound:'streak10.mp3' },
+  { type:'apsara',   label:'GROOMING SET', emoji:'🧴', color:'#15336e', weight:3.5,  sound:'streak10.mp3' },
   { type:'bts',      label:'BTS PEN + STICKER', emoji:'💜', color:'#0e5a3a', weight:37,   sound:'coin.mp3' },
   { type:'rare',     label:'RARE DOLL',    emoji:'🐼', color:'#4e1f72', weight:3,    sound:'streak15.mp3' },
   { type:'doll',     label:'DOLL SET',     emoji:'🪆', color:'#6b1838', weight:12.5, sound:'toffee2.mp3' },
@@ -654,10 +654,10 @@ const SEGMENTS = [
 ];
  
 const PRIZE_NAMES = {
-  bottle:'Steel / Bruce 1100 Bottle', apsara:'Apsara Joy Kit', doll:'Doll Set',
+  bottle:'Steel / Bruce 1100 Bottle', apsara:'Grooming Set', doll:'Doll Set',
   rare:'Rare Doll Set / Small Panda', car:'Toy Car', keychain:'Key Chain', bts:'BTS Pen + Sticker'
 };
-const PRIZE_EMOJI = { bottle:'🏆', apsara:'✏️', doll:'🪆', rare:'🐼', car:'🏎️', keychain:'🔑', bts:'💜' };
+const PRIZE_EMOJI = { bottle:'🏆', apsara:'🧴', doll:'🪆', rare:'🐼', car:'🏎️', keychain:'🔑', bts:'💜' };
 const PRIZE_ORDER = ['bottle', 'apsara', 'rare', 'car', 'doll', 'bts', 'keychain'];
 // Prizes with counted stock (the rest never run out)
 const STOCKED = { bottle:2, apsara:5, rare:5, car:8, doll:15 };
@@ -890,7 +890,7 @@ function showResult(entry, fresh){
  
   const T = {
     bottle:   ['grand', '🏆', 'GRAND JACKPOT!', 'You won the Steel / Bruce 1100 Bottle! Show this pass at the counter.'],
-    apsara:   ['grand', '✏️', 'ROYAL WIN!',     'You won the Apsara Joy Kit! Show this pass at the counter.'],
+    apsara:   ['grand', '🧴', 'ROYAL WIN!',     'You won the Grooming Set! Show this pass at the counter.'],
     rare:     ['grand', '🐼', 'RARE WIN!',      'You won a Rare Doll Set / Small Panda! Show this pass at the counter.'],
     car:      ['win',   '🏎️', 'SUPER WIN!',     'You won a Toy Car! Show this pass at the counter.'],
     doll:     ['win',   '🪆', 'LOVELY WIN!',    'You won a Doll Set! Show this pass at the counter.'],
