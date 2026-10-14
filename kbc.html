@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KBC - Choose Your Quiz</title>
+    <script src="gamepass.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Teko:wght@500;700&family=Yatra+One&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #05060a; --text: #eef4f8; --muted: #9aa6bd; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; min-height: 100vh; background: var(--bg); }
+        body {
+            color: var(--text); font-family: 'Rajdhani', 'Segoe UI', sans-serif; overflow-x: hidden;
+            display: flex; flex-direction: column; align-items: center; padding: 12px 16px 28px;
+        }
+        .bg { position: fixed; inset: 0; z-index: -2;
+            background: radial-gradient(ellipse at 20% 20%, rgba(255,138,31,.22), transparent 55%),
+                        radial-gradient(ellipse at 80% 85%, rgba(40,200,90,.22), transparent 55%), #05060a; }
+        .rays { position: fixed; z-index: -1; width: 150vmax; height: 150vmax; left: 50%; top: 30%; transform: translate(-50%, -50%);
+            opacity: .08; pointer-events: none;
+            background: repeating-conic-gradient(from 0deg, #fff 0deg 3deg, transparent 3deg 15deg);
+            -webkit-mask: radial-gradient(circle, #000 0%, transparent 60%); mask: radial-gradient(circle, #000 0%, transparent 60%);
+            animation: spin 160s linear infinite; }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .header { width: 100%; max-width: 560px; display: flex; align-items: center; justify-content: space-between; }
+        .back-btn { color: #00f0ff; background: rgba(15,17,30,.85); border: 1px solid rgba(0,240,255,.35); padding: 8px 12px; border-radius: 10px;
+            text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 11px; }
+        .head-space { width: 78px; }
+
+        .hero { text-align: center; margin: 18px 0 20px; }
+        .logo {
+            font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(3rem, 17vw, 5rem); letter-spacing: 6px; line-height: 1;
+            background: linear-gradient(90deg, #ffcf3f, #fff3c4, #5dff8a, #ffcf3f); background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 4s linear infinite;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        .sub { color: var(--muted); letter-spacing: 3px; font-size: 14px; margin-top: 6px; text-transform: uppercase; }
+
+        .choices { width: 100%; max-width: 560px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 480px) { .choices { grid-template-columns: 1fr; } }
+        .choice {
+            position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            min-height: 270px; padding: 22px 16px; border-radius: 22px; text-decoration: none; color: inherit; overflow: hidden;
+            border: 2px solid var(--c); background: linear-gradient(180deg, var(--bg1), var(--bg2));
+            box-shadow: 0 0 28px var(--glow), inset 0 0 30px var(--glow); transition: transform .2s, box-shadow .2s;
+            animation: enter .6s both;
+        }
+        .choice:nth-child(2) { animation-delay: .15s; }
+        .choice:hover, .choice:active { transform: translateY(-5px) scale(1.02); box-shadow: 0 0 46px var(--c), inset 0 0 30px var(--glow); }
+        @keyframes enter { from { opacity: 0; transform: translateY(24px); } }
+        .choice::before { content: ''; position: absolute; inset: -40%; opacity: .12; pointer-events: none;
+            background: repeating-conic-gradient(from 0deg, var(--c) 0deg 4deg, transparent 4deg 16deg); animation: spin2 60s linear infinite; }
+        @keyframes spin2 { to { transform: rotate(360deg); } }
+        .choice > * { position: relative; }
+        .emoji { font-size: 74px; line-height: 1; filter: drop-shadow(0 0 16px var(--c)); }
+        .name { margin-top: 12px; font-size: 1.9rem; line-height: 1.05; color: var(--c); }
+        .tagline { margin-top: 8px; font-size: 15px; color: #d6dde9; line-height: 1.35; max-width: 220px; }
+        .chip { margin-top: 14px; padding: 6px 18px; border-radius: 20px; border: 1px solid var(--c); color: var(--c);
+            font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px; }
+        .lock { position: absolute; top: 10px; right: 12px; font-size: 11px; font-family: 'Orbitron', sans-serif; color: var(--c); opacity: .9; }
+
+        .dharma { --c: #ffcf3f; --glow: rgba(255,138,31,.28); --bg1: #2a1206; --bg2: #0f0603; }
+        .dharma .name { font-family: 'Yatra One', serif; font-size: 1.7rem; }
+        .cricket { --c: #5dff8a; --glow: rgba(40,200,90,.28); --bg1: #07311d; --bg2: #02120a; }
+        .cricket .name { font-family: 'Teko', sans-serif; font-weight: 700; font-size: 2.3rem; letter-spacing: 1px; }
+        .note { margin-top: 20px; color: var(--muted); font-size: 13px; text-align: center; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="rays"></div>
+
+    <div class="header">
+        <a href="index.html" class="back-btn">&larr; ARCADE</a>
+        <div class="head-space"></div>
+    </div>
+
+    <div class="hero">
+        <div class="logo">KBC</div>
+        <div class="sub">Choose your quiz</div>
+    </div>
+
+    <div class="choices">
+        <a class="choice dharma" href="dharma.html">
+            <span class="lock">🔒 CODE</span>
+            <div class="emoji">🕉️</div>
+            <div class="name">धर्म प्रश्नोत्तरी</div>
+            <div class="tagline">Ramayana, Mahabharata &amp; Sanatan knowledge — 15 questions, 4 lifelines.</div>
+            <div class="chip">PLAY DHARMA</div>
+        </a>
+        <a class="choice cricket" href="cricket.html">
+            <span class="lock">🔒 CODE</span>
+            <div class="emoji">🏏</div>
+            <div class="name">CRICKET KBC</div>
+            <div class="tagline">ODI, T20, Test, IPL, World Cups &amp; Ranji Trophy — 15 questions, 4 lifelines.</div>
+            <div class="chip">PLAY CRICKET</div>
+        </a>
+    </div>
+    <div class="note">Same rules in both: 5 difficulty levels · timer · suspense from Q10</div>
+
+    <script>
+        /* Back from a quiz = that player's pass is over; the next quiz needs a new code */
+        try { window.GamePass && GamePass.endAllPasses(); } catch (e) {}
+        window.addEventListener('pageshow', function () { try { window.GamePass && GamePass.endAllPasses(); } catch (e) {} });
+    </script>
+</body>
+</html>

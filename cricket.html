@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket KBC</title>
+<script src="gamepass.js" data-game="cricket"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Teko:wght@500;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030d0a; --panel: #04140d; --panel2: #0b2a1b;
+            --gold: #c8ff5a; --gold2: #3fbf5e; --saffron: #1fb6ff;
+            --text: #e9fff0; --muted: #8fb8a0; --line: #1d5a38;
+            --ok: #2fbf4a; --bad: #e0303f; --lock: #1fb6ff;
+        }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; min-height: 100vh; background: var(--bg); }
+        body {
+            color: var(--text); font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; padding: 12px 16px 24px;
+            overflow-x: hidden;
+        }
+
+        /* ---------- Background: mowed-grass ground + floating cricket balls ---------- */
+        .bg-glow {
+            position: fixed; inset: 0; z-index: -3;
+            background: radial-gradient(ellipse at 50% 30%, #0e3a26 0%, #04140d 45%, #020806 100%);
+        }
+        .mandala {
+            position: fixed; z-index: -2; width: 150vmax; height: 150vmax; left: 50%; top: 38%;
+            transform: translate(-50%, -50%); opacity: .16; pointer-events: none; border-radius: 50%;
+            background:
+                radial-gradient(circle, transparent 0 17%, var(--gold) 17.2% 17.6%, transparent 17.8% 33%, #fff 33.2% 33.5%, transparent 33.7%),
+                repeating-conic-gradient(from 0deg, #1a7a3c 0deg 9deg, #0d4a24 9deg 18deg);
+            -webkit-mask: radial-gradient(circle, #000 0%, transparent 62%);
+                    mask: radial-gradient(circle, #000 0%, transparent 62%);
+            animation: spin 240s linear infinite;
+        }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+        .spark {
+            position: fixed; bottom: -14px; width: 9px; height: 9px; border-radius: 50%; z-index: -1;
+            background: #e0303f; box-shadow: 0 0 8px 2px rgba(255,255,255,.55), inset -1px -1px 0 rgba(0,0,0,.35); opacity: 0;
+            animation: rise linear infinite; pointer-events: none;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: .8; }
+            100% { transform: translateY(-105vh) translateX(var(--drift)); opacity: 0; }
+        }
+
+        /* ---------- Header ---------- */
+        .header { width: 100%; max-width: 560px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+        .back-btn, .icon-btn {
+            color: var(--gold); background: rgba(5, 30, 20, .85); border: 1px solid var(--line);
+            padding: 8px 12px; border-radius: 10px; text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 11px; cursor: pointer;
+        }
+        .icon-btn { font-size: 16px; padding: 5px 10px; font-family: inherit; }
+        .title {
+            font-family: 'Teko', sans-serif; margin: 0; font-size: 1.9rem; letter-spacing: 1px; line-height: 1; text-align: center;
+            background: linear-gradient(90deg, #3fbf5e, #eaffd6, #c8ff5a, #3fbf5e); background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: shine 4s linear infinite;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* ---------- Ladder ---------- */
+        .ladder { width: 100%; max-width: 560px; display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; margin-bottom: 12px; }
+        .rung {
+            height: 26px; border-radius: 6px; background: #06201a; border: 1px solid #14452b;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--muted); position: relative;
+            transition: all .3s;
+        }
+        .rung.mile { border-color: var(--gold2); color: var(--gold); }
+        .rung.mile::after { content: '★'; position: absolute; top: -9px; font-size: 9px; color: var(--gold); }
+        .rung.done { background: linear-gradient(180deg, #2b6b1c, #17421a); color: #eaffd6; border-color: var(--gold2); }
+        .rung.now { background: var(--saffron); color: #04140d; border-color: #eaffd6; transform: scale(1.12); box-shadow: 0 0 12px var(--saffron); animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse { 50% { box-shadow: 0 0 22px var(--gold); } }
+
+        /* ---------- Card ---------- */
+        .quiz-card {
+            width: 100%; max-width: 560px; background: rgba(4, 20, 13, .9);
+            border: 1.5px solid var(--line); border-radius: 20px; padding: 16px;
+            box-shadow: 0 15px 40px rgba(0,0,0,.85), inset 0 0 40px rgba(31,182,255,.05); position: relative;
+        }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .q-count { font-family: 'Orbitron', sans-serif; color: var(--gold); font-size: 13px; letter-spacing: 1px; }
+        .tier { font-size: 12px; color: var(--muted); }
+
+        /* Timer ring */
+        .timer { position: relative; width: 54px; height: 54px; }
+        .timer svg { transform: rotate(-90deg); }
+        .timer .track { stroke: #12402a; }
+        .timer .bar { stroke: var(--gold); transition: stroke-dashoffset 1s linear, stroke .3s; }
+        .timer span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron'; font-size: 15px; color: var(--gold); }
+        .timer.low .bar { stroke: var(--bad); }
+        .timer.low span { color: var(--bad); animation: beat .5s ease-in-out infinite; }
+        .timer.paused { opacity: .5; }
+        @keyframes beat { 50% { transform: scale(1.18); } }
+
+        /* Lifelines */
+        .lifelines { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .life {
+            display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; cursor: pointer;
+            color: var(--muted); font-family: inherit; font-size: 11px; padding: 0; width: 64px; transition: opacity .5s, transform .5s;
+        }
+        .life .orb {
+            width: 50px; height: 50px; border-radius: 50%; position: relative;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--gold);
+            background: radial-gradient(circle at 35% 30%, #14573a, #04180f); border: 2px solid var(--gold2);
+            box-shadow: 0 0 10px rgba(200,255,90,.25); transition: transform .2s, box-shadow .2s;
+        }
+        .life:hover:not(:disabled) .orb { transform: translateY(-3px); box-shadow: 0 0 18px rgba(200,255,90,.6); }
+        .life:disabled { cursor: not-allowed; }
+        .life.used .orb { filter: grayscale(1); opacity: .45; }
+        .life.used .orb::after {
+            content: ''; position: absolute; inset: 6px;
+            background: linear-gradient(45deg, transparent 46%, var(--bad) 46%, var(--bad) 54%, transparent 54%),
+                        linear-gradient(-45deg, transparent 46%, var(--bad) 46%, var(--bad) 54%, transparent 54%);
+        }
+        .life.gone { opacity: 0; transform: scale(.3); pointer-events: none; width: 0; margin: 0 -5px; overflow: hidden; }
+        .life-note { text-align: center; font-size: 11px; color: var(--muted); margin: -6px 0 10px; min-height: 14px; }
+
+        /* Question + options (KBC lozenge shape) */
+        .lozenge { clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%); }
+        .q-frame { background: linear-gradient(90deg, var(--gold2), #eaffd6, var(--gold2)); padding: 2px; margin-bottom: 16px; }
+        .q-inner {
+            background: linear-gradient(180deg, #0d3322, #03100a); padding: 18px 9%; min-height: 86px;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; line-height: 1.4; color: #fff;
+        }
+        .enter { animation: enter .45s ease-out both; }
+        @keyframes enter { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+        @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+        .opt {
+            background: var(--line); padding: 2px; border: 0; cursor: pointer; font-family: inherit; transition: transform .15s, background .2s;
+        }
+        .opt .in {
+            display: flex; align-items: center; gap: 8px; padding: 11px 9%; min-height: 48px;
+            background: #04140d; color: var(--text); font-size: 16px; font-weight: 700; text-align: left; transition: background .2s;
+        }
+        .opt .key { font-family: 'Orbitron'; color: var(--saffron); font-size: 12px; }
+        .opt:hover:not(:disabled):not(.sel) { background: var(--gold); transform: scale(1.02); }
+        .opt:hover:not(:disabled):not(.sel) .in { background: #0f3523; }
+        .opt:disabled { cursor: default; }
+        .opt.hidden { visibility: hidden; }
+        .opt.sel, .opt.locked { background: #eaffd6; }
+        .opt.sel .in, .opt.locked .in { background: linear-gradient(180deg, #4cc9ff, #0a86c9); color: #04140d; }
+        .opt.sel .key, .opt.locked .key { color: #04140d; }
+        .opt.locked { animation: lockGlow 1s ease-in-out infinite; }
+        @keyframes lockGlow { 50% { filter: drop-shadow(0 0 10px var(--saffron)); } }
+        .opt.correct { background: #c8ffd0; animation: blink .35s step-end 5; }
+        .opt.correct .in { background: linear-gradient(180deg, #3ad25a, #1a8a33); color: #fff; }
+        .opt.correct .key { color: #fff; }
+        .opt.wrong { background: #ffc8cc; animation: shake .45s; }
+        .opt.wrong .in { background: linear-gradient(180deg, #e8434f, #9a1520); color: #fff; }
+        .opt.wrong .key { color: #fff; }
+        @keyframes blink { 50% { filter: brightness(1.6); } }
+        @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+        .opt.stagger { animation: enter .4s ease-out both; }
+
+        .lock-btn {
+            display: block; margin: 14px auto 0; border: 0; border-radius: 30px; padding: 12px 34px; cursor: pointer;
+            background: linear-gradient(180deg, #d9ff7a, #7fd62a); color: #04140d; font-family: 'Rajdhani'; font-weight: 700; font-size: 16px;
+            box-shadow: 0 6px 18px rgba(31,182,255,.4); visibility: hidden; transform: scale(.8); opacity: 0; transition: all .2s;
+        }
+        .lock-btn.show { visibility: visible; transform: scale(1); opacity: 1; }
+
+        /* ---------- Suspense ---------- */
+        .card-dim { position: absolute; inset: 0; border-radius: 20px; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 2; }
+        .suspense .card-dim { opacity: 1; }
+        .suspense .opt.locked { position: relative; z-index: 3; }
+        .suspense-ui {
+            position: absolute; left: 0; right: 0; top: 10px; z-index: 4; text-align: center; pointer-events: none;
+            opacity: 0; transition: opacity .4s;
+        }
+        .suspense .suspense-ui { opacity: 1; }
+        .suspense-ui .say { font-family: 'Teko'; font-size: 1.9rem; color: var(--gold); text-shadow: 0 0 14px var(--saffron); }
+        .heart { font-size: 34px; display: inline-block; animation: heart .75s ease-in-out infinite; }
+        @keyframes heart { 0%,100% { transform: scale(1); } 15% { transform: scale(1.3); } 30% { transform: scale(1); } 45% { transform: scale(1.2); } }
+        .s-bar { width: 70%; height: 6px; margin: 8px auto 0; border-radius: 3px; background: #123a28; overflow: hidden; }
+        .s-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--bad), var(--gold)); transform-origin: left; }
+        .shake-screen { animation: screenShake .12s linear infinite; }
+        @keyframes screenShake { 25% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, 1px); } }
+
+        /* ---------- Overlays / modals ---------- */
+        .screen {
+            position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 24px 16px; background: radial-gradient(circle at 50% 40%, rgba(8,52,34,.97), rgba(2,8,6,.98));
+            transition: opacity .5s;
+        }
+        .screen.hide { opacity: 0; pointer-events: none; }
+        .rays {
+            position: absolute; inset: -50%; pointer-events: none; opacity: .25;
+            background: repeating-conic-gradient(from 0deg, rgba(200,255,90,.5) 0deg 6deg, transparent 6deg 18deg);
+            -webkit-mask: radial-gradient(circle, #000 0%, transparent 55%); mask: radial-gradient(circle, #000 0%, transparent 55%);
+            animation: spinRays 30s linear infinite;
+        }
+        @keyframes spinRays { to { transform: rotate(360deg); } }
+        .om {
+            font-size: 84px; line-height: 1; color: var(--gold); position: relative;
+            text-shadow: 0 0 30px var(--saffron), 0 0 60px rgba(31,182,255,.5); animation: omIn 1.4s cubic-bezier(.2,.9,.3,1.3) both;
+        }
+        @keyframes omIn { from { transform: scale(0) rotate(-180deg); opacity: 0; } }
+        .welcome { font-size: 15px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-top: 14px; animation: enter .6s .7s both; position: relative; }
+        .big-title {
+            font-family: 'Teko'; font-size: clamp(3rem, 13vw, 4.8rem); line-height: 1; letter-spacing: 2px; margin: 4px 0 8px; position: relative;
+            background: linear-gradient(90deg, #3fbf5e, #eaffd6, #c8ff5a, #3fbf5e); background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: enter .7s 1s both, shine 4s linear infinite;
+        }
+        .tagline { max-width: 420px; color: var(--text); font-size: 15px; line-height: 1.6; animation: enter .6s 1.3s both; position: relative; }
+        .rules { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13px; color: var(--muted); line-height: 1.8; animation: enter .6s 1.5s both; position: relative; }
+        .start-btn {
+            position: relative; margin-top: 22px; border: 0; border-radius: 40px; padding: 15px 44px; cursor: pointer;
+            background: linear-gradient(180deg, #d9ff7a, #7fd62a); color: #04140d; font-family: 'Rajdhani'; font-weight: 700; font-size: 18px;
+            box-shadow: 0 0 0 0 rgba(200,255,90,.6); animation: enter .6s 1.7s both, ring 2s 2.3s infinite;
+        }
+        .ghost-btn { position: relative; margin-top: 10px; background: none; border: 1px solid var(--line); color: var(--gold); border-radius: 30px; padding: 10px 26px; font-family: 'Rajdhani'; font-size: 14px; text-decoration: none; }
+        @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(200,255,90,.6); } 100% { box-shadow: 0 0 0 22px rgba(200,255,90,0); } }
+        .tap-hint { position: relative; margin-top: 12px; font-size: 12px; color: var(--gold); opacity: .8; animation: beat 1.2s infinite; }
+        .tap-hint.hide { display: none; }
+
+        .modal-wrap { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .modal-wrap.hide { display: none; }
+        .modal {
+            width: 100%; max-width: 380px; background: linear-gradient(180deg, #0b2a1b, #03110a); border: 1.5px solid var(--gold2);
+            border-radius: 18px; padding: 20px; text-align: center; animation: enter .3s ease-out both; box-shadow: 0 0 40px rgba(31,182,255,.25);
+        }
+        .modal h3 { font-family: 'Teko'; color: var(--gold); margin: 0 0 12px; font-weight: 700; font-size: 1.7rem; letter-spacing: 1px; }
+        .modal .ok { margin-top: 16px; border: 0; border-radius: 24px; padding: 10px 30px; background: var(--gold); color: #04140d; font-weight: 700; font-family: 'Rajdhani'; font-size: 15px; cursor: pointer; }
+        .modal .ok:disabled { opacity: .35; }
+        .poll { display: flex; justify-content: center; align-items: flex-end; gap: 14px; height: 170px; margin-top: 8px; }
+        .poll .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 46px; }
+        .poll .pct { font-family: 'Orbitron'; font-size: 12px; color: var(--gold); margin-bottom: 4px; min-height: 14px; }
+        .poll .bar { width: 100%; height: 0%; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--gold), var(--saffron)); transition: height 1.6s cubic-bezier(.2,.8,.2,1); }
+        .poll .lbl { font-family: 'Orbitron'; font-size: 13px; color: var(--text); margin-top: 6px; }
+        .phone { font-size: 48px; display: inline-block; animation: ringPhone .6s ease-in-out infinite; }
+        @keyframes ringPhone { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+        .friend-msg { font-size: 16px; line-height: 1.6; min-height: 52px; margin-top: 10px; }
+        .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
+        @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+        .toast {
+            position: fixed; top: 18%; left: 50%; transform: translate(-50%, -20px) scale(.9); z-index: 45; opacity: 0; pointer-events: none;
+            background: linear-gradient(180deg, #d9ff7a, #7fd62a); color: #04140d; padding: 14px 26px; border-radius: 16px; text-align: center;
+            font-family: 'Teko'; font-size: 1.5rem; box-shadow: 0 10px 40px rgba(31,182,255,.5); transition: all .4s cubic-bezier(.2,.9,.3,1.3);
+        }
+        .toast small { display: block; font-family: 'Rajdhani'; font-size: 13px; }
+        .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+        .result-icon { font-size: 70px; position: relative; animation: omIn 1s both; }
+        .result-title { font-family: 'Teko'; font-size: 2.6rem; color: var(--gold); margin: 6px 0; position: relative; }
+        .result-text { position: relative; font-size: 15px; line-height: 1.7; max-width: 400px; }
+        .result-text b { color: var(--gold); }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; position: relative; }
+        #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="mandala"></div>
+
+    <div class="header">
+        <a href="kbc.html" class="back-btn">&larr; KBC</a>
+        <h2 class="title">CRICKET KBC</h2>
+        <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    </div>
+
+    <div class="ladder" id="ladder"></div>
+
+    <div class="quiz-card" id="card">
+        <div class="card-dim"></div>
+        <div class="suspense-ui">
+            <div class="heart">💓</div>
+            <div class="say">And the right answer is...</div>
+            <div class="s-bar"><i id="sBar"></i></div>
+        </div>
+
+        <div class="top-row">
+            <div>
+                <div class="q-count" id="qCount">Question 1/15</div>
+                <div class="tier" id="tier">Net Practice</div>
+            </div>
+            <div class="timer" id="timer">
+                <svg width="54" height="54"><circle class="track" cx="27" cy="27" r="23" fill="none" stroke-width="4"/><circle class="bar" id="timerBar" cx="27" cy="27" r="23" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="0"/></svg>
+                <span id="timerNum">30</span>
+            </div>
+        </div>
+
+        <div class="lifelines">
+            <button class="life" id="life50"><span class="orb">50:50</span>50:50</button>
+            <button class="life" id="lifeFlip"><span class="orb">🔄</span>Flip Q</button>
+            <button class="life" id="lifeAud"><span class="orb">📊</span>Fan Poll</button>
+            <button class="life" id="lifeFriend"><span class="orb">📞</span>Friend</button>
+        </div>
+        <div class="life-note" id="lifeNote"></div>
+
+        <div class="q-frame lozenge"><div class="q-inner lozenge" id="question"></div></div>
+
+        <div class="options" id="options"></div>
+        <button class="lock-btn" id="lockBtn">🔒 Lock Answer</button>
+    </div>
+
+    <!-- Welcome banner -->
+    <div class="screen" id="intro">
+        <div class="rays"></div>
+        <div class="om">🏏</div>
+        <div class="welcome">Welcome to</div>
+        <div class="big-title">CRICKET KBC</div>
+        <div class="tagline">15 questions from ODI, T20, Test, IPL, World Cups and Ranji Trophy. Answer them all and become a <b style="color:var(--gold)">Cricket Legend</b>!</div>
+        <ul class="rules">
+            <li>❌ One wrong answer — game over</li>
+            <li>📊📞 Fan Poll &amp; Friend only until Q7, and less reliable with every question</li>
+            <li>💓 Suspense on every answer from Q10</li>
+        </ul>
+        <button class="start-btn" id="startBtn">▶ Start Game</button>
+        <div class="tap-hint hide" id="tapHint">🔊 Tap the screen for music</div>
+    </div>
+
+    <!-- End screen -->
+    <div class="screen hide" id="endScreen">
+        <div class="rays"></div>
+        <div class="result-icon" id="endIcon">🏆</div>
+        <div class="result-title" id="endTitle"></div>
+        <div class="result-text" id="endText"></div>
+        <div class="btn-row">
+            <button class="start-btn" style="animation:none" id="againBtn">↻ Play Again</button>
+        </div>
+        <a href="kbc.html" class="ghost-btn">Back to KBC</a>
+    </div>
+
+    <!-- Lifeline modal -->
+    <div class="modal-wrap hide" id="modalWrap"><div class="modal" id="modal"></div></div>
+
+    <div class="toast" id="toast"></div>
+    <canvas id="confetti"></canvas>
+
+    <script>
+    /* =====================================================================
+       QUESTION BANK — first option is always the correct one (shuffled at runtime).
+       l = level 1 (easy) … 5 (hardest). Each game uses 3 questions per level.
+       ===================================================================== */
+    const BANK = [
+        // ----- Level 1 : Net Practice (Easy) -----
+        { l: 1, q: "How many players from one team are on the field during a cricket match?", o: ["11", "9", "12", "10"] },
+        { l: 1, q: "How many legal balls are there in one over?", o: ["6", "8", "5", "10"] },
+        { l: 1, q: "Which batting legend is known as the \"God of Cricket\"?", o: ["Sachin Tendulkar", "Virat Kohli", "MS Dhoni", "Rahul Dravid"] },
+        { l: 1, q: "Who captained India to their first World Cup win in 1983?", o: ["Kapil Dev", "Sunil Gavaskar", "Mohinder Amarnath", "Bishan Singh Bedi"] },
+        { l: 1, q: "Who captained India to the 2011 World Cup title?", o: ["MS Dhoni", "Virat Kohli", "Rohit Sharma", "Sourav Ganguly"] },
+        { l: 1, q: "Which Indian captain is nicknamed \"Captain Cool\"?", o: ["MS Dhoni", "Virat Kohli", "Rahul Dravid", "Sourav Ganguly"] },
+        { l: 1, q: "Which IPL team is captained by MS Dhoni?", o: ["Chennai Super Kings", "Mumbai Indians", "Delhi Capitals", "Kolkata Knight Riders"] },
+        { l: 1, q: "Which Indian batter is famous as the \"Run Machine\"?", o: ["Virat Kohli", "Shikhar Dhawan", "KL Rahul", "Shreyas Iyer"] },
+        { l: 1, q: "Which Indian opener is nicknamed \"Hitman\"?", o: ["Rohit Sharma", "Shikhar Dhawan", "Virender Sehwag", "Shubman Gill"] },
+        { l: 1, q: "Which Indian batter was called \"The Wall\"?", o: ["Rahul Dravid", "VVS Laxman", "Cheteshwar Pujara", "Sunil Gavaskar"] },
+        { l: 1, q: "Which former Indian captain is fondly called \"Dada\"?", o: ["Sourav Ganguly", "Rahul Dravid", "Anil Kumble", "Mohammad Azharuddin"] },
+        { l: 1, q: "Which Indian opener is known as \"Gabbar\"?", o: ["Shikhar Dhawan", "Rohit Sharma", "Virender Sehwag", "Gautam Gambhir"] },
+        { l: 1, q: "Which West Indian batter calls himself the \"Universe Boss\"?", o: ["Chris Gayle", "Brian Lara", "Kieron Pollard", "Viv Richards"] },
+        { l: 1, q: "How many runs are scored when the ball crosses the boundary without touching the ground?", o: ["6", "4", "5", "8"] },
+        { l: 1, q: "How many runs are scored when the ball reaches the boundary after bouncing?", o: ["4", "6", "3", "5"] },
+        { l: 1, q: "A batter who gets out without scoring is said to have scored a...", o: ["Duck", "Swan", "Hen", "Crow"] },
+        { l: 1, q: "Taking three wickets on three consecutive balls is called a...", o: ["Hat-trick", "Triple strike", "Treble over", "Triple wicket"] },
+        { l: 1, q: "How many stumps are there at each end of a cricket pitch?", o: ["3", "2", "4", "5"] },
+        { l: 1, q: "Which colour of ball is used in traditional Test cricket?", o: ["Red", "White", "Pink", "Yellow"] },
+        { l: 1, q: "Which national team is popularly called the \"Men in Blue\"?", o: ["India", "Australia", "Pakistan", "New Zealand"] },
+        { l: 1, q: "Which team won the first T20 World Cup in 2007?", o: ["India", "Pakistan", "Australia", "Sri Lanka"] },
+        { l: 1, q: "Where was the 2011 World Cup final played?", o: ["Wankhede Stadium, Mumbai", "Eden Gardens, Kolkata", "M. Chinnaswamy Stadium, Bengaluru", "Feroz Shah Kotla, Delhi"] },
+        { l: 1, q: "Which batter scored 100 international centuries?", o: ["Sachin Tendulkar", "Ricky Ponting", "Virat Kohli", "Jacques Kallis"] },
+        { l: 1, q: "In which city is the famous Eden Gardens stadium?", o: ["Kolkata", "Mumbai", "Chennai", "Delhi"] },
+        { l: 1, q: "In which city is the Lord's cricket ground, the \"Home of Cricket\"?", o: ["London", "Manchester", "Sydney", "Birmingham"] },
+        { l: 1, q: "Which team won the very first IPL season in 2008?", o: ["Rajasthan Royals", "Chennai Super Kings", "Mumbai Indians", "Deccan Chargers"] },
+        { l: 1, q: "Which legendary Australian spinner captained Rajasthan Royals to the first IPL title?", o: ["Shane Warne", "Ricky Ponting", "Glenn McGrath", "Steve Waugh"] },
+        { l: 1, q: "How many overs does each team get in a T20 match?", o: ["20", "10", "25", "50"] },
+        { l: 1, q: "How many overs does each team get in a standard ODI?", o: ["50", "40", "20", "60"] },
+        { l: 1, q: "In cricket, what does \"LBW\" stand for?", o: ["Leg Before Wicket", "Last Ball Wide", "Long Ball Win", "Leg Behind Wicket"] },
+        { l: 1, q: "The Ashes series is played between England and which other country?", o: ["Australia", "India", "South Africa", "West Indies"] },
+        { l: 1, q: "Which Indian legend played his entire IPL career for Mumbai Indians?", o: ["Sachin Tendulkar", "Virat Kohli", "MS Dhoni", "Sourav Ganguly"] },
+        { l: 1, q: "Which team won the ODI World Cup in 2019?", o: ["England", "New Zealand", "India", "Australia"] },
+        { l: 1, q: "Which team won the ODI World Cup in 2023?", o: ["Australia", "India", "South Africa", "New Zealand"] },
+        { l: 1, q: "Which team won the T20 World Cup in 2024?", o: ["India", "South Africa", "England", "Australia"] },
+        { l: 1, q: "Which jersey number is MS Dhoni famous for?", o: ["7", "10", "18", "45"] },
+        { l: 1, q: "Virat Kohli has played his whole IPL career for which franchise?", o: ["Royal Challengers Bengaluru", "Mumbai Indians", "Chennai Super Kings", "Delhi Capitals"] },
+        { l: 1, q: "What is the player who stands behind the stumps to collect the ball called?", o: ["Wicketkeeper", "Slip", "Gully", "Sweeper"] },
+        { l: 1, q: "Who gives decisions such as out or not out on the field?", o: ["Umpire", "Match referee", "Captain", "Coach"] },
+        { l: 1, q: "What are the two small pieces of wood placed on top of the stumps called?", o: ["Bails", "Pegs", "Caps", "Clips"] },
+        { l: 1, q: "A delivery bowled too far away from the batter to reach is called a...", o: ["Wide", "No-ball", "Bouncer", "Dead ball"] },
+        { l: 1, q: "What is a delivery called when the bowler's front foot lands beyond the crease?", o: ["No-ball", "Wide", "Bye", "Dead ball"] },
+        { l: 1, q: "In limited-overs cricket, the ball after a front-foot no-ball is called a...", o: ["Free hit", "Bonus ball", "Power ball", "Extra ball"] },
+        { l: 1, q: "What is a score of 100 runs by one batter called?", o: ["Century", "Half-century", "Double", "Grand slam"] },
+        { l: 1, q: "How many runs make a half-century?", o: ["50", "25", "75", "40"] },
+        { l: 1, q: "A fast, short-pitched ball that rises towards the batter's head is called a...", o: ["Bouncer", "Yorker", "Googly", "Full toss"] },
+        { l: 1, q: "A ball pitched right at the batter's toes is called a...", o: ["Yorker", "Bouncer", "Beamer", "Googly"] },
+        { l: 1, q: "How many days does a Test match last at most?", o: ["5", "3", "4", "7"] },
+        { l: 1, q: "How many innings does each team get in a Test match?", o: ["2", "1", "3", "4"] },
+        { l: 1, q: "The fielding-restriction overs at the start of an innings are called the...", o: ["Powerplay", "Free play", "Fast play", "Super over"] },
+        { l: 1, q: "In ICC tournaments, a tied T20 knockout match is decided by a...", o: ["Super Over", "Coin toss", "Penalty shoot-out", "Replay"] },
+        { l: 1, q: "Which national team is nicknamed the \"Proteas\"?", o: ["South Africa", "New Zealand", "Sri Lanka", "Zimbabwe"] },
+        { l: 1, q: "Which national team is nicknamed the \"Black Caps\"?", o: ["New Zealand", "West Indies", "Afghanistan", "Australia"] },
+        { l: 1, q: "Which country does Babar Azam play for?", o: ["Pakistan", "Bangladesh", "Afghanistan", "Sri Lanka"] },
+        { l: 1, q: "Which country does Kane Williamson play for?", o: ["New Zealand", "Australia", "England", "South Africa"] },
+        { l: 1, q: "Which country does Joe Root play for?", o: ["England", "Australia", "New Zealand", "South Africa"] },
+        { l: 1, q: "Which country does leg-spinner Rashid Khan play for?", o: ["Afghanistan", "Pakistan", "Bangladesh", "UAE"] },
+        { l: 1, q: "Which country does Shakib Al Hasan play for?", o: ["Bangladesh", "Sri Lanka", "Pakistan", "Afghanistan"] },
+        { l: 1, q: "Which country does Steve Smith play for?", o: ["Australia", "England", "South Africa", "New Zealand"] },
+        { l: 1, q: "Which country did Brian Lara play for?", o: ["West Indies", "England", "South Africa", "Sri Lanka"] },
+        { l: 1, q: "Which country did all-rounder Jacques Kallis play for?", o: ["South Africa", "Australia", "England", "Zimbabwe"] },
+        { l: 1, q: "Which country did Kumar Sangakkara play for?", o: ["Sri Lanka", "Bangladesh", "India", "Pakistan"] },
+        { l: 1, q: "Which country did Shane Warne play for?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 1, q: "Which IPL team represents Kolkata?", o: ["Kolkata Knight Riders", "Sunrisers Hyderabad", "Rajasthan Royals", "Punjab Kings"] },
+        { l: 1, q: "Which IPL team plays its home matches at the Wankhede Stadium?", o: ["Mumbai Indians", "Chennai Super Kings", "Delhi Capitals", "Rajasthan Royals"] },
+        { l: 1, q: "Which IPL team plays its home matches at Chepauk?", o: ["Chennai Super Kings", "Mumbai Indians", "Sunrisers Hyderabad", "Kolkata Knight Riders"] },
+        { l: 1, q: "Which IPL team's home ground is the M. Chinnaswamy Stadium?", o: ["Royal Challengers Bengaluru", "Chennai Super Kings", "Punjab Kings", "Gujarat Titans"] },
+        { l: 1, q: "Which city does the Sunrisers IPL team represent?", o: ["Hyderabad", "Pune", "Chennai", "Bengaluru"] },
+        { l: 1, q: "Which Bollywood superstar co-owns Kolkata Knight Riders?", o: ["Shah Rukh Khan", "Salman Khan", "Aamir Khan", "Akshay Kumar"] },
+        { l: 1, q: "Which actress co-owns the Punjab Kings IPL team?", o: ["Preity Zinta", "Shilpa Shetty", "Juhi Chawla", "Kareena Kapoor"] },
+        { l: 1, q: "What does IPL stand for?", o: ["Indian Premier League", "International Premier League", "Indian Players League", "Indian Pro League"] },
+        { l: 1, q: "In which year was the first IPL season played?", o: ["2008", "2007", "2010", "2005"] },
+        { l: 1, q: "What does ICC stand for?", o: ["International Cricket Council", "Indian Cricket Council", "International Cricket Committee", "International Cricket Club"] },
+        { l: 1, q: "Which body runs cricket in India?", o: ["BCCI", "ICC", "IOA", "SAI"] },
+        { l: 1, q: "Who played MS Dhoni in the film \"M.S. Dhoni: The Untold Story\"?", o: ["Sushant Singh Rajput", "Ranveer Singh", "Varun Dhawan", "Sidharth Malhotra"] },
+        { l: 1, q: "Ranveer Singh played which cricketer in the film \"83\"?", o: ["Kapil Dev", "Sunil Gavaskar", "Mohinder Amarnath", "Ravi Shastri"] },
+        { l: 1, q: "The Aamir Khan film \"Lagaan\" is built around which sport?", o: ["Cricket", "Hockey", "Football", "Kabaddi"] },
+        { l: 1, q: "Which Indian batter is nicknamed \"SKY\"?", o: ["Suryakumar Yadav", "Shubman Gill", "Sanju Samson", "Shreyas Iyer"] },
+        { l: 1, q: "Which Indian all-rounder is fondly called \"Jaddu\"?", o: ["Ravindra Jadeja", "Jasprit Bumrah", "Ishan Kishan", "Yuzvendra Chahal"] },
+        { l: 1, q: "Which Pakistani all-rounder was nicknamed \"Boom Boom\"?", o: ["Shahid Afridi", "Shoaib Malik", "Abdul Razzaq", "Mohammad Hafeez"] },
+        { l: 1, q: "Which aggressive Indian opener was called the \"Nawab of Najafgarh\"?", o: ["Virender Sehwag", "Gautam Gambhir", "Shikhar Dhawan", "Murali Vijay"] },
+        { l: 1, q: "In which country is the Melbourne Cricket Ground (MCG)?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 1, q: "If the ball hits the stumps and knocks the bails off, the batter is...", o: ["Bowled", "Stumped", "Run out", "Caught"] },
+        { l: 1, q: "The keeper whips off the bails while the batter is out of the crease after missing the ball. This is called...", o: ["Stumped", "Run out", "Bowled", "Hit wicket"] },
+        { l: 1, q: "How many wickets must a team take to bowl out the opposition in an innings?", o: ["10", "11", "9", "12"] },
+        { l: 1, q: "How many on-field umpires are there in an international match?", o: ["2", "1", "3", "4"] },
+        { l: 1, q: "Which official checks close decisions using TV replays?", o: ["Third umpire", "Match referee", "Scorer", "Fourth umpire"] },
+        { l: 1, q: "What does DRS stand for in cricket?", o: ["Decision Review System", "Direct Replay System", "Decision Rerun Service", "Delivery Review Signal"] },
+        { l: 1, q: "Which colour ball is used in day-night Test matches?", o: ["Pink", "Red", "White", "Orange"] },
+        { l: 1, q: "Which colour ball is used in ODIs and T20 internationals?", o: ["White", "Red", "Pink", "Yellow"] },
+        { l: 1, q: "Which Indian legend is lovingly called \"Thala\" by CSK fans?", o: ["MS Dhoni", "Suresh Raina", "Ravindra Jadeja", "Faf du Plessis"] },
+        { l: 1, q: "Which team won IPL 2023?", o: ["Chennai Super Kings", "Gujarat Titans", "Mumbai Indians", "Royal Challengers Bangalore"] },
+        { l: 1, q: "Which team won IPL 2024?", o: ["Kolkata Knight Riders", "Sunrisers Hyderabad", "Rajasthan Royals", "Chennai Super Kings"] },
+        { l: 1, q: "Which team won the 2022 T20 World Cup?", o: ["England", "Pakistan", "India", "Australia"] },
+        { l: 1, q: "Which team won the 2021 T20 World Cup?", o: ["Australia", "New Zealand", "Pakistan", "England"] },
+        { l: 1, q: "Which team won the 2015 ODI World Cup?", o: ["Australia", "New Zealand", "India", "South Africa"] },
+        { l: 1, q: "India beat which team in the 2011 World Cup final?", o: ["Sri Lanka", "Pakistan", "Australia", "England"] },
+        { l: 1, q: "India beat which team in the 1983 World Cup final?", o: ["West Indies", "Australia", "England", "Pakistan"] },
+        { l: 1, q: "India beat which team in the 2024 T20 World Cup final?", o: ["South Africa", "England", "Australia", "Afghanistan"] },
+        { l: 1, q: "India lost the 2023 World Cup final to which team?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 1, q: "Which country hosted the 2023 ODI World Cup?", o: ["India", "England", "Australia", "South Africa"] },
+        { l: 1, q: "Which Indian wicketkeeper made a comeback in 2024 after a serious car accident?", o: ["Rishabh Pant", "Ishan Kishan", "KL Rahul", "Sanju Samson"] },
+        { l: 1, q: "Which shot is MS Dhoni famous for?", o: ["Helicopter shot", "Dilscoop", "Switch hit", "Paddle sweep"] },
+        { l: 1, q: "What is the name of Sachin Tendulkar's son, who also plays cricket?", o: ["Arjun Tendulkar", "Rohan Tendulkar", "Aryan Tendulkar", "Ajit Tendulkar"] },
+        { l: 1, q: "Which legendary Australian batter was called \"The Don\"?", o: ["Don Bradman", "Don Tallon", "Dennis Lillee", "Doug Walters"] },
+        { l: 1, q: "In which city was MS Dhoni born and raised?", o: ["Ranchi", "Patna", "Jamshedpur", "Kolkata"] },
+        { l: 1, q: "Virat Kohli grew up and learnt his cricket in which city?", o: ["Delhi", "Mumbai", "Bengaluru", "Chandigarh"] },
+        { l: 1, q: "Hitting the stumps with your own bat while playing a shot gets you out...", o: ["Hit wicket", "Bowled", "Stumped", "Run out"] },
+        { l: 1, q: "Which Indian fast bowler is famous for his short run-up and unusual action?", o: ["Jasprit Bumrah", "Mohammed Shami", "Mohammed Siraj", "Bhuvneshwar Kumar"] },
+        { l: 1, q: "Which India all-rounder is the younger brother of Krunal Pandya?", o: ["Hardik Pandya", "Axar Patel", "Shivam Dube", "Washington Sundar"] },
+        { l: 1, q: "Which colour cap do Australian Test players famously wear?", o: ["Baggy green", "Baggy blue", "Baggy gold", "Baggy red"] },
+        { l: 1, q: "Which Indian spinner is popularly known as \"Jumbo\"?", o: ["Anil Kumble", "Harbhajan Singh", "Ravichandran Ashwin", "Kuldeep Yadav"] },
+        { l: 1, q: "How many Test matches did Sachin Tendulkar play?", o: ["200", "180", "150", "210"] },
+        { l: 1, q: "Which cricketer was the first sportsperson to receive the Bharat Ratna?", o: ["Sachin Tendulkar", "Kapil Dev", "Sunil Gavaskar", "MS Dhoni"] },
+        // ----- Level 2 : Club Cricket -----
+        { l: 2, q: "Against which team did India win the first T20 World Cup final in 2007?", o: ["Pakistan", "Australia", "Sri Lanka", "England"] },
+        { l: 2, q: "Who hit six sixes in an over in the 2007 T20 World Cup?", o: ["Yuvraj Singh", "MS Dhoni", "Virender Sehwag", "Rohit Sharma"] },
+        { l: 2, q: "Yuvraj Singh hit his six sixes in an over off which bowler?", o: ["Stuart Broad", "Andrew Flintoff", "James Anderson", "Graeme Swann"] },
+        { l: 2, q: "Who is the highest run-scorer in international cricket across all formats?", o: ["Sachin Tendulkar", "Virat Kohli", "Ricky Ponting", "Kumar Sangakkara"] },
+        { l: 2, q: "Who scored the first-ever men's double century in ODI cricket?", o: ["Sachin Tendulkar", "Virender Sehwag", "Rohit Sharma", "Chris Gayle"] },
+        { l: 2, q: "Rohit Sharma scored a record 264 in an ODI against which team?", o: ["Sri Lanka", "Australia", "West Indies", "England"] },
+        { l: 2, q: "Which team won the first two ODI World Cups, in 1975 and 1979?", o: ["West Indies", "Australia", "England", "India"] },
+        { l: 2, q: "Who captained Pakistan to the 1992 World Cup title?", o: ["Imran Khan", "Wasim Akram", "Javed Miandad", "Inzamam-ul-Haq"] },
+        { l: 2, q: "Which team won the 1996 World Cup?", o: ["Sri Lanka", "Australia", "Pakistan", "India"] },
+        { l: 2, q: "Who is the leading wicket-taker in Test cricket history?", o: ["Muttiah Muralitharan", "Shane Warne", "James Anderson", "Anil Kumble"] },
+        { l: 2, q: "Which South African star is famously known as \"Mr. 360\"?", o: ["AB de Villiers", "Hashim Amla", "Quinton de Kock", "Faf du Plessis"] },
+        { l: 2, q: "Which colour cap is given to the leading wicket-taker of an IPL season?", o: ["Purple", "Orange", "Green", "Blue"] },
+        { l: 2, q: "Which colour cap is given to the leading run-scorer of an IPL season?", o: ["Orange", "Purple", "Green", "Red"] },
+        { l: 2, q: "Who took all 10 wickets in a single Test innings against Pakistan in 1999?", o: ["Anil Kumble", "Harbhajan Singh", "Kapil Dev", "Javagal Srinath"] },
+        { l: 2, q: "Who was the first Indian to score a Test triple century?", o: ["Virender Sehwag", "Sachin Tendulkar", "Karun Nair", "VVS Laxman"] },
+        { l: 2, q: "Which is the largest cricket stadium in the world by capacity?", o: ["Narendra Modi Stadium, Ahmedabad", "Melbourne Cricket Ground", "Eden Gardens, Kolkata", "Lord's, London"] },
+        { l: 2, q: "Which Pakistani fast bowler was known as the \"Rawalpindi Express\"?", o: ["Shoaib Akhtar", "Wasim Akram", "Waqar Younis", "Imran Khan"] },
+        { l: 2, q: "After whom is India's domestic Ranji Trophy named?", o: ["Ranjitsinhji", "Duleepsinhji", "Nawab of Pataudi", "CK Nayudu"] },
+        { l: 2, q: "Which team has won the most Ranji Trophy titles?", o: ["Mumbai", "Karnataka", "Delhi", "Tamil Nadu"] },
+        { l: 2, q: "Who was the Player of the Tournament in the 2011 World Cup?", o: ["Yuvraj Singh", "MS Dhoni", "Sachin Tendulkar", "Zaheer Khan"] },
+        { l: 2, q: "Who won the Man of the Match award in the 2011 World Cup final?", o: ["MS Dhoni", "Gautam Gambhir", "Yuvraj Singh", "Virat Kohli"] },
+        { l: 2, q: "At which ground was the 1983 World Cup final played?", o: ["Lord's, London", "The Oval, London", "Old Trafford, Manchester", "Headingley, Leeds"] },
+        { l: 2, q: "The International Cricket Council (ICC) is headquartered in which city?", o: ["Dubai", "London", "Mumbai", "Melbourne"] },
+        { l: 2, q: "Who captained India when they reached the 2003 World Cup final?", o: ["Sourav Ganguly", "Rahul Dravid", "Sachin Tendulkar", "Anil Kumble"] },
+        { l: 2, q: "Who took the famous catch of David Miller in the 2024 T20 World Cup final?", o: ["Suryakumar Yadav", "Hardik Pandya", "Rohit Sharma", "Virat Kohli"] },
+        { l: 2, q: "Who was Player of the Tournament in the 2024 T20 World Cup?", o: ["Jasprit Bumrah", "Virat Kohli", "Arshdeep Singh", "Rohit Sharma"] },
+        { l: 2, q: "Which Indian spinner is nicknamed the \"Turbanator\"?", o: ["Harbhajan Singh", "Yuzvendra Chahal", "Ravichandran Ashwin", "Anil Kumble"] },
+        { l: 2, q: "Which Indian cricketer is nicknamed \"Mr. IPL\"?", o: ["Suresh Raina", "Rohit Sharma", "MS Dhoni", "Dinesh Karthik"] },
+        { l: 2, q: "The Border–Gavaskar Trophy is a Test series between India and which country?", o: ["Australia", "England", "South Africa", "Pakistan"] },
+        { l: 2, q: "Which jersey number does Virat Kohli wear?", o: ["18", "7", "45", "10"] },
+        { l: 2, q: "What is the length of a cricket pitch between the two sets of stumps?", o: ["22 yards", "20 yards", "25 yards", "18 yards"] },
+        { l: 2, q: "In cricket, an over in which no runs are scored off the bat is called a...", o: ["Maiden over", "Silent over", "Zero over", "Dot over"] },
+        { l: 2, q: "Which Pakistani left-arm pacer is called the \"Sultan of Swing\"?", o: ["Wasim Akram", "Waqar Younis", "Shoaib Akhtar", "Mohammad Amir"] },
+        { l: 2, q: "Who captained India to the 2025 Champions Trophy title?", o: ["Rohit Sharma", "Virat Kohli", "Hardik Pandya", "KL Rahul"] },
+        { l: 2, q: "Against which team did Sachin Tendulkar play his 200th and final Test in 2013?", o: ["West Indies", "Australia", "England", "South Africa"] },
+        { l: 2, q: "Which franchise won the IPL in its debut season of 2022?", o: ["Gujarat Titans", "Lucknow Super Giants", "Rajasthan Royals", "Sunrisers Hyderabad"] },
+        { l: 2, q: "A leg-spinner's ball that turns the opposite way, into a right-handed batter, is called a...", o: ["Googly", "Doosra", "Flipper", "Slider"] },
+        { l: 2, q: "What is the batting crease line that a batter must ground the bat behind to be safe?", o: ["Popping crease", "Return crease", "Bowling crease", "Boundary rope"] },
+        { l: 2, q: "Getting out on the very first ball you face is called a...", o: ["Golden duck", "Silver duck", "Diamond duck", "Royal duck"] },
+        { l: 2, q: "How many overs can one bowler bowl in a T20 international?", o: ["4", "5", "6", "3"] },
+        { l: 2, q: "How many overs can one bowler bowl in an ODI?", o: ["10", "8", "12", "15"] },
+        { l: 2, q: "In the first powerplay of an ODI (overs 1–10), how many fielders may stand outside the 30-yard circle?", o: ["2", "3", "4", "5"] },
+        { l: 2, q: "In which city is the Arun Jaitley Stadium (formerly Feroz Shah Kotla)?", o: ["Delhi", "Lucknow", "Jaipur", "Chandigarh"] },
+        { l: 2, q: "In which city is the M. A. Chidambaram Stadium (Chepauk)?", o: ["Chennai", "Hyderabad", "Kochi", "Bengaluru"] },
+        { l: 2, q: "In which country is the Newlands cricket ground?", o: ["South Africa", "New Zealand", "England", "Australia"] },
+        { l: 2, q: "In which country is the Galle International Stadium?", o: ["Sri Lanka", "Bangladesh", "India", "Pakistan"] },
+        { l: 2, q: "In which country is Eden Park, a famous cricket and rugby ground?", o: ["New Zealand", "Australia", "South Africa", "England"] },
+        { l: 2, q: "The Kensington Oval, venue of the 2024 T20 World Cup final, is in which country?", o: ["Barbados", "Jamaica", "Trinidad and Tobago", "Antigua"] },
+        { l: 2, q: "Which Indian all-rounder is jokingly called \"Sir\" by fans?", o: ["Ravindra Jadeja", "Ravichandran Ashwin", "Hardik Pandya", "Axar Patel"] },
+        { l: 2, q: "Who was India's head coach when they won the 2024 T20 World Cup?", o: ["Rahul Dravid", "Ravi Shastri", "Gautam Gambhir", "Anil Kumble"] },
+        { l: 2, q: "Who became India's head coach after the 2024 T20 World Cup?", o: ["Gautam Gambhir", "VVS Laxman", "Ashish Nehra", "Ravi Shastri"] },
+        { l: 2, q: "Who was India's head coach when they won the 2011 World Cup?", o: ["Gary Kirsten", "Greg Chappell", "Duncan Fletcher", "John Wright"] },
+        { l: 2, q: "The Big Bash League is the T20 league of which country?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 2, q: "The PSL is the T20 league of which country?", o: ["Pakistan", "Sri Lanka", "Bangladesh", "Afghanistan"] },
+        { l: 2, q: "\"The Hundred\" competition is played in which country?", o: ["England", "Australia", "India", "West Indies"] },
+        { l: 2, q: "Which Indian pacer took a hat-trick against Afghanistan in the 2019 World Cup?", o: ["Mohammed Shami", "Jasprit Bumrah", "Bhuvneshwar Kumar", "Hardik Pandya"] },
+        { l: 2, q: "Who took 7 wickets against New Zealand in the 2023 World Cup semi-final?", o: ["Mohammed Shami", "Jasprit Bumrah", "Mohammed Siraj", "Kuldeep Yadav"] },
+        { l: 2, q: "Mohammed Siraj took 6 for 21 in the 2023 Asia Cup final against which team?", o: ["Sri Lanka", "Pakistan", "Bangladesh", "Afghanistan"] },
+        { l: 2, q: "Which great all-rounder was called the \"Haryana Hurricane\"?", o: ["Kapil Dev", "Virender Sehwag", "Yuzvendra Chahal", "Joginder Sharma"] },
+        { l: 2, q: "Which Indian off-spinner with over 500 Test wickets retired in December 2024?", o: ["Ravichandran Ashwin", "Harbhajan Singh", "Ravindra Jadeja", "Washington Sundar"] },
+        { l: 2, q: "Who captained India at the 2023 ODI World Cup?", o: ["Rohit Sharma", "Virat Kohli", "KL Rahul", "Hardik Pandya"] },
+        { l: 2, q: "Who captained Australia to the 2023 World Cup title?", o: ["Pat Cummins", "Steve Smith", "Aaron Finch", "David Warner"] },
+        { l: 2, q: "Who captained England to the 2019 World Cup title?", o: ["Eoin Morgan", "Joe Root", "Jos Buttler", "Ben Stokes"] },
+        { l: 2, q: "Who captained England to the 2022 T20 World Cup title?", o: ["Jos Buttler", "Eoin Morgan", "Ben Stokes", "Moeen Ali"] },
+        { l: 2, q: "Who captained Australia to the 2015 World Cup title?", o: ["Michael Clarke", "Steve Smith", "Ricky Ponting", "George Bailey"] },
+        { l: 2, q: "Who captained Australia to the 2003 and 2007 World Cup titles?", o: ["Ricky Ponting", "Steve Waugh", "Adam Gilchrist", "Michael Clarke"] },
+        { l: 2, q: "Who captained Australia to the 1999 World Cup title?", o: ["Steve Waugh", "Mark Taylor", "Allan Border", "Ricky Ponting"] },
+        { l: 2, q: "Who captained West Indies to the 1975 and 1979 World Cup titles?", o: ["Clive Lloyd", "Viv Richards", "Gordon Greenidge", "Michael Holding"] },
+        { l: 2, q: "Who captained West Indies to the 2012 and 2016 T20 World Cup titles?", o: ["Darren Sammy", "Chris Gayle", "Dwayne Bravo", "Kieron Pollard"] },
+        { l: 2, q: "Who captained India to the 2024 T20 World Cup title?", o: ["Rohit Sharma", "Virat Kohli", "Hardik Pandya", "Suryakumar Yadav"] },
+        { l: 2, q: "Who was Player of the Match in the 2024 T20 World Cup final?", o: ["Virat Kohli", "Jasprit Bumrah", "Axar Patel", "Hardik Pandya"] },
+        { l: 2, q: "How did MS Dhoni finish the 2011 World Cup final?", o: ["With a six", "With a four", "With a single", "With a two"] },
+        { l: 2, q: "Who has scored the most ODI centuries in history?", o: ["Virat Kohli", "Sachin Tendulkar", "Rohit Sharma", "Ricky Ponting"] },
+        { l: 2, q: "Virat Kohli's 50th ODI century broke whose record of 49?", o: ["Sachin Tendulkar", "Ricky Ponting", "Sanath Jayasuriya", "Kumar Sangakkara"] },
+        { l: 2, q: "Who is the leading run-scorer in women's international cricket?", o: ["Mithali Raj", "Charlotte Edwards", "Smriti Mandhana", "Meg Lanning"] },
+        { l: 2, q: "Which team won the Women's ODI World Cup in 2025?", o: ["India", "Australia", "South Africa", "England"] },
+        { l: 2, q: "Who captained India to the 2025 Women's World Cup title?", o: ["Harmanpreet Kaur", "Smriti Mandhana", "Mithali Raj", "Jhulan Goswami"] },
+        { l: 2, q: "Which franchise won the first Women's Premier League (WPL) in 2023?", o: ["Mumbai Indians", "Delhi Capitals", "Royal Challengers Bangalore", "UP Warriorz"] },
+        { l: 2, q: "Which franchise won the WPL in 2024?", o: ["Royal Challengers Bangalore", "Mumbai Indians", "Delhi Capitals", "Gujarat Giants"] },
+        { l: 2, q: "Which IPL team was earlier called \"Kings XI Punjab\"?", o: ["Punjab Kings", "Gujarat Titans", "Lucknow Super Giants", "Delhi Capitals"] },
+        { l: 2, q: "Which IPL team was earlier called \"Delhi Daredevils\"?", o: ["Delhi Capitals", "Punjab Kings", "Rajasthan Royals", "Sunrisers Hyderabad"] },
+        { l: 2, q: "In which country was IPL 2009 played?", o: ["South Africa", "UAE", "England", "Sri Lanka"] },
+        { l: 2, q: "In which country was IPL 2020 played?", o: ["UAE", "South Africa", "India", "Sri Lanka"] },
+        { l: 2, q: "Which team won IPL 2020?", o: ["Mumbai Indians", "Delhi Capitals", "Chennai Super Kings", "Sunrisers Hyderabad"] },
+        { l: 2, q: "Which team won IPL 2021?", o: ["Chennai Super Kings", "Kolkata Knight Riders", "Delhi Capitals", "Mumbai Indians"] },
+        { l: 2, q: "Which team won IPL 2018, its comeback season?", o: ["Chennai Super Kings", "Sunrisers Hyderabad", "Mumbai Indians", "Kolkata Knight Riders"] },
+        { l: 2, q: "Which captain won the T20 World Cup, the ODI World Cup and the Champions Trophy?", o: ["MS Dhoni", "Ricky Ponting", "Rohit Sharma", "Clive Lloyd"] },
+        { l: 2, q: "Which team won the 2023 Asia Cup?", o: ["India", "Sri Lanka", "Pakistan", "Bangladesh"] },
+        { l: 2, q: "Sachin Tendulkar made his Test debut in 1989 against which team?", o: ["Pakistan", "New Zealand", "England", "Australia"] },
+        { l: 2, q: "Who was India's first Test captain?", o: ["CK Nayudu", "Lala Amarnath", "Vijay Merchant", "Ranjitsinhji"] },
+        { l: 2, q: "Which World Cup-winning captain later became Prime Minister of his country?", o: ["Imran Khan", "Arjuna Ranatunga", "Clive Lloyd", "Kapil Dev"] },
+        { l: 2, q: "Which Australian batter is nicknamed \"Mr. Cricket\"?", o: ["Michael Hussey", "Michael Clarke", "Matthew Hayden", "Justin Langer"] },
+        { l: 2, q: "Which Australian captain is nicknamed \"Punter\"?", o: ["Ricky Ponting", "Steve Waugh", "Mark Taylor", "Allan Border"] },
+        { l: 2, q: "Which attacking Australian wicketkeeper was nicknamed \"Gilly\"?", o: ["Adam Gilchrist", "Ian Healy", "Brad Haddin", "Tim Paine"] },
+        { l: 2, q: "Which Indian all-rounder is nicknamed \"Lord\" by fans?", o: ["Shardul Thakur", "Hardik Pandya", "Axar Patel", "Deepak Chahar"] },
+        { l: 2, q: "Which Indian woman fast bowler took the most wickets in women's ODIs?", o: ["Jhulan Goswami", "Shikha Pandey", "Renuka Singh", "Poonam Yadav"] },
+        { l: 2, q: "Runs taken when the ball deflects off the batter's body (not the bat) are called...", o: ["Leg byes", "Byes", "Wides", "Overthrows"] },
+        { l: 2, q: "Runs taken when the ball misses the bat, body and keeper are called...", o: ["Byes", "Leg byes", "No-balls", "Penalty runs"] },
+        { l: 2, q: "Taking five wickets in an innings is popularly called a...", o: ["Five-wicket haul (fifer)", "Hat-trick", "Maiden spell", "Double strike"] },
+        { l: 2, q: "Strike rate in batting means runs scored per how many balls?", o: ["100", "50", "10", "60"] },
+        { l: 2, q: "A bowler's economy rate measures runs conceded per...", o: ["Over", "Wicket", "Ball", "Match"] },
+        { l: 2, q: "The Hawk-Eye technology is used mainly for...", o: ["Ball tracking for LBW", "Measuring bat speed", "Checking no-balls only", "Deciding the toss"] },
+        { l: 2, q: "UltraEdge (Snickometer) helps the umpire detect...", o: ["Edges off the bat", "Ball speed", "Wides", "Pitch moisture"] },
+        { l: 2, q: "Which format is the Ranji Trophy played in?", o: ["First-class (multi-day)", "T20", "One-day", "Hundred-ball"] },
+        { l: 2, q: "Which state does MS Dhoni represent in domestic cricket?", o: ["Jharkhand", "Bihar", "Bengal", "Odisha"] },
+        { l: 2, q: "Which team does Rohit Sharma represent in domestic cricket?", o: ["Mumbai", "Delhi", "Hyderabad", "Gujarat"] },
+        { l: 2, q: "Which team does Virat Kohli represent in domestic cricket?", o: ["Delhi", "Punjab", "Haryana", "Karnataka"] },
+        { l: 2, q: "Who became India's Test captain in 2025 after Rohit Sharma retired from Tests?", o: ["Shubman Gill", "Jasprit Bumrah", "Rishabh Pant", "KL Rahul"] },
+        { l: 2, q: "Which Indian is known as \"Mr. 360 of India\" for his scoops and ramps in T20s?", o: ["Suryakumar Yadav", "Rishabh Pant", "Hardik Pandya", "Sanju Samson"] },
+        { l: 2, q: "The 2026 T20 World Cup was co-hosted by India and which country?", o: ["Sri Lanka", "Bangladesh", "Pakistan", "UAE"] },
+        { l: 2, q: "Which team won the 2009 T20 World Cup?", o: ["Pakistan", "Sri Lanka", "India", "England"] },
+        { l: 2, q: "Which team won the 2010 T20 World Cup?", o: ["England", "Australia", "Pakistan", "Sri Lanka"] },
+        { l: 2, q: "Which team won the 2012 T20 World Cup?", o: ["West Indies", "Sri Lanka", "India", "Australia"] },
+        { l: 2, q: "Which team won the 2014 T20 World Cup?", o: ["Sri Lanka", "India", "West Indies", "Pakistan"] },
+        { l: 2, q: "Which team won the 2016 T20 World Cup?", o: ["West Indies", "England", "India", "New Zealand"] },
+        { l: 2, q: "In which country was the first World Cup held in 1975?", o: ["England", "Australia", "India", "West Indies"] },
+        { l: 2, q: "Which Indian spinner bowls left-arm wrist spin, also called \"chinaman\"?", o: ["Kuldeep Yadav", "Ravindra Jadeja", "Axar Patel", "Yuzvendra Chahal"] },
+        // ----- Level 3 : Domestic Pro -----
+        { l: 3, q: "Who bowled the final over of the 2007 T20 World Cup final?", o: ["Joginder Sharma", "Sreesanth", "Harbhajan Singh", "Irfan Pathan"] },
+        { l: 3, q: "Who hit four consecutive sixes in the last over of the 2016 T20 World Cup final?", o: ["Carlos Brathwaite", "Marlon Samuels", "Chris Gayle", "Andre Russell"] },
+        { l: 3, q: "Virat Kohli's unbeaten 82 at the MCG in the 2022 T20 World Cup came against which team?", o: ["Pakistan", "Australia", "South Africa", "Bangladesh"] },
+        { l: 3, q: "Which batter scored 281 in the famous 2001 Kolkata Test against Australia?", o: ["VVS Laxman", "Rahul Dravid", "Sachin Tendulkar", "Sourav Ganguly"] },
+        { l: 3, q: "Who took the first hat-trick by an Indian in Test cricket, in the 2001 Kolkata Test?", o: ["Harbhajan Singh", "Anil Kumble", "Javagal Srinath", "Zaheer Khan"] },
+        { l: 3, q: "Under which captain did India first win a Test series in Australia, in 2018-19?", o: ["Virat Kohli", "MS Dhoni", "Rohit Sharma", "Ajinkya Rahane"] },
+        { l: 3, q: "Which Brisbane ground saw India end Australia's long unbeaten run in January 2021?", o: ["The Gabba", "Adelaide Oval", "WACA, Perth", "Sydney Cricket Ground"] },
+        { l: 3, q: "What is the highest individual score in Test cricket?", o: ["400 not out", "380", "375", "365 not out"] },
+        { l: 3, q: "Who holds the record for the fastest ODI century, off just 31 balls?", o: ["AB de Villiers", "Chris Gayle", "Shahid Afridi", "Glenn Maxwell"] },
+        { l: 3, q: "Who scored the fastest World Cup century, off 40 balls, in 2023?", o: ["Glenn Maxwell", "AB de Villiers", "Kevin O'Brien", "David Warner"] },
+        { l: 3, q: "Who scored the highest individual score in World Cup history, 237 not out?", o: ["Martin Guptill", "Chris Gayle", "Rohit Sharma", "Virender Sehwag"] },
+        { l: 3, q: "Who has scored the most runs in World Cup history?", o: ["Sachin Tendulkar", "Ricky Ponting", "Virat Kohli", "Kumar Sangakkara"] },
+        { l: 3, q: "Who has taken the most wickets in World Cup history?", o: ["Glenn McGrath", "Muttiah Muralitharan", "Wasim Akram", "Mitchell Starc"] },
+        { l: 3, q: "Who has hit the most sixes in international cricket?", o: ["Rohit Sharma", "Chris Gayle", "Shahid Afridi", "Martin Guptill"] },
+        { l: 3, q: "Virat Kohli scored a record 973 runs in which IPL season?", o: ["2016", "2013", "2019", "2023"] },
+        { l: 3, q: "Who scored the highest individual score in IPL history, 175 not out?", o: ["Chris Gayle", "AB de Villiers", "KL Rahul", "David Warner"] },
+        { l: 3, q: "Who scored 158 not out in the very first IPL match in 2008?", o: ["Brendon McCullum", "Sourav Ganguly", "Adam Gilchrist", "Virender Sehwag"] },
+        { l: 3, q: "How many Test centuries did Sachin Tendulkar score?", o: ["51", "49", "45", "53"] },
+        { l: 3, q: "What was Don Bradman's Test batting average?", o: ["99.94", "89.94", "95.50", "101.20"] },
+        { l: 3, q: "How many runs did Don Bradman need in his last Test innings to finish with an average of 100?", o: ["4", "6", "10", "2"] },
+        { l: 3, q: "Who is the all-time leading run-scorer in the Ranji Trophy?", o: ["Wasim Jaffer", "Amol Muzumdar", "VVS Laxman", "Rahul Dravid"] },
+        { l: 3, q: "Which team won the Ranji Trophy in 2017-18 for the first time in its history?", o: ["Vidarbha", "Saurashtra", "Madhya Pradesh", "Kerala"] },
+        { l: 3, q: "In which year did India play their first-ever Test match?", o: ["1932", "1947", "1928", "1952"] },
+        { l: 3, q: "The first-ever Test match in 1877 was played between Australia and which team?", o: ["England", "India", "South Africa", "New Zealand"] },
+        { l: 3, q: "Pakistan beat which team in the 1992 World Cup final?", o: ["England", "New Zealand", "Australia", "West Indies"] },
+        { l: 3, q: "Who captained Kolkata Knight Riders to IPL titles in 2012 and 2014?", o: ["Gautam Gambhir", "Sourav Ganguly", "Shah Rukh Khan", "Dinesh Karthik"] },
+        { l: 3, q: "How many IPL titles did Rohit Sharma win as Mumbai Indians captain?", o: ["5", "3", "4", "6"] },
+        { l: 3, q: "In which year did Virat Kohli captain India to the Under-19 World Cup title?", o: ["2008", "2006", "2010", "2012"] },
+        { l: 3, q: "The first World Test Championship final in 2021 was played at which ground?", o: ["The Rose Bowl, Southampton", "Lord's, London", "The Oval, London", "Edgbaston, Birmingham"] },
+        { l: 3, q: "Who was the Player of the Tournament in the 2003 World Cup?", o: ["Sachin Tendulkar", "Ricky Ponting", "Sourav Ganguly", "Glenn McGrath"] },
+        { l: 3, q: "How many Test wickets did Muttiah Muralitharan take?", o: ["800", "708", "619", "563"] },
+        { l: 3, q: "Which Indian batting legend was nicknamed the \"Little Master\"?", o: ["Sunil Gavaskar", "Sachin Tendulkar", "Gundappa Viswanath", "Kapil Dev"] },
+        { l: 3, q: "Which team won IPL 2009, played in South Africa?", o: ["Deccan Chargers", "Royal Challengers Bangalore", "Delhi Daredevils", "Chennai Super Kings"] },
+        { l: 3, q: "Which team won IPL 2010 and 2011?", o: ["Chennai Super Kings", "Mumbai Indians", "Kolkata Knight Riders", "Royal Challengers Bangalore"] },
+        { l: 3, q: "Which team won IPL 2012, beating Chennai Super Kings in the final?", o: ["Kolkata Knight Riders", "Mumbai Indians", "Delhi Daredevils", "Rajasthan Royals"] },
+        { l: 3, q: "Which team won IPL 2013 and 2015?", o: ["Mumbai Indians", "Chennai Super Kings", "Kolkata Knight Riders", "Sunrisers Hyderabad"] },
+        { l: 3, q: "Who scored 117 not out for CSK in the IPL 2018 final?", o: ["Shane Watson", "Ambati Rayudu", "Suresh Raina", "Faf du Plessis"] },
+        { l: 3, q: "Which two captains have each won five IPL titles?", o: ["MS Dhoni and Rohit Sharma", "MS Dhoni and Gautam Gambhir", "Rohit Sharma and Virat Kohli", "Gautam Gambhir and Shane Warne"] },
+        { l: 3, q: "Which two franchises were suspended from the IPL for the 2016 and 2017 seasons?", o: ["Chennai Super Kings and Rajasthan Royals", "Mumbai Indians and Delhi Daredevils", "Kolkata Knight Riders and Kings XI Punjab", "Deccan Chargers and Pune Warriors"] },
+        { l: 3, q: "Which businessman originally owned Royal Challengers Bangalore?", o: ["Vijay Mallya", "Mukesh Ambani", "N. Srinivasan", "Ness Wadia"] },
+        { l: 3, q: "Who was the founding chairman and commissioner of the IPL?", o: ["Lalit Modi", "N. Srinivasan", "Sharad Pawar", "Jagmohan Dalmiya"] },
+        { l: 3, q: "Which CSK all-rounder released the hit song \"Champion\"?", o: ["Dwayne Bravo", "Kieron Pollard", "Chris Gayle", "Andre Russell"] },
+        { l: 3, q: "Who became the first batter to score 8,000 IPL runs, in 2024?", o: ["Virat Kohli", "Rohit Sharma", "Shikhar Dhawan", "David Warner"] },
+        { l: 3, q: "At the 2025 IPL mega auction, who was bought for a then-record ₹27 crore?", o: ["Rishabh Pant", "Shreyas Iyer", "Venkatesh Iyer", "KL Rahul"] },
+        { l: 3, q: "Who became the youngest centurion in IPL history in 2025, aged just 14?", o: ["Vaibhav Suryavanshi", "Yashasvi Jaiswal", "Riyan Parag", "Abhishek Sharma"] },
+        { l: 3, q: "Who top-scored for India with 97 in the 2011 World Cup final?", o: ["Gautam Gambhir", "Virender Sehwag", "Virat Kohli", "Yuvraj Singh"] },
+        { l: 3, q: "Who top-scored for India with 75 in the 2007 T20 World Cup final?", o: ["Gautam Gambhir", "Rohit Sharma", "Yuvraj Singh", "Robin Uthappa"] },
+        { l: 3, q: "Who was Player of the Match in the 2007 T20 World Cup final?", o: ["Irfan Pathan", "RP Singh", "Gautam Gambhir", "Joginder Sharma"] },
+        { l: 3, q: "How was the tied India vs Pakistan group match at the 2007 T20 World Cup decided?", o: ["Bowl-out", "Super Over", "Coin toss", "Shared points"] },
+        { l: 3, q: "Which Indian captain won the most Test matches?", o: ["Virat Kohli", "MS Dhoni", "Sourav Ganguly", "Mohammad Azharuddin"] },
+        { l: 3, q: "The 2002 Champions Trophy final was rained off. Which teams shared the trophy?", o: ["India and Sri Lanka", "India and Australia", "Sri Lanka and Pakistan", "Australia and South Africa"] },
+        { l: 3, q: "Which team beat India in the 2017 Champions Trophy final at The Oval?", o: ["Pakistan", "England", "Australia", "Bangladesh"] },
+        { l: 3, q: "Which team won the 2023 World Test Championship final?", o: ["Australia", "India", "New Zealand", "England"] },
+        { l: 3, q: "Which team won the 2025 World Test Championship final at Lord's?", o: ["South Africa", "Australia", "India", "England"] },
+        { l: 3, q: "In how many balls did Yuvraj Singh hit his famous T20I fifty against England in 2007?", o: ["12", "15", "10", "18"] },
+        { l: 3, q: "Who captained India in the famous Gabba Test win of January 2021?", o: ["Ajinkya Rahane", "Virat Kohli", "Rohit Sharma", "Cheteshwar Pujara"] },
+        { l: 3, q: "Who scored 89 not out to win the Gabba Test for India in January 2021?", o: ["Rishabh Pant", "Shubman Gill", "Cheteshwar Pujara", "Washington Sundar"] },
+        { l: 3, q: "Who scored 303 not out against England in 2016, India's second Test triple century?", o: ["Karun Nair", "KL Rahul", "Murali Vijay", "Cheteshwar Pujara"] },
+        { l: 3, q: "How many ODI double centuries has Rohit Sharma scored?", o: ["3", "2", "1", "4"] },
+        { l: 3, q: "Who scored the second-ever men's ODI double century, 219 against West Indies in 2011?", o: ["Virender Sehwag", "Sachin Tendulkar", "Rohit Sharma", "Gautam Gambhir"] },
+        { l: 3, q: "Glenn Maxwell scored 201 not out while battling cramps in the 2023 World Cup against which team?", o: ["Afghanistan", "Netherlands", "Pakistan", "Bangladesh"] },
+        { l: 3, q: "In which year did the first day-night Test match take place?", o: ["2015", "2012", "2017", "2009"] },
+        { l: 3, q: "Against which team did India play their first day-night Test, at Eden Gardens in 2019?", o: ["Bangladesh", "West Indies", "Sri Lanka", "Australia"] },
+        { l: 3, q: "India were bowled out for their lowest Test total of 36 against which team in 2020?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 3, q: "Which team became the first to whitewash India 3-0 in a home Test series, in 2024?", o: ["New Zealand", "England", "Australia", "South Africa"] },
+        { l: 3, q: "Which Indian bowler took a hat-trick in the first over of a Test, against Pakistan in 2006?", o: ["Irfan Pathan", "Zaheer Khan", "RP Singh", "Sreesanth"] },
+        { l: 3, q: "Sachin Tendulkar's 100th international century came against which team?", o: ["Bangladesh", "Sri Lanka", "Pakistan", "South Africa"] },
+        { l: 3, q: "Sachin Tendulkar's \"Desert Storm\" innings in Sharjah in 1998 came against which team?", o: ["Australia", "New Zealand", "Pakistan", "Zimbabwe"] },
+        { l: 3, q: "The \"Bodyline\" tactic of 1932-33 was mainly aimed at which batter?", o: ["Don Bradman", "Bill Ponsford", "Stan McCabe", "Bill Woodfull"] },
+        { l: 3, q: "The Ashes urn is traditionally said to hold the ashes of a burnt...", o: ["Bail", "Ball", "Bat", "Stump"] },
+        { l: 3, q: "In 2025 the India–England Test series trophy was renamed after James Anderson and which Indian?", o: ["Sachin Tendulkar", "Sunil Gavaskar", "Kapil Dev", "Rahul Dravid"] },
+        { l: 3, q: "Which venue hosted the 1987 World Cup final?", o: ["Eden Gardens, Kolkata", "Lord's, London", "Wankhede Stadium, Mumbai", "Gaddafi Stadium, Lahore"] },
+        { l: 3, q: "Which World Cup was the first to use coloured clothing and a white ball?", o: ["1992", "1987", "1996", "1999"] },
+        { l: 3, q: "Which South African fielder famously flew in to run out Inzamam-ul-Haq in the 1992 World Cup?", o: ["Jonty Rhodes", "Herschelle Gibbs", "Allan Donald", "Hansie Cronje"] },
+        { l: 3, q: "The 1996 World Cup semi-final at Eden Gardens was abandoned due to crowd trouble. Who was awarded the match?", o: ["Sri Lanka", "India", "Australia", "West Indies"] },
+        { l: 3, q: "Which non-Test team reached the semi-finals of the 2003 World Cup?", o: ["Kenya", "Zimbabwe", "Netherlands", "Canada"] },
+        { l: 3, q: "Which Irishman hit a 50-ball century to beat England at the 2011 World Cup?", o: ["Kevin O'Brien", "William Porterfield", "Paul Stirling", "Niall O'Brien"] },
+        { l: 3, q: "Who ran out MS Dhoni with a direct hit in the 2019 World Cup semi-final?", o: ["Martin Guptill", "Kane Williamson", "Trent Boult", "Ross Taylor"] },
+        { l: 3, q: "Who scored 84 not out for England in the 2019 World Cup final?", o: ["Ben Stokes", "Jos Buttler", "Joe Root", "Jonny Bairstow"] },
+        { l: 3, q: "Which team did Afghanistan stun first at the 2023 World Cup, in Delhi?", o: ["England", "Pakistan", "Sri Lanka", "Australia"] },
+        { l: 3, q: "Who took the most wickets at the 2023 World Cup, with 24?", o: ["Mohammed Shami", "Adam Zampa", "Jasprit Bumrah", "Dilshan Madushanka"] },
+        { l: 3, q: "Who was Player of the Tournament at both the 2014 and 2016 T20 World Cups?", o: ["Virat Kohli", "Chris Gayle", "Rohit Sharma", "Marlon Samuels"] },
+        { l: 3, q: "Who was Player of the Tournament at the 2022 T20 World Cup?", o: ["Sam Curran", "Virat Kohli", "Jos Buttler", "Shadab Khan"] },
+        { l: 3, q: "Who was Player of the Tournament at the 2021 T20 World Cup?", o: ["David Warner", "Babar Azam", "Josh Hazlewood", "Mitchell Marsh"] },
+        { l: 3, q: "Running out the non-striker who leaves the crease early is popularly named after which Indian?", o: ["Vinoo Mankad", "Lala Amarnath", "Kapil Dev", "Ravichandran Ashwin"] },
+        { l: 3, q: "Which batter became the first to be \"timed out\" in international cricket, at the 2023 World Cup?", o: ["Angelo Mathews", "Shakib Al Hasan", "Kusal Mendis", "Mushfiqur Rahim"] },
+        { l: 3, q: "In a five-day Test, a side trailing by at least how many runs can be asked to follow on?", o: ["200", "150", "100", "250"] },
+        { l: 3, q: "A lower-order batter sent in late in the day to protect the main batters is called a...", o: ["Nightwatchman", "Pinch-hitter", "Tail-ender", "Runner"] },
+        { l: 3, q: "Getting out for zero in both innings of a Test is called a...", o: ["Pair", "Double duck", "Twin zero", "Blob"] },
+        { l: 3, q: "Which close-in fielding position stands right in front of the batter on the off side?", o: ["Silly point", "Gully", "Cover", "Third man"] },
+        { l: 3, q: "In which year was the Ranji Trophy first played?", o: ["1934-35", "1947-48", "1926-27", "1950-51"] },
+        { l: 3, q: "Ranjitsinhji, after whom the Ranji Trophy is named, played Test cricket for which country?", o: ["England", "India", "Australia", "South Africa"] },
+        { l: 3, q: "Syed Mushtaq Ali Trophy is India's domestic competition in which format?", o: ["T20", "One-day", "First-class", "Hundred-ball"] },
+        { l: 3, q: "Vijay Hazare Trophy is India's domestic competition in which format?", o: ["One-day (50 overs)", "T20", "First-class", "Two-day"] },
+        { l: 3, q: "Which domestic team does Cheteshwar Pujara represent?", o: ["Saurashtra", "Gujarat", "Baroda", "Mumbai"] },
+        { l: 3, q: "Which batter scored 87 not out to win the 2002 NatWest Series final at Lord's?", o: ["Mohammad Kaif", "Yuvraj Singh", "Sourav Ganguly", "Rahul Dravid"] },
+        { l: 3, q: "Sourav Ganguly famously waved his shirt on the Lord's balcony after winning which final?", o: ["NatWest Series 2002", "Champions Trophy 2002", "World Cup 2003 semi-final", "Asia Cup 2001"] },
+        { l: 3, q: "Which Indian bowler is known as the \"Chakdah Express\"?", o: ["Jhulan Goswami", "Renuka Singh", "Shikha Pandey", "Pooja Vastrakar"] },
+        { l: 3, q: "Which Indian batter was called the \"Lady Tendulkar\"?", o: ["Mithali Raj", "Anjum Chopra", "Harmanpreet Kaur", "Smriti Mandhana"] },
+        { l: 3, q: "Harmanpreet Kaur's famous 171 not out in the 2017 Women's World Cup semi-final came against which team?", o: ["Australia", "England", "New Zealand", "South Africa"] },
+        { l: 3, q: "MS Dhoni holds an honorary rank of Lieutenant Colonel in which force?", o: ["Territorial Army", "Indian Air Force", "Indian Navy", "BSF"] },
+        { l: 3, q: "Before cricket fame, MS Dhoni worked as a ticket collector at which railway station?", o: ["Kharagpur", "Ranchi", "Howrah", "Dhanbad"] },
+        { l: 3, q: "On which date did MS Dhoni announce his international retirement?", o: ["15 August 2020", "26 January 2020", "2 April 2021", "7 July 2019"] },
+        { l: 3, q: "Which Australian batter tragically died after being hit by a bouncer in 2014?", o: ["Phillip Hughes", "Ed Cowan", "Shaun Marsh", "Chris Rogers"] },
+        { l: 3, q: "The 2018 Australian ball-tampering scandal took place in which city?", o: ["Cape Town", "Johannesburg", "Durban", "Centurion"] },
+        { l: 3, q: "Which South African captain was banned for life in the 2000 match-fixing scandal?", o: ["Hansie Cronje", "Graeme Smith", "Shaun Pollock", "Kepler Wessels"] },
+        { l: 3, q: "Javed Miandad hit a last-ball six in the 1986 Sharjah final off which Indian bowler?", o: ["Chetan Sharma", "Kapil Dev", "Manoj Prabhakar", "Ravi Shastri"] },
+        { l: 3, q: "Who bowled the fastest recorded delivery in cricket, 161.3 km/h, in 2003?", o: ["Shoaib Akhtar", "Brett Lee", "Shaun Tait", "Mitchell Starc"] },
+        { l: 3, q: "Which country became the 10th Test-playing nation in 2000?", o: ["Bangladesh", "Zimbabwe", "Ireland", "Kenya"] },
+        { l: 3, q: "Which two countries were given Test status together in 2017?", o: ["Afghanistan and Ireland", "Ireland and Scotland", "Afghanistan and Nepal", "Netherlands and Scotland"] },
+        { l: 3, q: "Who became ICC Chairman in December 2024?", o: ["Jay Shah", "Greg Barclay", "Sourav Ganguly", "Shashank Manohar"] },
+        { l: 3, q: "Which Australian fast bowler was nicknamed \"Pigeon\"?", o: ["Glenn McGrath", "Jason Gillespie", "Brett Lee", "Merv Hughes"] },
+        { l: 3, q: "Which Australian fast bowler was nicknamed \"Binga\"?", o: ["Brett Lee", "Shaun Tait", "Mitchell Johnson", "Glenn McGrath"] },
+        { l: 3, q: "Which English all-rounder was nicknamed \"Freddie\"?", o: ["Andrew Flintoff", "Ian Botham", "Ben Stokes", "Paul Collingwood"] },
+        { l: 3, q: "Which Pakistani all-rounder was nicknamed \"The Professor\"?", o: ["Mohammad Hafeez", "Shoaib Malik", "Misbah-ul-Haq", "Younis Khan"] },
+        { l: 3, q: "Sourav Ganguly scored a century on his Test debut in 1996 at which ground?", o: ["Lord's", "The Oval", "Trent Bridge", "Edgbaston"] },
+        { l: 3, q: "Who was the first Indian to score a century in T20 internationals?", o: ["Suresh Raina", "Rohit Sharma", "Virat Kohli", "Yuvraj Singh"] },
+        { l: 3, q: "Which young Indian opener scored back-to-back Test double centuries against England in 2024?", o: ["Yashasvi Jaiswal", "Shubman Gill", "Sarfaraz Khan", "Dhruv Jurel"] },
+        { l: 3, q: "Who scored a double century against New Zealand in January 2023 to become the youngest ODI double centurion?", o: ["Shubman Gill", "Ishan Kishan", "Prithvi Shaw", "Ruturaj Gaikwad"] },
+        // ----- Level 4 : International -----
+        { l: 4, q: "Which country won the 1987 World Cup, the first held outside England?", o: ["Australia", "England", "Pakistan", "India"] },
+        { l: 4, q: "Where was the 1996 World Cup final played?", o: ["Gaddafi Stadium, Lahore", "Eden Gardens, Kolkata", "Wankhede Stadium, Mumbai", "National Stadium, Karachi"] },
+        { l: 4, q: "Who was the Player of the Tournament in the 1999 World Cup?", o: ["Lance Klusener", "Steve Waugh", "Shane Warne", "Saeed Anwar"] },
+        { l: 4, q: "Who was the Player of the Tournament in the 2007 World Cup?", o: ["Glenn McGrath", "Matthew Hayden", "Ricky Ponting", "Muttiah Muralitharan"] },
+        { l: 4, q: "Who was the Player of the Tournament in the 2015 World Cup?", o: ["Mitchell Starc", "Brendon McCullum", "Martin Guptill", "Trent Boult"] },
+        { l: 4, q: "How was the 2019 World Cup final between England and New Zealand finally decided?", o: ["Boundary count after a tied Super Over", "Duckworth–Lewis method", "Coin toss", "Replay the next day"] },
+        { l: 4, q: "Which batter scored 137 in the 2023 World Cup final in Ahmedabad?", o: ["Travis Head", "David Warner", "Marnus Labuschagne", "Glenn Maxwell"] },
+        { l: 4, q: "Who scored a record 765 runs in a single World Cup, in 2023?", o: ["Virat Kohli", "Rohit Sharma", "Quinton de Kock", "Daryl Mitchell"] },
+        { l: 4, q: "Who scored a record five centuries in a single World Cup, in 2019?", o: ["Rohit Sharma", "Joe Root", "David Warner", "Kane Williamson"] },
+        { l: 4, q: "Who scored four consecutive centuries in the 2015 World Cup?", o: ["Kumar Sangakkara", "Tillakaratne Dilshan", "Hashim Amla", "Martin Guptill"] },
+        { l: 4, q: "Which English off-spinner took 19 wickets in a single Test against Australia in 1956?", o: ["Jim Laker", "Fred Trueman", "Derek Underwood", "Graeme Swann"] },
+        { l: 4, q: "What were Anil Kumble's figures when he took all 10 wickets against Pakistan in 1999?", o: ["10 for 74", "10 for 53", "10 for 90", "10 for 68"] },
+        { l: 4, q: "Whose was the 800th and final Test wicket of Muttiah Muralitharan, in 2010?", o: ["Pragyan Ojha", "Harbhajan Singh", "Ishant Sharma", "Zaheer Khan"] },
+        { l: 4, q: "Shane Warne's \"Ball of the Century\" in 1993 bowled which English batter?", o: ["Mike Gatting", "Graham Gooch", "Alec Stewart", "Nasser Hussain"] },
+        { l: 4, q: "Against which team did Sachin Tendulkar score his first international century in 1990?", o: ["England", "Australia", "Pakistan", "West Indies"] },
+        { l: 4, q: "Which fast bowler holds the record for most Test wickets by a pacer, with 704?", o: ["James Anderson", "Glenn McGrath", "Courtney Walsh", "Stuart Broad"] },
+        { l: 4, q: "Which team scored the highest total in Test history, 952/6 declared, against India in 1997?", o: ["Sri Lanka", "England", "Pakistan", "Australia"] },
+        { l: 4, q: "Which team holds the lowest Test total, 26 all out, against England in 1955?", o: ["New Zealand", "India", "South Africa", "Zimbabwe"] },
+        { l: 4, q: "Where did Virender Sehwag score his highest Test score of 319 against South Africa?", o: ["Chennai", "Mumbai", "Kolkata", "Bengaluru"] },
+        { l: 4, q: "What did MS Dhoni score on his ODI debut against Bangladesh in 2004?", o: ["0", "12", "31", "4"] },
+        { l: 4, q: "Kapil Dev's famous 175 not out in the 1983 World Cup came against which team?", o: ["Zimbabwe", "West Indies", "Australia", "England"] },
+        { l: 4, q: "At which stadium did Virat Kohli score his 50th ODI century in the 2023 World Cup semi-final?", o: ["Wankhede Stadium, Mumbai", "Eden Gardens, Kolkata", "Narendra Modi Stadium, Ahmedabad", "M. A. Chidambaram Stadium, Chennai"] },
+        { l: 4, q: "Where was the opening match of the first IPL in 2008 played?", o: ["M. Chinnaswamy Stadium, Bengaluru", "Wankhede Stadium, Mumbai", "Eden Gardens, Kolkata", "Feroz Shah Kotla, Delhi"] },
+        { l: 4, q: "Which team won the IPL in 2016, defeating Royal Challengers Bangalore in the final?", o: ["Sunrisers Hyderabad", "Mumbai Indians", "Kolkata Knight Riders", "Chennai Super Kings"] },
+        { l: 4, q: "Which team beat Rising Pune Supergiant by one run in the IPL 2017 final?", o: ["Mumbai Indians", "Kolkata Knight Riders", "Sunrisers Hyderabad", "Kings XI Punjab"] },
+        { l: 4, q: "Which team beat Chennai Super Kings by one run in the IPL 2019 final?", o: ["Mumbai Indians", "Delhi Capitals", "Sunrisers Hyderabad", "Rajasthan Royals"] },
+        { l: 4, q: "Which IPL team was bowled out for the lowest-ever total of 49 in 2017?", o: ["Royal Challengers Bangalore", "Delhi Daredevils", "Rajasthan Royals", "Kings XI Punjab"] },
+        { l: 4, q: "Against which team did Sachin Tendulkar score a century on his Ranji Trophy debut at age 15?", o: ["Gujarat", "Delhi", "Karnataka", "Baroda"] },
+        { l: 4, q: "The Duckworth–Lewis method is named after Frank Duckworth and which other statistician?", o: ["Tony Lewis", "Steven Stern", "Richie Benaud", "Bill Lawry"] },
+        { l: 4, q: "Who was the Player of the Tournament in the 2019 World Cup?", o: ["Kane Williamson", "Rohit Sharma", "Jofra Archer", "Ben Stokes"] },
+        { l: 4, q: "Alastair Cook scored a century in his final Test innings in 2018 against which team?", o: ["India", "Australia", "South Africa", "Pakistan"] },
+        { l: 4, q: "Who took the catch to dismiss Viv Richards in the 1983 World Cup final?", o: ["Kapil Dev", "Madan Lal", "Mohinder Amarnath", "Roger Binny"] },
+        { l: 4, q: "Who won the Man of the Match award in the 1983 World Cup final?", o: ["Mohinder Amarnath", "Kapil Dev", "Madan Lal", "Kirti Azad"] },
+        { l: 4, q: "Who has taken the most wickets in ODI cricket history?", o: ["Muttiah Muralitharan", "Wasim Akram", "Waqar Younis", "Glenn McGrath"] },
+        { l: 4, q: "Who hit the fastest ODI double century, off 126 balls, against Bangladesh in 2022?", o: ["Ishan Kishan", "Shubman Gill", "Rohit Sharma", "Glenn Maxwell"] },
+        { l: 4, q: "Who scored the first double century in World Cup history, 215 against Zimbabwe in 2015?", o: ["Chris Gayle", "Martin Guptill", "AB de Villiers", "Kumar Sangakkara"] },
+        { l: 4, q: "Who hit six sixes in an over in a T20I against Sri Lanka in 2021?", o: ["Kieron Pollard", "Chris Gayle", "Andre Russell", "Nicholas Pooran"] },
+        { l: 4, q: "Who was Player of the Match in the 2012 IPL final for KKR, scoring 89?", o: ["Manvinder Bisla", "Gautam Gambhir", "Jacques Kallis", "Yusuf Pathan"] },
+        { l: 4, q: "Who scored 94 to help KKR win the IPL 2014 final?", o: ["Manish Pandey", "Robin Uthappa", "Gautam Gambhir", "Yusuf Pathan"] },
+        { l: 4, q: "Who has taken the most hat-tricks in IPL history?", o: ["Amit Mishra", "Yuvraj Singh", "Lakshmipathy Balaji", "Yuzvendra Chahal"] },
+        { l: 4, q: "Mitchell Starc was bought for a then-record ₹24.75 crore for IPL 2024 by which team?", o: ["Kolkata Knight Riders", "Sunrisers Hyderabad", "Mumbai Indians", "Delhi Capitals"] },
+        { l: 4, q: "Which two teams replaced CSK and RR in the IPL in 2016 and 2017?", o: ["Rising Pune Supergiant and Gujarat Lions", "Pune Warriors and Kochi Tuskers", "Gujarat Titans and Lucknow Super Giants", "Deccan Chargers and Gujarat Lions"] },
+        { l: 4, q: "In which single IPL season did Kochi Tuskers Kerala take part?", o: ["2011", "2010", "2012", "2013"] },
+        { l: 4, q: "In 2023, Yashasvi Jaiswal hit the fastest IPL fifty in how many balls?", o: ["13", "14", "15", "12"] },
+        { l: 4, q: "MS Dhoni was the most expensive buy at the first IPL auction in 2008. Which team bought him?", o: ["Chennai Super Kings", "Mumbai Indians", "Deccan Chargers", "Kolkata Knight Riders"] },
+        { l: 4, q: "Who was the first Indian to score centuries in all three international formats?", o: ["Suresh Raina", "Rohit Sharma", "Virat Kohli", "KL Rahul"] },
+        { l: 4, q: "Virat Kohli's only T20I century, 122 not out in the 2022 Asia Cup, came against which team?", o: ["Afghanistan", "Pakistan", "Hong Kong", "Sri Lanka"] },
+        { l: 4, q: "Kapil Dev overtook whose record of 431 Test wickets in 1994?", o: ["Richard Hadlee", "Ian Botham", "Dennis Lillee", "Malcolm Marshall"] },
+        { l: 4, q: "Brian Lara's 375 in 1994 broke whose Test record of 365 not out?", o: ["Garry Sobers", "Len Hutton", "Don Bradman", "Hanif Mohammad"] },
+        { l: 4, q: "Matthew Hayden briefly held the Test record with 380 in 2003 against which team?", o: ["Zimbabwe", "Bangladesh", "England", "Sri Lanka"] },
+        { l: 4, q: "The highest Test partnership, 624 runs in 2006, was between Kumar Sangakkara and whom?", o: ["Mahela Jayawardene", "Sanath Jayasuriya", "Tillakaratne Dilshan", "Marvan Atapattu"] },
+        { l: 4, q: "Who took the first hat-trick in World Cup history, in 1987 against New Zealand?", o: ["Chetan Sharma", "Kapil Dev", "Wasim Akram", "Maninder Singh"] },
+        { l: 4, q: "Who captained his country in a record 109 Test matches?", o: ["Graeme Smith", "Allan Border", "Stephen Fleming", "MS Dhoni"] },
+        { l: 4, q: "Which Pakistani bowler hit Sachin Tendulkar on the nose during his debut series in 1989?", o: ["Waqar Younis", "Wasim Akram", "Imran Khan", "Aaqib Javed"] },
+        { l: 4, q: "In which city did Sachin Tendulkar make his Test debut?", o: ["Karachi", "Lahore", "Faisalabad", "Sialkot"] },
+        { l: 4, q: "Who captained England in the infamous \"Bodyline\" series of 1932-33?", o: ["Douglas Jardine", "Harold Larwood", "Gubby Allen", "Wally Hammond"] },
+        { l: 4, q: "The Ashes legend began after Australia beat England at The Oval in which year?", o: ["1882", "1877", "1901", "1912"] },
+        { l: 4, q: "The Frank Worrell Trophy is contested between Australia and which team?", o: ["West Indies", "England", "India", "South Africa"] },
+        { l: 4, q: "The Chappell–Hadlee Trophy is contested between Australia and which team?", o: ["New Zealand", "England", "South Africa", "Sri Lanka"] },
+        { l: 4, q: "Who bowled the infamous underarm delivery against New Zealand in 1981?", o: ["Trevor Chappell", "Greg Chappell", "Dennis Lillee", "Rod Marsh"] },
+        { l: 4, q: "The 2008 \"Monkeygate\" row in Sydney involved Harbhajan Singh and which Australian?", o: ["Andrew Symonds", "Matthew Hayden", "Ricky Ponting", "Brett Lee"] },
+        { l: 4, q: "Who became India's first foreign head coach in 2000?", o: ["John Wright", "Greg Chappell", "Gary Kirsten", "Duncan Fletcher"] },
+        { l: 4, q: "Which pair batted through the final day to save the 2021 Sydney Test against Australia?", o: ["Hanuma Vihari and R Ashwin", "Rishabh Pant and Cheteshwar Pujara", "Ajinkya Rahane and Ravindra Jadeja", "Shubman Gill and Rohit Sharma"] },
+        { l: 4, q: "Anil Kumble famously bowled with a broken jaw in 2002 against which team?", o: ["West Indies", "Australia", "England", "Sri Lanka"] },
+        { l: 4, q: "India's lowest home Test total, 46 all out in 2024, came against which team?", o: ["New Zealand", "England", "Australia", "South Africa"] },
+        { l: 4, q: "Which famous Indian captain led the team to its first Test series wins in both West Indies and England, in 1971?", o: ["Ajit Wadekar", "Mansur Ali Khan Pataudi", "Sunil Gavaskar", "Bishan Singh Bedi"] },
+        { l: 4, q: "India won its first Test series in Pakistan in 2004. Which batter scored 309 in that series?", o: ["Virender Sehwag", "Rahul Dravid", "Sachin Tendulkar", "VVS Laxman"] },
+        { l: 4, q: "South Africa returned to international cricket in 1991 by playing which team?", o: ["India", "England", "Australia", "West Indies"] },
+        { l: 4, q: "Which Australian media tycoon started World Series Cricket in 1977?", o: ["Kerry Packer", "Rupert Murdoch", "Lachlan Murdoch", "Alan Bond"] },
+        { l: 4, q: "Who was the first bowler to take 500 ODI wickets?", o: ["Wasim Akram", "Muttiah Muralitharan", "Waqar Younis", "Shaun Pollock"] },
+        { l: 4, q: "In 1996 Shahid Afridi hit a 37-ball ODI century against which team?", o: ["Sri Lanka", "India", "Kenya", "Australia"] },
+        { l: 4, q: "In how many balls did AB de Villiers hit the fastest ODI fifty, in 2015?", o: ["16", "18", "20", "14"] },
+        { l: 4, q: "Which umpire has stood in the most Test matches?", o: ["Aleem Dar", "Steve Bucknor", "Rudi Koertzen", "Dickie Bird"] },
+        { l: 4, q: "Who was the first batter to score 10,000 runs in T20 cricket?", o: ["Chris Gayle", "Kieron Pollard", "Virat Kohli", "Brendon McCullum"] },
+        { l: 4, q: "Who took four wickets in four balls against South Africa at the 2007 World Cup?", o: ["Lasith Malinga", "Chaminda Vaas", "Muttiah Muralitharan", "Shoaib Akhtar"] },
+        { l: 4, q: "Who scored centuries in each of his first three Test matches, in 1984-85?", o: ["Mohammad Azharuddin", "Dilip Vengsarkar", "Ravi Shastri", "Sunil Gavaskar"] },
+        { l: 4, q: "Who scored 95 on Test debut in the same 1996 Lord's Test where Ganguly scored a century?", o: ["Rahul Dravid", "VVS Laxman", "Sanjay Manjrekar", "Ajay Jadeja"] },
+        { l: 4, q: "Who scored a century on Test debut against West Indies in 2018, aged 18?", o: ["Prithvi Shaw", "Shubman Gill", "Mayank Agarwal", "Hanuma Vihari"] },
+        { l: 4, q: "Which West Indian fast bowler was nicknamed \"Whispering Death\"?", o: ["Michael Holding", "Malcolm Marshall", "Joel Garner", "Curtly Ambrose"] },
+        { l: 4, q: "Which English all-rounder was nicknamed \"Beefy\"?", o: ["Ian Botham", "Andrew Flintoff", "Tony Greig", "Graham Gooch"] },
+        { l: 4, q: "Which leg-spinner was the first bowler to reach 700 Test wickets?", o: ["Shane Warne", "Muttiah Muralitharan", "Anil Kumble", "Abdul Qadir"] },
+        { l: 4, q: "Who has taken the most ODI wickets for India?", o: ["Anil Kumble", "Javagal Srinath", "Zaheer Khan", "Kapil Dev"] },
+        { l: 4, q: "Which wicketkeeper holds the record for most dismissals in Test cricket?", o: ["Mark Boucher", "Adam Gilchrist", "Ian Healy", "MS Dhoni"] },
+        { l: 4, q: "Which team won the Ranji Trophy in 2021-22 for the first time, beating Mumbai in the final?", o: ["Madhya Pradesh", "Saurashtra", "Vidarbha", "Bengal"] },
+        { l: 4, q: "Which team won its first Ranji Trophy in 2019-20, beating Bengal in the final?", o: ["Saurashtra", "Vidarbha", "Madhya Pradesh", "Gujarat"] },
+        { l: 4, q: "Which team won the Ranji Trophy in 2023-24, beating Vidarbha in the final?", o: ["Mumbai", "Madhya Pradesh", "Tamil Nadu", "Saurashtra"] },
+        { l: 4, q: "Who holds the record for the most wickets in Ranji Trophy history?", o: ["Rajinder Goel", "Padmakar Shivalkar", "S. Venkataraghavan", "Bishan Singh Bedi"] },
+        { l: 4, q: "Which Indian domestic first-class competition is played between zones?", o: ["Duleep Trophy", "Ranji Trophy", "Vijay Hazare Trophy", "Syed Mushtaq Ali Trophy"] },
+        { l: 4, q: "Which Pakistani batter was famous for a 970-minute innings of 337 in 1958?", o: ["Hanif Mohammad", "Zaheer Abbas", "Javed Miandad", "Mushtaq Mohammad"] },
+        { l: 4, q: "Who scored the century in the very first World Cup final, in 1975?", o: ["Clive Lloyd", "Viv Richards", "Rohan Kanhai", "Alvin Kallicharran"] },
+        { l: 4, q: "Who scored an unbeaten century to win the 1996 World Cup final for Sri Lanka?", o: ["Aravinda de Silva", "Sanath Jayasuriya", "Arjuna Ranatunga", "Asanka Gurusinha"] },
+        { l: 4, q: "Which Pakistan coach died during the 2007 World Cup in the West Indies?", o: ["Bob Woolmer", "Richard Pybus", "Geoff Lawson", "Javed Miandad"] },
+        { l: 4, q: "Who hit the winning six for New Zealand against South Africa in the 2015 World Cup semi-final?", o: ["Grant Elliott", "Brendon McCullum", "Corey Anderson", "Daniel Vettori"] },
+        { l: 4, q: "In the 2019 World Cup final, how many runs were awarded when a throw deflected off Ben Stokes's bat to the boundary?", o: ["6", "5", "4", "7"] },
+        { l: 4, q: "Which countries are hosting the 2027 ODI World Cup?", o: ["South Africa, Zimbabwe and Namibia", "India, Sri Lanka and Bangladesh", "England and Ireland", "Australia and New Zealand"] },
+        { l: 4, q: "Who was Player of the Tournament at the 2007 T20 World Cup?", o: ["Shahid Afridi", "Yuvraj Singh", "Matthew Hayden", "Umar Gul"] },
+        { l: 4, q: "Who was Player of the Tournament at the 2009 T20 World Cup?", o: ["Tillakaratne Dilshan", "Shahid Afridi", "Umar Gul", "Kumar Sangakkara"] },
+        { l: 4, q: "Who was Player of the Tournament at the 2010 T20 World Cup?", o: ["Kevin Pietersen", "Craig Kieswetter", "Michael Hussey", "Mahela Jayawardene"] },
+        { l: 4, q: "Who was Player of the Tournament at the 2012 T20 World Cup?", o: ["Shane Watson", "Marlon Samuels", "Chris Gayle", "Ajantha Mendis"] },
+        { l: 4, q: "Which Sri Lankan spinner made the \"carrom ball\" famous on his 2008 debut?", o: ["Ajantha Mendis", "Rangana Herath", "Muttiah Muralitharan", "Akila Dananjaya"] },
+        { l: 4, q: "Which Pakistani off-spinner is credited with inventing the \"doosra\"?", o: ["Saqlain Mushtaq", "Saeed Ajmal", "Abdul Qadir", "Mushtaq Ahmed"] },
+        { l: 4, q: "The weight of a men's cricket ball is between...", o: ["155.9 and 163 grams", "120 and 130 grams", "180 and 190 grams", "140 and 145 grams"] },
+        { l: 4, q: "In cricket superstition, which score is considered unlucky and called \"Nelson\"?", o: ["111", "99", "87", "13"] },
+        { l: 4, q: "Which Indian fast bowler made his Test debut in South Africa in January 2018?", o: ["Jasprit Bumrah", "Mohammed Siraj", "Navdeep Saini", "Shardul Thakur"] },
+        { l: 4, q: "Who scored the fastest Test fifty by an Indian, off 28 balls in 2022?", o: ["Rishabh Pant", "Kapil Dev", "Shardul Thakur", "Virender Sehwag"] },
+        // ----- Level 5 : Hall of Fame (Hardest) -----
+        { l: 5, q: "Who scored the first double century in Test cricket, in 1884 at The Oval?", o: ["Billy Murdoch", "WG Grace", "Bobby Abel", "Alfred Lyttelton"] },
+        { l: 5, q: "Who scored the first triple century in Test cricket, 325 in 1930?", o: ["Andy Sandham", "Wally Hammond", "Don Bradman", "Len Hutton"] },
+        { l: 5, q: "Which legendary all-rounder scored 365 not out in a Test against Pakistan in 1958?", o: ["Garry Sobers", "Frank Worrell", "Clive Lloyd", "Everton Weekes"] },
+        { l: 5, q: "Herschelle Gibbs hit six sixes in an over in the 2007 World Cup against which team?", o: ["Netherlands", "Ireland", "Bangladesh", "Scotland"] },
+        { l: 5, q: "Who scored the first double century in ODI history, men's or women's, an unbeaten 229 in 1997?", o: ["Belinda Clark", "Charlotte Edwards", "Mithali Raj", "Meg Lanning"] },
+        { l: 5, q: "Who was the first batter to score 10,000 Test runs?", o: ["Sunil Gavaskar", "Allan Border", "Sachin Tendulkar", "Viv Richards"] },
+        { l: 5, q: "Who captained India in their first-ever ODI, in 1974?", o: ["Ajit Wadekar", "Bishan Singh Bedi", "Mansur Ali Khan Pataudi", "Sunil Gavaskar"] },
+        { l: 5, q: "Against which team did Sunil Gavaskar famously score 36 not out in 60 overs in the 1975 World Cup?", o: ["England", "West Indies", "Australia", "Pakistan"] },
+        { l: 5, q: "Which team won the very first Ranji Trophy in 1934-35?", o: ["Bombay", "Madras", "Northern India", "Bengal"] },
+        { l: 5, q: "The Irani Cup is played between the Ranji Trophy champions and which team?", o: ["Rest of India", "India A", "Board President's XI", "Duleep Trophy winners"] },
+        { l: 5, q: "After which cricketer is India's Duleep Trophy named?", o: ["Duleepsinhji", "Ranjitsinhji", "CK Nayudu", "Vijay Merchant"] },
+        { l: 5, q: "Ravi Shastri hit six sixes in a Ranji Trophy over in 1985 off which bowler?", o: ["Tilak Raj", "Rajinder Goel", "Padmakar Shivalkar", "Karsan Ghavri"] },
+        { l: 5, q: "Who scored 443 not out, the highest individual score in the Ranji Trophy?", o: ["BB Nimbalkar", "Vijay Hazare", "Vinoo Mankad", "CK Nayudu"] },
+        { l: 5, q: "The \"Timeless Test\" of 1939 in Durban was abandoned as a draw after how many days of play?", o: ["10", "8", "12", "7"] },
+        { l: 5, q: "The first tied Test in history, in 1960, was played between West Indies and which team?", o: ["Australia", "England", "India", "Pakistan"] },
+        { l: 5, q: "India's tied Test of 1986, in which Dean Jones scored 210, was played in which city?", o: ["Chennai", "Mumbai", "Kolkata", "Bengaluru"] },
+        { l: 5, q: "Who was the Player of the Tournament in the 1992 World Cup?", o: ["Martin Crowe", "Imran Khan", "Javed Miandad", "Wasim Akram"] },
+        { l: 5, q: "Who was the Player of the Tournament in the 1996 World Cup?", o: ["Sanath Jayasuriya", "Aravinda de Silva", "Sachin Tendulkar", "Mark Waugh"] },
+        { l: 5, q: "Who won the Orange Cap in the first IPL season in 2008?", o: ["Shaun Marsh", "Matthew Hayden", "Gautam Gambhir", "Sachin Tendulkar"] },
+        { l: 5, q: "Who won the Purple Cap in the first IPL season in 2008?", o: ["Sohail Tanvir", "Shane Warne", "Zaheer Khan", "Pragyan Ojha"] },
+        { l: 5, q: "Who scored the first Test century by an Indian, in 1933?", o: ["Lala Amarnath", "CK Nayudu", "Vijay Merchant", "Vinoo Mankad"] },
+        { l: 5, q: "India's first-ever Test victory, in 1952 in Madras, came against which team?", o: ["England", "Pakistan", "Australia", "New Zealand"] },
+        { l: 5, q: "Which two teams played the first-ever One Day International, in 1971?", o: ["Australia and England", "India and England", "West Indies and England", "Australia and New Zealand"] },
+        { l: 5, q: "Which two teams played the first-ever men's T20 International, in 2005?", o: ["Australia and New Zealand", "England and Australia", "South Africa and England", "India and Pakistan"] },
+        { l: 5, q: "Brendon McCullum scored the fastest Test century, off just 54 balls, against which team?", o: ["Australia", "England", "India", "Pakistan"] },
+        { l: 5, q: "Which Indian bowler took 434 Test wickets and held the world record when he retired?", o: ["Kapil Dev", "Anil Kumble", "Bishan Singh Bedi", "Erapalli Prasanna"] },
+        { l: 5, q: "Who was the first bowler to take 400 Test wickets?", o: ["Richard Hadlee", "Kapil Dev", "Dennis Lillee", "Ian Botham"] },
+        { l: 5, q: "Brian Lara's 501 not out broke whose first-class record of 499?", o: ["Hanif Mohammad", "Don Bradman", "Bill Ponsford", "BB Nimbalkar"] },
+        { l: 5, q: "Who was the first batter to score five consecutive Test centuries, in 1948?", o: ["Everton Weekes", "Don Bradman", "Clyde Walcott", "Frank Worrell"] },
+        { l: 5, q: "Who returned figures of 10 for 10, the best ever in first-class cricket, in 1932?", o: ["Hedley Verity", "Jim Laker", "Wilfred Rhodes", "Tich Freeman"] },
+        { l: 5, q: "Who is the oldest man to play Test cricket, at 52?", o: ["Wilfred Rhodes", "WG Grace", "Bert Ironmonger", "Jack Hobbs"] },
+        { l: 5, q: "Who scored the most centuries in first-class cricket?", o: ["Jack Hobbs", "Don Bradman", "Patsy Hendren", "Wally Hammond"] },
+        { l: 5, q: "Which 19th-century English cricketer, a doctor by profession, was known as \"The Champion\"?", o: ["WG Grace", "Jack Hobbs", "Fred Spofforth", "Ranjitsinhji"] },
+        { l: 5, q: "Who scored India's first ODI century, 175 not out in 1983?", o: ["Kapil Dev", "Sunil Gavaskar", "Krishnamachari Srikkanth", "Sandeep Patil"] },
+        { l: 5, q: "At which ground did Kapil Dev score 175 not out against Zimbabwe in 1983?", o: ["Tunbridge Wells", "Lord's", "Old Trafford", "Chelmsford"] },
+        { l: 5, q: "Who took the first hat-trick in ODI history, in 1982?", o: ["Jalaluddin", "Bruce Reid", "Chetan Sharma", "Wasim Akram"] },
+        { l: 5, q: "Who scored India's fastest ODI fifty, off 21 balls, in 2000?", o: ["Ajit Agarkar", "Virender Sehwag", "Yuvraj Singh", "Kapil Dev"] },
+        { l: 5, q: "Which Indian scored centuries in three consecutive Lord's Tests (1979, 1982, 1986)?", o: ["Dilip Vengsarkar", "Sunil Gavaskar", "Gundappa Viswanath", "Ravi Shastri"] },
+        { l: 5, q: "Rohit Sharma scored 177 on Test debut in 2013 against which team?", o: ["West Indies", "Australia", "England", "South Africa"] },
+        { l: 5, q: "Who scored a world-record 260 on first-class debut in the 1994 Ranji Trophy?", o: ["Amol Muzumdar", "Wasim Jaffer", "Sachin Tendulkar", "Vinod Kambli"] },
+        { l: 5, q: "How many consecutive Ranji Trophy titles did Bombay win from 1958-59?", o: ["15", "10", "8", "12"] },
+        { l: 5, q: "Ranjitsinhji was the Jam Sahib (ruler) of which princely state?", o: ["Nawanagar", "Patiala", "Baroda", "Gwalior"] },
+        { l: 5, q: "Who was India's first Test captain after independence, on the 1947-48 tour of Australia?", o: ["Lala Amarnath", "Vijay Hazare", "Vijay Merchant", "CK Nayudu"] },
+        { l: 5, q: "Which Indian took 16 wickets on Test debut against West Indies in 1988?", o: ["Narendra Hirwani", "Maninder Singh", "Arshad Ayub", "Venkatapathy Raju"] },
+        { l: 5, q: "Who scored 774 runs in his debut Test series in the West Indies in 1971?", o: ["Sunil Gavaskar", "Gundappa Viswanath", "Dilip Sardesai", "Ajit Wadekar"] },
+        { l: 5, q: "Who was the first Indian to score a Test century outside India, in 1936 at Old Trafford?", o: ["Mushtaq Ali", "Vijay Merchant", "Lala Amarnath", "CK Nayudu"] },
+        { l: 5, q: "Which Sri Lankan took 8 for 19, the best figures in ODI history, in 2001?", o: ["Chaminda Vaas", "Muttiah Muralitharan", "Lasith Malinga", "Ajantha Mendis"] },
+        { l: 5, q: "Who returned 6 for 4, the best ODI figures by an Indian, against Bangladesh in 2014?", o: ["Stuart Binny", "Anil Kumble", "Ashish Nehra", "Kuldeep Yadav"] },
+        { l: 5, q: "The lowest ODI total of 35 has been made by Zimbabwe and which other team?", o: ["USA", "Canada", "Netherlands", "Nepal"] },
+        { l: 5, q: "Who bowled the very first ball in IPL history, in 2008?", o: ["Praveen Kumar", "Zaheer Khan", "Ishant Sharma", "Ashok Dinda"] },
+        { l: 5, q: "Who took the first hat-trick in IPL history, in 2008?", o: ["Lakshmipathy Balaji", "Amit Mishra", "Makhaya Ntini", "Rohit Sharma"] },
+        { l: 5, q: "Who was the Player of the Tournament in the first IPL season in 2008?", o: ["Shane Watson", "Shaun Marsh", "Sohail Tanvir", "Shane Warne"] },
+        { l: 5, q: "In 2015, Yuvraj Singh became the costliest IPL buy at ₹16 crore. Which team bought him?", o: ["Delhi Daredevils", "Royal Challengers Bangalore", "Sunrisers Hyderabad", "Kings XI Punjab"] },
+        { l: 5, q: "Which umpire no-balled Muttiah Muralitharan for throwing at the MCG in 1995?", o: ["Darrell Hair", "Ross Emerson", "Steve Bucknor", "David Shepherd"] },
+        { l: 5, q: "Who was the first Indian to be President of the ICC?", o: ["Jagmohan Dalmiya", "Sharad Pawar", "N. Srinivasan", "Shashank Manohar"] },
+        { l: 5, q: "Which English fast bowler of the 1950s was nicknamed \"Typhoon\"?", o: ["Frank Tyson", "Fred Trueman", "Brian Statham", "Alec Bedser"] },
+        { l: 5, q: "Which English fast bowler bowled \"Bodyline\" for Douglas Jardine in 1932-33?", o: ["Harold Larwood", "Bill Voce", "Gubby Allen", "Hedley Verity"] },
+        { l: 5, q: "Who scored 138 not out in the 1979 World Cup final?", o: ["Viv Richards", "Gordon Greenidge", "Collis King", "Clive Lloyd"] },
+        { l: 5, q: "Who scored 270 at Rawalpindi in 2004 to clinch India's first Test series win in Pakistan?", o: ["Rahul Dravid", "Virender Sehwag", "Sachin Tendulkar", "VVS Laxman"] },
+        { l: 5, q: "Kapil Dev's best Test figures of 9 for 83 came against which team in 1983?", o: ["West Indies", "Pakistan", "England", "Australia"] },
+        { l: 5, q: "In which country was the first Asia Cup held, in 1984?", o: ["UAE", "Sri Lanka", "India", "Pakistan"] },
+        { l: 5, q: "Which team did Vidarbha beat in the 2024-25 Ranji Trophy final, that team's first-ever final?", o: ["Kerala", "Gujarat", "Haryana", "Andhra"] },
+        { l: 5, q: "The Basil D'Oliveira Trophy is contested between England and which team?", o: ["South Africa", "Australia", "West Indies", "Sri Lanka"] },
+        { l: 5, q: "Shafali Verma captained India to the first Under-19 Women's T20 World Cup title in which year?", o: ["2023", "2021", "2022", "2024"] },
+        { l: 5, q: "Who was Player of the Match in the 2010 T20 World Cup final?", o: ["Craig Kieswetter", "Kevin Pietersen", "Paul Collingwood", "Ryan Sidebottom"] },
+        { l: 5, q: "Who took 8 for 55 in an innings to set up India's first Test win, at Madras in 1952?", o: ["Vinoo Mankad", "Ghulam Ahmed", "Subhash Gupte", "Lala Amarnath"] },
+        { l: 5, q: "The Cooch Behar Trophy is a domestic competition for which age group?", o: ["Under-19", "Under-16", "Under-23", "Under-25"] },
+        { l: 5, q: "Who hit a 36-ball ODI century in 2014, then the fastest ever?", o: ["Corey Anderson", "AB de Villiers", "Shahid Afridi", "Glenn Maxwell"] }
+    ];
+
+    /* =====================================================================
+       SETTINGS
+       ===================================================================== */
+    const TOTAL = 15;
+    const SUSPENSE_FROM = 10;     // question number from which every answer gets the suspense
+    const SUSPENSE_MS = 8000;     // length of suspense (matches kbc10.mp3)
+    const HELP_LAST_Q = 7;        // audience poll & friend vanish from question 8
+    const TIER_NAMES = ["Net Practice", "Club Cricket", "Domestic Pro", "International", "Hall of Fame"];
+    // How likely the audience / friend point to the right answer, by question number (1..7)
+    const audienceTrust = n => Math.max(0.4, 0.92 - 0.08 * (n - 1));   // 92% → 44%
+    const friendTrust   = n => Math.max(0.35, 0.85 - 0.08 * (n - 1));  // 85% → 37%
+    const timeFor = n => n <= 5 ? 30 : n <= 10 ? 45 : 60;
+
+    /* =====================================================================
+       AUDIO
+       kbc1 intro · kbc2 at Q5 · kbc3 at Q10 · kbc4 win · kbc5 50:50
+       kbc6 audience · kbc7 friend · kbc8/kbc9 wrong · kbc10 suspense
+       ===================================================================== */
+    const SND = {};
+    for (let i = 1; i <= 10; i++) {
+        const a = new Audio(); a.preload = 'auto'; a.src = 'kbc' + i + '.mp3';
+        SND['kbc' + i] = a;
+    }
+    let current = null, actx = null;
+    let muted = false;
+    try { muted = localStorage.getItem('cricketMuted') === '1'; } catch (e) {}
+
+    function play(name) {
+        stopAudio();
+        const a = SND[name];
+        if (muted || !a) return Promise.resolve(false);
+        a.currentTime = 0; current = a;
+        const p = a.play();
+        return p ? p.then(() => true).catch(() => false) : Promise.resolve(true);
+    }
+    function stopAudio() { if (current) { current.pause(); current = null; } stopHeartbeat(); }
+    function ensureCtx() {
+        try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {}
+    }
+    function tone(freq, dur, vol, type = 'sine', endFreq) {
+        if (muted || !actx) return;
+        try {
+            const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+            o.type = type; o.frequency.setValueAtTime(freq, t);
+            if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+            g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+        } catch (e) {}
+    }
+    // Fallback suspense sound if kbc10.mp3 is missing: a heartbeat that speeds up
+    let hbTimer = null;
+    function heartbeat(ms) {
+        stopHeartbeat();
+        const end = Date.now() + ms;
+        const beat = () => {
+            const left = end - Date.now();
+            if (left <= 0) return;
+            tone(60, .18, .5, 'sine', 40);
+            setTimeout(() => tone(55, .15, .35, 'sine', 38), 160);
+            hbTimer = setTimeout(beat, 400 + 500 * (left / ms));
+        };
+        beat();
+    }
+    function stopHeartbeat() { clearTimeout(hbTimer); hbTimer = null; }
+    const clickSfx = () => tone(700, .06, .08, 'triangle');
+
+    /* =====================================================================
+       STATE
+       ===================================================================== */
+    const $ = id => document.getElementById(id);
+    const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    let G = null;               // game state
+    let timerId = null;
+
+    function prepare(item) {     // shuffle options, remember where the correct one landed
+        const order = shuffle([0, 1, 2, 3]);
+        return { q: item.q, l: item.l, opts: order.map(i => item.o[i]), a: order.indexOf(0) };
+    }
+
+    function newGame() {
+        const qs = [], spare = {};
+        for (let l = 1; l <= 5; l++) {
+            const pool = shuffle(BANK.filter(b => b.l === l));
+            qs.push(...pool.slice(0, 3).map(prepare));
+            spare[l] = pool.slice(3);
+        }
+        G = { qs, spare, idx: 0, sel: -1, locked: false, hidden: [], paused: false, over: false,
+              life: { f50: true, flip: true, aud: true, friend: true } };
+    }
+
+    /* =====================================================================
+       RENDER
+       ===================================================================== */
+    const KEYS = ['A', 'B', 'C', 'D'];
+    function buildLadder() {
+        const lad = $('ladder'); lad.innerHTML = '';
+        for (let i = 1; i <= TOTAL; i++) {
+            const r = document.createElement('div');
+            r.className = 'rung' + (i % 5 === 0 ? ' mile' : '');
+            r.textContent = i; lad.appendChild(r);
+        }
+    }
+    function updateLadder() {
+        [...$('ladder').children].forEach((r, i) => {
+            r.classList.toggle('done', i < G.idx);
+            r.classList.toggle('now', i === G.idx && !G.over);
+        });
+    }
+
+    function renderQuestion(animate = true) {
+        const q = G.qs[G.idx], n = G.idx + 1;
+        $('qCount').textContent = `Question ${n}/${TOTAL}`;
+        $('tier').textContent = TIER_NAMES[q.l - 1];
+        const qe = $('question');
+        qe.textContent = q.q;
+        if (animate) { qe.parentElement.classList.remove('enter'); void qe.offsetWidth; qe.parentElement.classList.add('enter'); }
+
+        const box = $('options'); box.innerHTML = '';
+        q.opts.forEach((t, i) => {
+            const b = document.createElement('button');
+            b.className = 'opt lozenge' + (animate ? ' stagger' : '');
+            if (animate) b.style.animationDelay = (0.15 + i * 0.12) + 's';
+            b.innerHTML = `<span class="in lozenge"><span class="key">${KEYS[i]}:</span><span></span></span>`;
+            b.querySelector('.in span:last-child').textContent = t;
+            b.onclick = () => select(i);
+            box.appendChild(b);
+        });
+        G.sel = -1; G.hidden = [];
+        $('lockBtn').classList.remove('show');
+    }
+
+    function renderLifelines() {
+        const late = G.idx + 1 > HELP_LAST_Q;
+        const set = (id, key, vanish) => {
+            const b = $(id);
+            b.classList.toggle('used', !G.life[key]);
+            b.classList.toggle('gone', !!vanish);
+            b.disabled = !G.life[key] || G.locked || !!vanish;
+        };
+        set('life50', 'f50');
+        set('lifeFlip', 'flip', false);
+        $('lifeFlip').disabled = $('lifeFlip').disabled || !G.spare[G.qs[G.idx].l].length;
+        set('lifeAud', 'aud', late);
+        set('lifeFriend', 'friend', late);
+        $('lifeNote').textContent = late ? 'Fan Poll and Friend are not available from Q8' : '';
+    }
+
+    /* =====================================================================
+       TIMER
+       ===================================================================== */
+    const CIRC = 2 * Math.PI * 23;
+    function startTimer(sec) {
+        clearInterval(timerId);
+        G.timeLeft = sec; G.timeMax = sec; drawTimer();
+        timerId = setInterval(() => {
+            if (G.paused) return;
+            G.timeLeft--; drawTimer();
+            if (G.timeLeft <= 5 && G.timeLeft > 0) tone(880, .05, .06, 'square');
+            if (G.timeLeft <= 0) { clearInterval(timerId); timeUp(); }
+        }, 1000);
+    }
+    function drawTimer() {
+        $('timerNum').textContent = G.timeLeft;
+        $('timerBar').style.strokeDashoffset = CIRC * (1 - G.timeLeft / G.timeMax);
+        $('timer').classList.toggle('low', G.timeLeft <= 10);
+        $('timer').classList.toggle('paused', G.paused);
+    }
+    function pause(on) { G.paused = on; drawTimer(); }
+
+    /* =====================================================================
+       FLOW
+       ===================================================================== */
+    let firstStart = true;
+    function startGame() {
+        ensureCtx();
+        // If autoplay was blocked and the intro music never started, start it with the game
+        if (firstStart && (!current || current.paused)) play('kbc1');
+        firstStart = false;
+        newGame();
+        $('intro').classList.add('hide');
+        $('endScreen').classList.add('hide');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const n = G.idx + 1;
+        G.locked = false;
+        renderQuestion(true);
+        renderLifelines();
+        updateLadder();
+        if (n === 5) { play('kbc2'); toast('🌟 Question 5', 'First milestone — now the real test begins!'); }
+        if (n === 10) { play('kbc3'); toast('🔥 Question 10', 'Now every answer comes with suspense!'); }
+        if (n === HELP_LAST_Q + 1) toast('⚠️ Fan Poll and Friend are gone', 'Now it is only your cricket knowledge!');
+        startTimer(timeFor(n));
+    }
+
+    function select(i) {
+        if (G.locked || G.over || G.hidden.includes(i)) return;
+        clickSfx();
+        G.sel = i;
+        [...$('options').children].forEach((b, j) => b.classList.toggle('sel', j === i));
+        $('lockBtn').classList.add('show');
+    }
+
+    function lockAnswer() {
+        if (G.sel < 0 || G.locked) return;
+        G.locked = true;
+        clearInterval(timerId);
+        $('lockBtn').classList.remove('show');
+        const btns = [...$('options').children];
+        btns.forEach(b => b.disabled = true);
+        btns[G.sel].classList.remove('sel');
+        btns[G.sel].classList.add('locked');
+        renderLifelines();
+        tone(300, .25, .15, 'sawtooth', 600);
+
+        if (G.idx + 1 >= SUSPENSE_FROM) runSuspense(reveal);
+        else setTimeout(reveal, 1600);
+    }
+
+    function runSuspense(done) {
+        const card = $('card'), bar = $('sBar');
+        card.classList.add('suspense');
+        bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
+        void bar.offsetWidth;
+        bar.style.transition = `transform ${SUSPENSE_MS}ms linear`; bar.style.transform = 'scaleX(0)';
+        play('kbc10').then(ok => { if (!ok && !muted) heartbeat(SUSPENSE_MS); });
+        setTimeout(() => card.classList.add('shake-screen'), SUSPENSE_MS - 1500);
+        setTimeout(() => {
+            card.classList.remove('suspense', 'shake-screen');
+            stopAudio();
+            done();
+        }, SUSPENSE_MS);
+    }
+
+    function reveal() {
+        const q = G.qs[G.idx], btns = [...$('options').children];
+        btns[G.sel].classList.remove('locked');
+        if (G.sel === q.a) {
+            btns[q.a].classList.add('correct');
+            tone(660, .12, .15, 'triangle'); setTimeout(() => tone(990, .25, .15, 'triangle'), 120);
+            setTimeout(() => {
+                G.idx++;
+                if (G.idx >= TOTAL) win(); else loadQuestion();
+            }, 2000);
+        } else {
+            btns[G.sel].classList.add('wrong');
+            setTimeout(() => btns[q.a].classList.add('correct'), 500);
+            lose(false);
+        }
+    }
+
+    function timeUp() {
+        if (G.locked || G.over) return;
+        G.locked = true;
+        const q = G.qs[G.idx], btns = [...$('options').children];
+        btns.forEach(b => b.disabled = true);
+        btns[q.a].classList.add('correct');
+        $('lockBtn').classList.remove('show');
+        lose(true);
+    }
+
+    function lose(timeout) {
+        G.over = true;
+        play(Math.random() < 0.5 ? 'kbc8' : 'kbc9');
+        try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+        const q = G.qs[G.idx], n = G.idx + 1, right = G.idx;
+        const mile = right >= 10 ? 'You crossed the second milestone (10)' : right >= 5 ? 'You crossed the first milestone (5)' : 'No milestone crossed';
+        setTimeout(() => {
+            showEnd('😔', timeout ? 'Time is up!' : 'Wrong answer!',
+                `You reached question <b>${n}</b> — <b>${right}/${TOTAL}</b> correct<br>${mile}<br><br>The right answer was: <b>${escapeHtml(q.opts[q.a])}</b>`);
+        }, 2800);
+    }
+
+    function win() {
+        G.over = true;
+        updateLadder();
+        play('kbc4');
+        showEnd('🏆', 'You are a Cricket Legend!', `Incredible! You answered all <b>15</b> questions correctly.<br>Your cricket knowledge is truly Hall of Fame class. 🏏`);
+        confetti();
+    }
+
+    function showEnd(icon, title, html) {
+        clearInterval(timerId);
+        $('endIcon').textContent = icon;
+        $('endTitle').textContent = title;
+        $('endText').innerHTML = html;
+        $('endScreen').classList.remove('hide');
+    }
+
+    /* =====================================================================
+       LIFELINES
+       ===================================================================== */
+    const visibleOpts = () => [0, 1, 2, 3].filter(i => !G.hidden.includes(i));
+
+    function use5050() {
+        if (!G.life.f50 || G.locked) return;
+        G.life.f50 = false;
+        play('kbc5');
+        const q = G.qs[G.idx];
+        const remove = shuffle([0, 1, 2, 3].filter(i => i !== q.a)).slice(0, 2);
+        G.hidden = remove;
+        const btns = [...$('options').children];
+        remove.forEach(i => { btns[i].classList.add('hidden'); btns[i].classList.remove('sel'); });
+        if (remove.includes(G.sel)) { G.sel = -1; $('lockBtn').classList.remove('show'); }
+        renderLifelines();
+    }
+
+    function useFlip() {
+        const lvl = G.qs[G.idx].l;
+        if (!G.life.flip || G.locked || !G.spare[lvl].length) return;
+        G.life.flip = false;
+        tone(400, .3, .12, 'sine', 900);
+        G.qs[G.idx] = prepare(G.spare[lvl].shift());
+        renderQuestion(true);
+        renderLifelines();
+        startTimer(timeFor(G.idx + 1));
+    }
+
+    function useAudience() {
+        const n = G.idx + 1;
+        if (!G.life.aud || G.locked || n > HELP_LAST_Q) return;
+        G.life.aud = false;
+        renderLifelines();
+        pause(true);
+        play('kbc6');
+        const q = G.qs[G.idx], vis = visibleOpts();
+        const leader = Math.random() < audienceTrust(n) ? q.a : pick(vis.filter(i => i !== q.a));
+        const shares = {};
+        const lead = vis.length === 2 ? 55 + Math.floor(Math.random() * 25) : 45 + Math.floor(Math.random() * 20);
+        shares[leader] = lead;
+        const others = vis.filter(i => i !== leader);
+        const w = others.map(() => Math.random() + 0.3), ws = w.reduce((s, x) => s + x, 0);
+        let used = lead;
+        others.forEach((i, k) => { shares[i] = Math.floor((100 - lead) * w[k] / ws); used += shares[i]; });
+        shares[leader] += 100 - used;
+
+        openModal(`<h3>📊 Fan Poll</h3>
+            <div style="font-size:13px;color:var(--muted)" id="pollStatus" class="dots">The crowd is voting</div>
+            <div class="poll">${[0,1,2,3].map(i => `<div class="col" style="${G.hidden.includes(i) ? 'opacity:.2' : ''}">
+                <div class="pct" id="pct${i}"></div><div class="bar" id="bar${i}"></div><div class="lbl">${KEYS[i]}</div></div>`).join('')}</div>
+            <button class="ok" id="modalOk" disabled>OK</button>`);
+        setTimeout(() => {
+            $('pollStatus').classList.remove('dots');
+            $('pollStatus').textContent = 'The crowd says:';
+            vis.forEach(i => { $('bar' + i).style.height = shares[i] + '%'; countUp($('pct' + i), shares[i]); });
+            $('modalOk').disabled = false;
+        }, 2200);
+    }
+
+    function useFriend() {
+        const n = G.idx + 1;
+        if (!G.life.friend || G.locked || n > HELP_LAST_Q) return;
+        G.life.friend = false;
+        renderLifelines();
+        pause(true);
+        play('kbc7');
+        const q = G.qs[G.idx], vis = visibleOpts();
+        const ans = Math.random() < friendTrust(n) ? q.a : pick(vis.filter(i => i !== q.a));
+        const other = pick(vis.filter(i => i !== ans));
+        const say = (i) => `<b style="color:var(--gold)">${KEYS[i]}: ${escapeHtml(q.opts[i])}</b>`;
+        const lines = [
+            `"I'm completely sure, the answer is ${say(ans)}."`,
+            `"I think ${say(ans)} is right... almost certain."`,
+            `"Hmm... tough one. I'd say ${say(ans)}, but it could be ${say(other)} too."`,
+            `"Not sure at all, but my gut says ${say(ans)}."`
+        ];
+        openModal(`<h3>📞 Phone a Friend</h3>
+            <div class="phone" id="phoneIcon">📱</div>
+            <div class="friend-msg" id="friendMsg"><span class="dots">Calling your friend</span></div>
+            <button class="ok" id="modalOk" disabled>Hang up</button>`);
+        setTimeout(() => { $('friendMsg').innerHTML = '<span class="dots">Your friend is thinking</span>'; }, 1500);
+        setTimeout(() => {
+            $('phoneIcon').style.animation = 'none';
+            $('friendMsg').innerHTML = pick(lines);
+            $('modalOk').disabled = false;
+        }, 3500);
+    }
+
+    function openModal(html) {
+        $('modal').innerHTML = html;
+        $('modalWrap').classList.remove('hide');
+        $('modalOk').onclick = closeModal;
+    }
+    function closeModal() {
+        $('modalWrap').classList.add('hide');
+        pause(false);
+    }
+
+    /* =====================================================================
+       EFFECTS
+       ===================================================================== */
+    let toastTimer = null;
+    function toast(title, sub) {
+        const t = $('toast');
+        t.innerHTML = `${title}<small>${sub}</small>`;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+    function countUp(el, to) {
+        const t0 = performance.now();
+        const step = (t) => { const p = Math.min(1, (t - t0) / 1600); el.textContent = Math.round(to * p) + '%'; if (p < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+    }
+    function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    function confetti() {
+        const cv = $('confetti'), cx = cv.getContext('2d');
+        cv.width = innerWidth; cv.height = innerHeight;
+        const colors = ['#c8ff5a', '#1fb6ff', '#ffffff', '#e0303f', '#2fbf4a'];
+        const parts = Array.from({ length: 160 }, () => ({
+            x: Math.random() * cv.width, y: -20 - Math.random() * cv.height,
+            vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, r: 4 + Math.random() * 5,
+            a: Math.random() * 6, va: (Math.random() - .5) * .3, c: pick(colors)
+        }));
+        const t0 = performance.now();
+        (function frame(t) {
+            cx.clearRect(0, 0, cv.width, cv.height);
+            parts.forEach(p => {
+                p.x += p.vx; p.y += p.vy; p.a += p.va;
+                cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.fillStyle = p.c; cx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); cx.restore();
+            });
+            if (t - t0 < 7000) requestAnimationFrame(frame); else cx.clearRect(0, 0, cv.width, cv.height);
+        })(t0);
+    }
+
+    function makeSparks() {
+        for (let i = 0; i < 18; i++) {
+            const s = document.createElement('div');
+            s.className = 'spark';
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.setProperty('--drift', (Math.random() * 80 - 40) + 'px');
+            s.style.animationDuration = (8 + Math.random() * 10) + 's';
+            s.style.animationDelay = (Math.random() * 10) + 's';
+            document.body.appendChild(s);
+        }
+    }
+
+    /* =====================================================================
+       WIRING
+       ===================================================================== */
+    function setMute(m) {
+        muted = m;
+        $('muteBtn').textContent = m ? '🔇' : '🔊';
+        try { localStorage.setItem('cricketMuted', m ? '1' : '0'); } catch (e) {}
+        if (m) stopAudio();
+    }
+
+    $('startBtn').onclick = startGame;
+    $('againBtn').onclick = startGame;
+    $('lockBtn').onclick = lockAnswer;
+    $('life50').onclick = use5050;
+    $('lifeFlip').onclick = useFlip;
+    $('lifeAud').onclick = useAudience;
+    $('lifeFriend').onclick = useFriend;
+    $('muteBtn').onclick = () => setMute(!muted);
+
+    document.addEventListener('keydown', e => {
+        if (!G || G.over || !$('modalWrap').classList.contains('hide')) return;
+        const k = e.key.toUpperCase();
+        const i = ['A', 'B', 'C', 'D'].indexOf(k) >= 0 ? ['A', 'B', 'C', 'D'].indexOf(k) : ['1', '2', '3', '4'].indexOf(k);
+        if (i >= 0) select(i);
+        if (e.key === 'Enter') lockAnswer();
+    });
+
+    // Welcome banner: play kbc1 right away; if the browser blocks autoplay, play on first tap
+    buildLadder();
+    makeSparks();
+    setMute(muted);
+    play('kbc1').then(ok => {
+        if (ok || muted) return;
+        $('tapHint').classList.remove('hide');
+        const unlock = (e) => {
+            $('tapHint').classList.add('hide');
+            ensureCtx();
+            if (e.target.closest('#startBtn')) return;   // start button handles itself
+            play('kbc1');
+        };
+        $('intro').addEventListener('pointerdown', unlock, { once: true });
+    });
+    </script>
+</body>
+</html>
