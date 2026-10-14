@@ -354,8 +354,10 @@ function playMilestone(n){
 const slowF     = () => performance.now() < slowUntil ? 1.7 : 1;
 const diff      = () => Math.min(1, hits / 90);
 const mult      = () => streak >= 20 ? 3 : streak >= 10 ? 2 : 1;
-const spawnDelay= () => Math.max(260, 900 - diff()*520 - Math.min(streak,25)*6) * slowF();
-const upTime    = () => Math.max(560, 1350 - diff()*620 - Math.min(streak,25)*10) * slowF();
+const HARD_SCORE = 12000, HARD_BOOST = 1.5;   // past this score everything runs 50% faster
+const hardF     = () => score >= HARD_SCORE ? HARD_BOOST : 1;
+const spawnDelay= () => Math.max(260, 900 - diff()*520 - Math.min(streak,25)*6) * slowF() / hardF();
+const upTime    = () => Math.max(560, 1350 - diff()*620 - Math.min(streak,25)*10) * slowF() / hardF();
 const maxActive = () => 1 + (hits >= 12 ? 1 : 0) + (hits >= 40 ? 1 : 0);
 
 function pickType(){

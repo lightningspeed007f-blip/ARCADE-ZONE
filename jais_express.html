@@ -654,7 +654,9 @@ function addPickup() {
    APPROACH_TIME = seconds an obstacle takes from the horizon to your auto at the start.
    Higher = more time to react. It gets shorter as you speed up. */
 const APPROACH_TIME = 1.9;
-function zRate() { return (0.9 / (APPROACH_TIME * 1000)) * Math.sqrt(Math.max(2.4, spd) / 3.2); }
+const HARD_SCORE = 35000, HARD_BOOST = 1.5;   // past this score traffic comes 50% faster and 50% more often
+function hardF() { return score >= HARD_SCORE ? HARD_BOOST : 1; }
+function zRate() { return (0.9 / (APPROACH_TIME * 1000)) * Math.sqrt(Math.max(2.4, spd) / 3.2) * hardF(); }
 function zPerMeter() { return zRate() / (Math.max(2.4, spd) * 0.009); }
 
 /* ---------- scoring events ---------- */
@@ -700,7 +702,7 @@ function update(dt) {
 
   // spawn
   const f = dt / 16.7;
-  if (Math.random() < (0.024 + (spd - 3.2) * 0.0018) * f) addObstacle();
+  if (Math.random() < (0.024 + (spd - 3.2) * 0.0018) * f * hardF()) addObstacle();
   if (Math.random() < 0.028 * f) addPickup();
 
   const adv = zRate() * dt;
