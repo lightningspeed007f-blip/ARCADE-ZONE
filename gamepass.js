@@ -27,6 +27,7 @@
   };
   var GAMES = {
     dharma: 'Dharma Quiz',
+    cricket: 'Cricket KBC',
     jais:   'Jais Express',
     panda:  'Tap The Panda'
   };
