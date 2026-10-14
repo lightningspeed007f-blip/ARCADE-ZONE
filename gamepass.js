@@ -8,7 +8,7 @@
    3. The player types the code. It works only once, only on that phone.
       Going back to the Game Zone ends the pass; the next player needs a new code.
 
-   Spin The Wheel has no entry code: staff type the one fixed SPIN_CODE
+   Spin The Wheel is unlocked differently: staff type the one fixed SPIN_CODE
    (below) on the player's phone, and each time it gives one spin.
 
    Jais Express and Tap The Panda (FIXED_GAMES below) use one fixed staff code
@@ -220,7 +220,7 @@
         '<div class="gz-lock">🔒</div>' +
         '<h2 id="gzTitle">' + GAMES[game].toUpperCase() + '</h2>' +
         (fixed
-          ? '<p>This game is locked. Pay at the counter and staff will type the code.</p>'
+          ? '<p>This game is locked. Pay धनराशि at the counter and staff will type the code.</p>'
           : '<p>This game is locked. Show this Player ID at the counter to get your code:</p>' +
             '<div class="gz-id" id="gzId"></div>') +
         '<input id="gzCode" type="tel" inputmode="numeric" maxlength="7" placeholder="------" autocomplete="off" aria-label="6-digit code">' +

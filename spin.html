@@ -433,7 +433,6 @@
     <span><i class="dot" style="background:var(--toffee)"></i>Toffee</span>
     <span><i class="dot" style="background:var(--stationery)"></i>Stationery</span>
     <span><i class="dot" style="background:var(--surprise)"></i>Surprise</span>
-    <span><i class="dot" style="background:var(--sorry)"></i>No prize</span>
     <button class="link-btn" id="oddsBtn">Prize chances</button>
   </div>
  
@@ -474,7 +473,7 @@
   <div class="card">
     <span class="icon">🎟️</span>
     <h2>GET SPINS</h2>
-    <p>Pay ₹<span class="price"></span> per spin at the counter. Staff will type the spin code here.</p>
+    <p>Pay <b>धनराशि</b> at the counter. Staff will type the spin code here.</p>
     <div class="dev-big" id="devBig">----</div>
     <input class="inp" id="codeInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Staff code">
     <p class="err" id="codeErr"></p>
@@ -518,7 +517,7 @@
  
       <section class="org-sec">
         <h3>🎟 Sell spins</h3>
-        <p class="hint">Take ₹<span class="price"></span> per spin, then type the staff spin code on the player's phone
+        <p class="hint">Take धनराशि for the spin, then type the staff spin code on the player's phone
           (tap GET SPINS). Same code every time, 1 spin each time. Staff code: <b id="orgSpinCode"></b></p>
         <div class="divider">Or add spins straight to this phone:</div>
         <div class="row">
@@ -567,7 +566,7 @@
 const CONFIG = {
   ORGANIZER_PIN: '241176',          // your organizer PIN
   SECRET: 'MKG-change-this-2026',    // any random words; makes claim codes impossible to guess
-  PRICE: 10,                         // ₹ per spin
+  PRICE: 10,                         // धनराशि per spin
   SPIN_CODE: window.GamePass ? GamePass.CONFIG.SPIN_CODE : '786110',  // set in gamepass.js; same code every spin
   START_TEDDY_STOCK: 3,
   START_POSTER_STOCK: 20,
@@ -578,12 +577,12 @@ const CONFIG = {
 /* Prize chances (weights add up to 100 = percent; decimals OK, e.g. teddy 0.01) */
 const SEGMENTS = [
   { type:'teddy',   label:'TEDDY',     emoji:'🧸',   color:'#e6394a', weight:0.01, sound:'teddy.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:15, sound:'sorry1.mp3' },
+  { type:'toffee1', label:'TOFFEE',    emoji:'🍬',   color:'#2b333d', weight:15, sound:'toffee2.mp3' },
   { type:'surprise', label:'SURPRISE', emoji:'🎁',   color:'#e84cc4', weight:17.99, sound:'toffee2.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#232a33', weight:15, sound:'sorry2.mp3' },
+  { type:'toffee1', label:'TOFFEE',    emoji:'🍬',   color:'#232a33', weight:15, sound:'toffee2.mp3' },
   { type:'poster',  label:'POSTER',    emoji:'🖼️',   color:'#6c4dff', weight:8,  sound:'poster.mp3' },
   { type:'toffee2', label:'2 TOFFEES', emoji:'🍬🍬', color:'#ff8c1a', weight:8,  sound:'toffee2.mp3' },
-  { type:'sorry',   label:'SORRY',     emoji:'❌',   color:'#2b333d', weight:14, sound:'sorry3.mp3' },
+  { type:'toffee1', label:'TOFFEE',    emoji:'🍬',   color:'#2b333d', weight:14, sound:'toffee2.mp3' },
   { type:'stationery', label:'STATIONERY', emoji:'✏️', color:'#1fb5a8', weight:22, sound:'toffee3.mp3' }
 ];
  
@@ -855,7 +854,7 @@ function updateUI(){
   } else {
     spinBtn.textContent = spinning ? 'SPINNING…' : 'GET SPINS';
     spinBtn.classList.add('need-code');
-    $('subStatus').textContent = spinning ? 'Good luck!' : `₹${CONFIG.PRICE} per spin. Pay at the counter to get your spin.`;
+    $('subStatus').textContent = spinning ? 'Good luck!' : 'धनराशि at the counter to get your spin.';
   }
   renderHistory();
 }
@@ -917,7 +916,7 @@ function renderOdds(){
   const total = SEGMENTS.reduce((a, s) => a + effWeight(s), 0);
   const groups = {};
   SEGMENTS.forEach(s => { groups[s.type] = (groups[s.type] || 0) + effWeight(s); });
-  $('oddsList').innerHTML = ['teddy', 'poster', 'toffee2', 'surprise', 'stationery', 'sorry'].map(t => {
+  $('oddsList').innerHTML = ['teddy', 'poster', 'toffee2', 'toffee1', 'surprise', 'stationery'].map(t => {
     const pct = groups[t] / total * 100;
     const shown = pct === 0 ? 'SOLD OUT' : (pct < 0.1 ? pct.toFixed(2) : pct < 2 ? pct.toFixed(1) : Math.round(pct)) + '%';
     return `<div class="stat"><span>${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]}</span><b>${shown}</b></div>`;
@@ -964,7 +963,7 @@ function renderOrg(){
   const toffees = org.given.toffee1 + org.given.toffee2 * 2;
   $('stats').innerHTML = `
     <div class="stat"><span>Spins sold</span><b>${org.spinsSold}</b></div>
-    <div class="stat"><span>Cash you should have</span><b>₹${org.spinsSold * CONFIG.PRICE}</b></div>
+    <div class="stat"><span>धनराशि you should have</span><b>${org.spinsSold * CONFIG.PRICE}</b></div>
     <div class="stat"><span>🧸 Teddies given</span><b>${org.given.teddy}</b></div>
     <div class="stat"><span>🖼️ Posters given</span><b>${org.given.poster}</b></div>
     <div class="stat"><span>🍬 Toffees given</span><b>${toffees}</b></div>
@@ -983,7 +982,7 @@ document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click',
   org.spinsSold += n;
   savePlayer(); saveOrg();
   renderWheel(); updateUI(); renderOrg(); bumpCredits();
-  $('addToast').textContent = `Added ${n} spin${n > 1 ? 's' : ''} to this phone (ID ${player.deviceId}). Collect ₹${n * CONFIG.PRICE}.`;
+  $('addToast').textContent = `Added ${n} spin${n > 1 ? 's' : ''} to this phone (ID ${player.deviceId}). Collect धनराशि.`;
   setTimeout(() => { $('addToast').textContent = ''; }, 4000);
 }));
  
