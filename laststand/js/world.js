@@ -68,6 +68,7 @@ export function createWorldContext() {
 }
 
 // ---------- facade (non-enterable) building ----------
+const AO_FADE = 1.3; // metres; matches AO_H in builder.js
 const cellUV = (i) => {
   const col = i % 4, row = Math.floor(i / 4), m = 0.003;
   return [col / 4 + m, 1 - (row + 1) / 4 + m, (col + 1) / 4 - m, 1 - row / 4 - m];
@@ -93,9 +94,17 @@ function faceBays(W, F, face, w, d, floors, pick, tint) {
     const wn = [n[0] * F.c + n[1] * F.s, 0, -n[0] * F.s + n[1] * F.c];
     const shadeK = face === 'front' ? 1 : 0.88;
     const col = [tint[0] * shadeK, tint[1] * shadeK, tint[2] * shadeK];
-    // slight darkening at street level (dust)
-    const colLow = f === 0 ? col.map((v) => v * 0.9) : col;
-    W.B.quad('facade', A0, B0, B1, A1, wn, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], [colLow, colLow, col, col], [F.x, F.z]);
+    if (f === 0) {
+      // street level: baked ambient occlusion + dust, fading out 1.3 m up (same curve as
+      // Builder.box). The bay is split there so the fade doesn't stretch over the storey.
+      const kh = AO_FADE / FH, vk = v0 + (v1 - v0) * kh;
+      const AK = [A0[0], A0[1] + AO_FADE, A0[2]], BK = [B0[0], B0[1] + AO_FADE, B0[2]];
+      const colLow = col.map((v) => v * 0.6);
+      W.B.quad('facade', A0, B0, BK, AK, wn, [[u0, v0], [u1, v0], [u1, vk], [u0, vk]], [colLow, colLow, col, col], [F.x, F.z]);
+      W.B.quad('facade', AK, BK, B1, A1, wn, [[u0, vk], [u1, vk], [u1, v1], [u0, v1]], col, [F.x, F.z]);
+      continue;
+    }
+    W.B.quad('facade', A0, B0, B1, A1, wn, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], col, [F.x, F.z]);
   }
 }
 
@@ -148,7 +157,7 @@ export function facadeBuilding(W, F, w, d, floors, o = {}) {
   if (r.chance(0.4)) W.props.dishes.push({ p: F.world(w / 2 - 0.6, H + 0.4, 0.8), yaw: F.yaw + Math.PI + (r() - 0.5) });
   if (floors >= 2 && r.chance(0.35)) {
     const mw = 2.6, md = 3;
-    F.box('plaster', -w / 2 + mw / 2 + 0.3, H + 1.25, d - md / 2 - 0.3, mw, 2.5, md, tint.map((v) => v * 0.9), { collide: false });
+    F.box('plaster', -w / 2 + mw / 2 + 0.3, H + 1.25, d - md / 2 - 0.3, mw, 2.5, md, tint.map((v) => v * 0.9), { collide: false, aoBase: F.y0 + H });
   }
   if (r.chance(0.2) && floors >= 2) { // rebar sticking up: unfinished next floor, very common
     for (let i = 0; i < 4; i++) F.box('plain', -w / 2 + 0.3 + i * (w - 0.6) / 3, H + 1.0, d - 0.3, 0.05, 2.0, 0.05, [0.3, 0.2, 0.15], { collide: false });

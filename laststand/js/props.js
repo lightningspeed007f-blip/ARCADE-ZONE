@@ -196,6 +196,24 @@ function parkedVehicles(W) {
   }
 }
 
+// ---------- soft contact shadows under parked things ----------
+// One instanced draw for the whole town: a dark, blurred rounded rectangle on the
+// ground under each car, auto, bus, cart, bike and cow, so they sit on the road.
+function contactShadows(scene, pr) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  x.filter = 'blur(7px)';
+  x.fillStyle = 'rgba(0,0,0,0.85)';
+  x.beginPath(); x.roundRect ? x.roundRect(12, 12, 40, 40, 10) : x.rect(12, 12, 40, 40); x.fill();
+  const t = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, color: 0xffffff, opacity: 0.8 });
+  const list = [];
+  const add = (arr, w, l) => { for (const it of arr) list.push({ p: it.p, yaw: it.yaw || 0, w, l }); };
+  add(pr.cars, 2.3, 4.6); add(pr.autos, 1.8, 3.1); add(pr.buses, 3.2, 11.5); add(pr.carts, 1.6, 2.7); add(pr.bikes, 0.8, 2.1); add(pr.cows, 1.1, 2.0);
+  // y 0.085: just above the highest road strip
+  return instanced(scene, new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, list, (s) => ({ x: s.p[0], y: 0.085, z: s.p[2], yaw: s.yaw, sv: [s.w, 1, s.l] }));
+}
+
 // ---------- build everything ----------
 export function buildProps(W, scene, mats, tex) {
   poleLines(W);
@@ -248,6 +266,7 @@ export function buildProps(W, scene, mats, tex) {
   instanced(scene, GEO.sleeper(), vc, pr.sleepers, (s) => ({ x: s[0], y: 0.05, z: s[1], yaw: Math.PI / 2 }));
   instanced(scene, GEO.barrier(), vc, pr.barriers, (b) => { P.add(b.p[0], 0.55, b.p[2], 0.15, 0.55, 0.15); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.0 }; });
   out.fans = instanced(scene, GEO.fan(), vc, W.fans, (f) => ({ x: f[0], y: f[1], z: f[2] }));
+  out.contact = contactShadows(scene, pr);
 
   // wires: one LineSegments for the whole town
   const wp = [], wc = [];
