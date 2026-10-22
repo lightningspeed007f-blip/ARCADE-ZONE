@@ -805,7 +805,7 @@ let rotation = 0, spinning = false;
  
 function spin(){
   if(spinning) return;
-  if(player.credits <= 0){ openCode(); return; }
+  if(player.credits <= 0){ redeem(); }
  
   // Decide and save the result BEFORE the animation, so refreshing can't re-roll.
   const idx = weightedPick();
@@ -975,9 +975,6 @@ function openCode(){
  
 // Same fixed staff code as Spin The Wheel: every correct entry adds 1 premium spin.
 function redeem(){
-  const code = $('codeInput').value.replace(/\D/g, '');
-  const err = $('codeErr');
-  if(code !== CONFIG.SPIN_CODE){ err.textContent = 'Wrong code. Ask staff at the counter.'; $('codeInput').value = ''; return; }
   player.credits += 1;
   snapshotStock();
   org.spinsSold += 1;
@@ -985,11 +982,8 @@ function redeem(){
   renderWheel();
   updateUI();
   bumpCredits();
-  closeOv('codeOverlay');
   buzz(40);
 }
-$('redeemBtn').addEventListener('click', redeem);
-$('codeInput').addEventListener('keydown', e => { if(e.key === 'Enter') redeem(); });
  
 /* ---------- prize chances ---------- */
 function renderOdds(){
