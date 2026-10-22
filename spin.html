@@ -23,6 +23,7 @@
     --poster:#6c4dff;
     --toffee:#f2a541;
     --toffee2:#ff8c1a;
+    --jhumka:#ff8c1a;
     --stationery:#1fb5a8;
     --surprise:#e84cc4;
     --sorry:#2b333d;
@@ -269,6 +270,7 @@
   .modal.win h2{ color:var(--lime); text-shadow:0 0 16px rgba(182,255,60,0.5); }
   .modal.poster h2{ color:#a996ff; text-shadow:0 0 16px rgba(108,77,255,0.6); }
   .modal.toffee h2{ color:var(--toffee); }
+  .modal.jhumka h2{ color:var(--jhumka); }
   .modal.stationery h2{ color:var(--stationery); }
   .modal.surprise h2{ color:var(--surprise); }
   .modal.lose h2{ color:var(--muted); }
@@ -431,6 +433,7 @@
     <span><i class="dot" style="background:var(--teddy)"></i>Teddy</span>
     <span><i class="dot" style="background:var(--poster)"></i>Poster</span>
     <span><i class="dot" style="background:var(--toffee)"></i>Toffee</span>
+    <span><i class="dot" style="background:var(--jhumka)"></i>Jhumka</span>
     <span><i class="dot" style="background:var(--stationery)"></i>Stationery</span>
     <span><i class="dot" style="background:var(--surprise)"></i>Surprise</span>
     <button class="link-btn" id="oddsBtn">Prize chances</button>
@@ -581,13 +584,13 @@ const SEGMENTS = [
   { type:'surprise', label:'SURPRISE', emoji:'🎁',   color:'#e84cc4', weight:17.99, sound:'toffee2.mp3' },
   { type:'toffee1', label:'TOFFEE',    emoji:'🍬',   color:'#232a33', weight:19, sound:'toffee2.mp3' },
   { type:'poster',  label:'POSTER',    emoji:'🖼️',   color:'#6c4dff', weight:8,  sound:'poster.mp3' },
-  { type:'toffee2', label:'2 TOFFEES', emoji:'🍬🍬', color:'#ff8c1a', weight:8,  sound:'toffee2.mp3' },
+  { type:'jhumka',  label:'JHUMKA',    emoji:'💎',   color:'#ff8c1a', weight:8,  sound:'toffee2.mp3' },
   { type:'toffee1', label:'TOFFEE',    emoji:'🍬',   color:'#2b333d', weight:17, sound:'toffee2.mp3' },
   { type:'stationery', label:'STATIONERY', emoji:'✏️', color:'#1fb5a8', weight:11, sound:'toffee3.mp3' }
 ];
  
-const PRIZE_NAMES = { teddy:'Teddy Bear', poster:'Poster', toffee2:'2 Toffees', toffee1:'1 Toffee', surprise:'Surprise Gift', stationery:'Stationery Kit', sorry:'No prize' };
-const PRIZE_EMOJI = { teddy:'🧸', poster:'🖼️', toffee2:'🍬', toffee1:'🍬', surprise:'🎁', stationery:'✏️', sorry:'❌' };
+const PRIZE_NAMES = { teddy:'Teddy Bear', poster:'Poster', jhumka:'Jhumka', toffee1:'1 Toffee', surprise:'Surprise Gift', stationery:'Stationery Kit', sorry:'No prize' };
+const PRIZE_EMOJI = { teddy:'🧸', poster:'🖼️', jhumka:'💎', toffee1:'🍬', surprise:'🎁', stationery:'✏️', sorry:'❌' };
 const SEG = 360 / SEGMENTS.length;
 const $ = id => document.getElementById(id);
  
@@ -623,7 +626,7 @@ savePlayer();
  
 function orgDefaults(){
   return { teddyStock:CONFIG.START_TEDDY_STOCK, posterStock:CONFIG.START_POSTER_STOCK, spinsSold:0,
-           issued:[], claims:{}, posterCount:0, posterLog:[], given:{ teddy:0, poster:0, toffee2:0, toffee1:0, surprise:0, stationery:0 } };
+           issued:[], claims:{}, posterCount:0, posterLog:[], given:{ teddy:0, poster:0, jhumka:0, toffee1:0, surprise:0, stationery:0 } };
 }
 let org = load(O_KEY, orgDefaults);
 const saveOrg = () => store(O_KEY, org);
@@ -808,7 +811,7 @@ function showResult(entry, fresh){
   const T = {
     teddy:   ['win',    '🧸', 'JACKPOT!',     'You won the Teddy Bear! Show this pass at the counter.', ['#e6394a','#ffcf3f','#b6ff3c','#ff7a1a']],
     poster:  ['poster', '🖼️', 'POSTER WIN!',  'You won a Poster! Show this pass at the counter to get your poster number.', ['#6c4dff','#a996ff','#ffcf3f']],
-    toffee2: ['toffee', '🍬', 'SWEET WIN!',   'You won 2 Toffees! Show this pass at the counter.', ['#f2a541','#ffcf3f']],
+    jhumka:  ['jhumka', '💎', 'JHUMKA WIN!',  'You won a Jhumka! Show this pass at the counter.', ['#ff8c1a','#ffcf3f']],
     toffee1: ['toffee', '🍬', 'SWEET!',       'You won 1 Toffee! Show this pass at the counter.', ['#f2a541','#ffcf3f']],
     surprise: ['surprise', '🎁', 'SURPRISE!',  'You won a Surprise Gift! Show this pass at the counter.', ['#e84cc4','#ffcf3f']],
     stationery: ['stationery', '✏️', 'STATIONERY WIN!', 'You won a Stationery Kit! Show this pass at the counter.', ['#1fb5a8','#ffcf3f']],
@@ -910,7 +913,7 @@ function renderOdds(){
   const total = SEGMENTS.reduce((a, s) => a + effWeight(s), 0);
   const groups = {};
   SEGMENTS.forEach(s => { groups[s.type] = (groups[s.type] || 0) + effWeight(s); });
-  $('oddsList').innerHTML = ['teddy', 'poster', 'toffee2', 'toffee1', 'surprise', 'stationery'].map(t => {
+  $('oddsList').innerHTML = ['teddy', 'poster', 'jhumka', 'toffee1', 'surprise', 'stationery'].map(t => {
     const pct = groups[t] / total * 100;
     const shown = pct === 0 ? 'SOLD OUT' : (pct < 0.1 ? pct.toFixed(2) : pct < 2 ? pct.toFixed(1) : Math.round(pct)) + '%';
     return `<div class="stat"><span>${PRIZE_EMOJI[t]} ${PRIZE_NAMES[t]}</span><b>${shown}</b></div>`;
@@ -954,13 +957,14 @@ function renderOrg(){
   $('orgSpinCode').textContent = CONFIG.SPIN_CODE;
   $('stTeddy').textContent = org.teddyStock;
   $('stPoster').textContent = org.posterStock;
-  const toffees = org.given.toffee1 + org.given.toffee2 * 2;
+  const toffees = org.given.toffee1 + (org.given.toffee2 || 0) * 2;
   $('stats').innerHTML = `
     <div class="stat"><span>Spins sold</span><b>${org.spinsSold}</b></div>
     <div class="stat"><span>धनराशि you should have</span><b>${org.spinsSold * CONFIG.PRICE}</b></div>
     <div class="stat"><span>🧸 Teddies given</span><b>${org.given.teddy}</b></div>
     <div class="stat"><span>🖼️ Posters given</span><b>${org.given.poster}</b></div>
     <div class="stat"><span>🍬 Toffees given</span><b>${toffees}</b></div>
+    <div class="stat"><span>💎 Jhumkas given</span><b>${org.given.jhumka || 0}</b></div>
     <div class="stat"><span>🎁 Surprise gifts given</span><b>${org.given.surprise || 0}</b></div>
     <div class="stat"><span>✏️ Stationery kits given</span><b>${org.given.stationery || 0}</b></div>`;
   $('posterLog').textContent = org.posterLog.length
@@ -991,7 +995,7 @@ $('verifyBtn').addEventListener('click', () => {
     return;
   }
   const hash = digits.slice(-4), spinNo = parseInt(digits.slice(0, -4), 10);
-  const type = ['teddy', 'poster', 'toffee2', 'toffee1', 'surprise', 'stationery'].find(tp => claimHash(dev, tp, spinNo) === hash);
+  const type = ['teddy', 'poster', 'jhumka', 'toffee1', 'surprise', 'stationery'].find(tp => claimHash(dev, tp, spinNo) === hash);
   if(!type){
     out.innerHTML = '<span class="big">❌ NOT VALID</span>This pass is fake or was typed wrong. Check the ID and code again.';
     return;
