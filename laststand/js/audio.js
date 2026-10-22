@@ -148,6 +148,14 @@ const R = {
     const debris = buf(len); for (let k = 0; k < 26; k++) { const s = env(hp(noise(0.03), 2500), 0.0005, 0.008); debris.set(s, Math.floor((0.15 + Math.random() * 1.3) * SR)); }
     return norm(mix(scale(thump, 1.2), body, scale(crack, 0.5), scale(env(debris, 0.01, 0.9), 0.25)), 0.98);
   },
+  // a lit bomb fuse (sutli): a hard spitting hiss full of tiny crackles; loops cleanly
+  fuse() {
+    const len = 1.5, a = hp(noise(len), 2600);
+    for (let i = 0; i < a.length; i++) a[i] *= 0.55 + 0.45 * Math.abs(Math.sin(i / SR * 2 * Math.PI * 6)) * (0.7 + 0.3 * rnd());
+    const cr = buf(len);
+    for (let k = 0; k < 90; k++) { const s = env(bp(noise(0.012), 2500 + Math.random() * 4000, 2), 0.0002, 0.003); const at = Math.floor(Math.random() * (len - 0.02) * SR); for (let i = 0; i < s.length; i++) cr[at + i] += s[i] * (0.4 + Math.random()); }
+    return norm(mix(scale(a, 0.6), cr), 0.75);
+  },
   // looping fire: low roar with random pops and crackles
   fire() {
     const len = 4, a = lp(lp(noise(len), 260), 400);
@@ -222,7 +230,7 @@ export class Audio {
     set('horn', R.horn); set('bell', R.bell); set('beep', () => R.beep(1200)); set('beepLow', () => R.beep(500, 0.2)); set('splash', R.splash);
     set('static', () => R.staticNoise(2.5));
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
-    set('rocket', R.rocket); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
+    set('rocket', R.rocket); set('fuse', R.fuse); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
     this._loadGunSounds();
     this._loadUserAudio();
   }

@@ -59,6 +59,12 @@ body.playing #hud { display: block; }
 #ammoNum { font-size: 26px; font-weight: 700; line-height: 1; }
 #ammoNum small { font-size: 15px; color: var(--muted); }
 #wName { font-size: 13px; color: #d8d8d8; font-family: 'Noto Sans Devanagari', sans-serif; }
+#bombHud { font-size: 13px; color: #e8c58a; font-weight: 700; margin-top: 2px; }
+#bombHud.none { opacity: .35; }
+body.touch #bombHud { display: none; }   /* phones: the BOMB button shows the count */
+#bombWarn { position: absolute; left: 50%; top: 31%; transform: translateX(-50%); padding: 4px 14px; border-radius: 6px; background: rgba(160,24,16,0.78); border: 1px solid rgba(255,190,120,0.7); color: #fff; font-weight: 700; font-size: 15px; letter-spacing: 1px; opacity: 0; pointer-events: none; white-space: nowrap; }
+#bombWarn.show { opacity: 1; animation: bombBlink .45s steps(2) infinite; }
+@keyframes bombBlink { 50% { background: rgba(230,70,20,0.85); } }
 
 #objective { position: absolute; left: calc(18px + env(safe-area-inset-left)); top: 14px; max-width: 46vw; opacity: 0; transition: opacity .6s; text-shadow: 0 1px 3px #000; }
 #objective.show { opacity: 1; }
@@ -131,6 +137,7 @@ body.playing.touch #touch { display: block; }
 #touch .tb.on { background: rgba(232,176,74,0.3); }
 #touch .tb.dim { opacity: .4; }
 #touch .tb small { display: block; font-size: 10px; opacity: .8; }
+#touch .tb:has(small) { flex-direction: column; }
 [data-act=fire] { right: calc(26px + env(safe-area-inset-right)); bottom: 70px; }
 [data-act=aim] { right: calc(116px + env(safe-area-inset-right)); bottom: 40px; }
 [data-act=reload] { right: calc(124px + env(safe-area-inset-right)); bottom: 108px; }
@@ -140,6 +147,7 @@ body.playing.touch #touch { display: block; }
 [data-act=swap] { right: calc(70px + env(safe-area-inset-right)); top: 8px; }
 [data-act=eat] { left: calc(22px + env(safe-area-inset-left)); top: 76px; }
 [data-act=torch] { left: calc(22px + env(safe-area-inset-left)); top: 136px; }
+[data-act=bomb] { right: calc(186px + env(safe-area-inset-right)); bottom: 92px; border-color: rgba(232,150,74,0.55); }
 /* jeep: DRIVE appears beside the jeep; pedals and steering replace the on-foot buttons while driving */
 #touch .tb.drv, #touch [data-act=drive] { display: none; }
 body.driving #touch .tb.foot { display: none; }
@@ -232,7 +240,8 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <div id="feed"></div>
   <div id="hp"><div class="row"><span id="hpNum">100</span><small>HEALTH</small></div><div class="bar"><div id="hpFill"></div></div><div id="stamWrap"><div id="stam"></div></div></div>
   <div id="lowhp"></div>
-  <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div></div>
+  <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div><div id="bombHud">💣 बम ×<span id="bombNum">1</span></div></div>
+  <div id="bombWarn">⚠ बम! भागो · BOMB — GET CLEAR</div>
   <div id="bossHud"><div id="bossName"></div><div class="bar"><div id="bossTrail"></div><div id="bossFill"></div></div></div>
   <div id="banner"></div>
   <div id="flash"></div>
@@ -250,6 +259,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <button class="tb foot" data-act="crouch">CROUCH</button>
   <button class="tb foot" data-act="sprint">RUN</button>
   <button class="tb foot" data-act="swap">SWAP</button>
+  <button class="tb foot" data-act="bomb" id="btnBomb">BOMB<small id="bombCount">1</small></button>
   <button class="tb" data-act="eat" id="btnEat">EAT<small id="foodCount">0</small></button>
   <button class="tb foot" data-act="torch" id="torchBtn">TORCH</button>
   <button class="tb" data-act="drive"><span class="i">DRIVE</span><span class="o">EXIT</span></button>
@@ -313,6 +323,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li>Right side — drag to look around.</li>
       <li>FIRE — hold to shoot; drag on it to aim while firing.</li>
       <li>AIM · RELOAD · USE · CROUCH · RUN · SWAP</li>
+      <li>BOMB — light and throw a desi bomb where you are looking (aim up to throw further).</li>
       <li>EAT — eats food from your bag (the only way to heal).</li>
       <li>TORCH — flashlight (people can see you from further away).</li>
       <li>DRIVE — appears next to the jeep. Then ◀ ▶ steer, GAS, BRAKE (hold to reverse), EXIT. The left stick also drives.</li>
@@ -325,6 +336,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li><kbd>Shift</kbd> sprint · <kbd>C</kbd> crouch</li>
       <li><kbd>F</kbd> torch · <kbd>H</kbd> eat · <kbd>Q</kbd>/wheel switch weapon</li>
       <li><kbd>1</kbd>–<kbd>7</kbd> weapon slots · <kbd>V</kbd> lathi</li>
+      <li><kbd>G</kbd> / <kbd>B</kbd> throw a desi bomb · <kbd>G</kbd> next to the jeep gets in</li>
       <li><kbd>G</kbd> / <kbd>E</kbd> get in / out of the jeep</li>
       <li>Jeep: <kbd>W</kbd><kbd>S</kbd> gas / brake-reverse · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · mouse looks around</li>
       <li><kbd>M</kbd> map · <kbd>Esc</kbd> pause</li></ul></div>
@@ -333,6 +345,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
       <li>Gunshots carry far — zombies and looters come to the sound.</li>
       <li>Headshots matter. Ammo is scarce.</li>
       <li>Locked doors can be kicked in (loud). Zombies can break doors too.</li>
+      <li>Desi bombs: about 2 seconds of fuse, a big blast, and you are not immune. A bomb that lands makes a noise zombies go to look at. Looters throw them too — watch for the fizzing spark.</li>
       <li>Zombies will not enter the Maa Kamakhya Mandir compound. Looters will.</li>
       <li>Something enormous sleeps beside the tracks west of Guru Gorakhnath Dham. Let it sleep — until you can't.</li></ul></div>
   </div>

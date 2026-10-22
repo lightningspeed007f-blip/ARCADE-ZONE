@@ -35,6 +35,7 @@ function models() {
     rifle: merge([part(Bx(0.05, 0.07, 0.6), 0x252527, 0, 0.04, -0.1), part(Bx(0.04, 0.04, 0.35), 0x252527, 0, 0.05, -0.55), part(Bx(0.05, 0.08, 0.25), 0x5a3a20, 0, 0.04, 0.3), part(Bx(0.035, 0.14, 0.06), 0x252527, 0, 0.0, -0.05, 0.35, 0, 0)]),
     rpg: merge([part(Cy(0.05, 0.05, 0.9, 8), 0x4a5236, 0, 0.06, 0, Math.PI / 2, 0, 0), part(Cy(0.07, 0.05, 0.2, 8), 0x3a4228, 0, 0.06, -0.52, Math.PI / 2, 0, 0), part(Bx(0.03, 0.1, 0.05), 0x222222, 0, 0.0, 0.05)]),
     key: merge([part(Cy(0.03, 0.03, 0.01, 10), 0xd4aa30, 0, 0.005, 0), part(Bx(0.012, 0.01, 0.12), 0xd4aa30, 0, 0.005, 0.07), part(Bx(0.02, 0.01, 0.012), 0xd4aa30, 0.012, 0.005, 0.12)]),
+    bomb: merge([part(new THREE.SphereGeometry(0.068, 10, 8), 0x9a7a4a, 0, 0.068, 0), part(new THREE.TorusGeometry(0.069, 0.007, 4, 14), 0x6a5232, 0, 0.068, 0, Math.PI / 2), part(new THREE.TorusGeometry(0.069, 0.007, 4, 14), 0x6a5232, 0, 0.068, 0), part(Cy(0.008, 0.01, 0.07, 5), 0x2a2420, 0, 0.16, 0)]),
     fuse: merge([part(Cy(0.03, 0.03, 0.1, 10), 0xf0f0e8, 0, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, 0.055, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, -0.055, 0.03, 0, 0, 0, Math.PI / 2)]),
   };
 }
@@ -60,7 +61,7 @@ export class Loot {
   // Weapons are small and dark, so each one gets a soft golden spark above it (one Points draw call
   // for all of them). It is hidden by walls, so it only shows once you can actually see the gun.
   _beaconFor(it) {
-    if (it.kind !== 'weapon') return;
+    if (it.kind !== 'weapon' && it.kind !== 'bomb') return;
     if (!this.beacon) {
       const N = 160, c = document.createElement('canvas'); c.width = c.height = 64;
       const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -105,7 +106,7 @@ export class Loot {
   }
 
   _set(it) {
-    const s = it.taken ? 0.0001 : it.kind === 'weapon' ? 1.7 : 1;
+    const s = it.taken ? 0.0001 : it.kind === 'weapon' ? 1.7 : it.kind === 'bomb' ? 1.3 : 1;
     this._v.set(it.p[0], it.p[1], it.p[2]); this._q.setFromEuler(new THREE.Euler(0, it.yaw, 0)); this._s.set(s, s, s);
     this._m.compose(this._v, this._q, this._s);
     it.im.setMatrixAt(it.ii, this._m);
@@ -150,10 +151,12 @@ export function containerLoot(type, r, owned) {
   else if (type === 'shelfx') { const a = rollAmmo(r, owned); out.push({ kind: 'ammo', id: a.t, n: a.n }); }
   else if (type === 'almirah') {
     if (r.chance(0.12)) out.push({ kind: 'weapon', id: r.pick(['revolver', 'katta', 'pistol']) });
+    else if (r.chance(0.08)) out.push({ kind: 'bomb', id: 'bomb' });
     else if (r.chance(0.55)) { const a = rollAmmo(r, owned); out.push({ kind: 'ammo', id: a.t, n: a.n }); }
     else out.push({ kind: 'food', id: rollFood(r) });
   } else { // trunk
     if (r.chance(0.5)) { const a = rollAmmo(r, owned); out.push({ kind: 'ammo', id: a.t, n: a.n }); } else out.push({ kind: 'food', id: rollFood(r) });
+    if (r.chance(0.1)) out.push({ kind: 'bomb', id: 'bomb' });
   }
   return out;
 }

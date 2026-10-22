@@ -1,8 +1,14 @@
-// Zombies and hostile humans. Bodies are drawn with instanced box limbs
-// (7 draw calls for every enemy on the map) and animated procedurally.
+// Zombies and hostile humans. Bodies are built from rounded, vertex-coloured
+// parts (skull with a face, tapered torso, capsule limbs, hands and shoes),
+// drawn with one instanced mesh per part (~16 draw calls for every enemy on
+// the map) and animated procedurally. The three factions read differently at
+// a glance: zombies are pale, blood-stained, reach forward and have glowing
+// eyes; thieves (chor) wear dark clothes and a bright gamchha wrapped over
+// the face and sneak in a crouch; armed looters stand upright with a cap and gun.
 import * as THREE from 'three';
-import { clamp, lerp, angleDiff } from './util.js';
+import { clamp, lerp, angleDiff, rgb } from './util.js';
 import { Physics } from './physics.js';
+import { BOMB } from './explosives.js';
 
 const MAX = 130;
 export const TYPES = {
@@ -20,17 +26,134 @@ const HUMAN_GUNS = {
   shotgun: { dmg: 20, rate: 1.4, burst: 1, sound: 'shotgun', drop: 'dunali' },
 };
 
-const SKIN_Z = [0x7d8a72, 0x8a8a78, 0x6f7a68, 0x93907a, 0x7a7060];
-const SKIN_H = [0x8d5a3c, 0xa06a48, 0x7a4a30, 0xb07a58];
-const CLOTH = [0xe8e2d0, 0x6a7a9a, 0x9a3030, 0x3a5a3a, 0xc8a040, 0x504860, 0x8a6a4a, 0xd0d0d8, 0x2a3a5a];
-const LEGS = [0x2a3040, 0x403a30, 0xd8d4c8, 0x5a5048, 0x30302a];
+// zombies: grey-green, waxy and bruised; people: North-Indian brown skin tones
+const SKIN_Z = [0x9aa58c, 0xa3a08a, 0x8e9a84, 0xb0aa92, 0x8a8478, 0x9c9a90];
+const SKIN_H = [0x8d5a3c, 0xa06a48, 0x7a4a30, 0xb07a58, 0x94603f];
+// what the dead were wearing: faded shirts, kurtas, vests, school and work clothes
+const CLOTH = [0xcfc8b4, 0x6a7a9a, 0x8a3a34, 0x4a5e44, 0xb8964a, 0x5a5068, 0x8a6a4a, 0xbcbcc4, 0x3a4a66, 0xa0785a];
+const LEGS = [0x2a3040, 0x403a30, 0xc8c4b8, 0x5a5048, 0x30302a, 0x4a4a52];
+const HAIR = [0x141210, 0x1c1814, 0x2a221c, 0x0e0e0e, 0x3a342e, 0x5a5650];
+// thieves: dark kurta / shirt, with a loud gamchha (checked cotton towel) tied over head and face
+const THIEF_TOP = [0x1e1e24, 0x26221e, 0x1f2a24, 0x2a1e22];
+const GAMCHHA = [0xd8401a, 0xe0a010, 0xc02040, 0xd86a10, 0x2a8ad0];
+// looters: olive, khaki and dark jackets, jeans, a cap
+const LOOTER_TOP = [0x4a5236, 0x6a5e40, 0x2e3440, 0x5a3a28, 0x3a3a3a];
+const CAPS = [0x2a2a2e, 0x6a1a1a, 0x3a4a2a, 0xb8a888, 0x1c2a4a];
+
+// ---------- geometry kit: rounded parts with UVs and baked shading colours ----------
+// Each part is tinted per instance (skin, shirt, trousers...), so baked colours
+// are multipliers: white takes the instance colour, dark values make eyes,
+// brows, belts and shoes.
+function P(geo, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz)));
+  const c = rgb(col), n = g.attributes.position.count, a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { a[i * 3] = c[0]; a[i * 3 + 1] = c[1]; a[i * 3 + 2] = c[2]; }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+  return g;
+}
+function M(parts) {
+  let n = 0;
+  for (const p of parts) n += p.attributes.position.count;
+  const out = new THREE.BufferGeometry();
+  for (const [k, w] of [['position', 3], ['normal', 3], ['uv', 2], ['color', 3]]) {
+    const a = new Float32Array(n * w); let o = 0;
+    for (const p of parts) { a.set(p.attributes[k].array, o); o += p.attributes[k].array.length; }
+    out.setAttribute(k, new THREE.BufferAttribute(a, w));
+  }
+  out.computeBoundingSphere();
+  return out;
+}
+const S = (seg = 10, rings = 8, th = Math.PI) => new THREE.SphereGeometry(1, seg, rings, 0, Math.PI * 2, 0, th);
+const C = (r0, r1, h, seg = 10, open = false) => new THREE.CylinderGeometry(r0, r1, h, seg, 1, open);
+const K = (r, len, rad = 8) => new THREE.CapsuleGeometry(r, len, 2, rad);
+const B = (x, y, z) => new THREE.BoxGeometry(x, y, z);
+const W = 0xffffff;
+
+function bodyParts() {
+  const eyesAt = (col, r, z) => [P(S(6, 4), col, -0.038, 0.022, z, 0, 0, 0, r, r * 0.8, r * 0.6), P(S(6, 4), col, 0.038, 0.022, z, 0, 0, 0, r, r * 0.8, r * 0.6)];
+  return {
+    // skull, jaw, nose, ears, eye sockets, brows, mouth and neck; centred like the old 26 cm head box
+    head: M([
+      P(S(12, 10), W, 0, 0.012, 0, 0, 0, 0, 0.096, 0.118, 0.108),
+      P(S(10, 6), W, 0, -0.058, 0.018, 0, 0, 0, 0.078, 0.06, 0.082),
+      P(B(0.026, 0.05, 0.04), 0xf0e8e4, 0, -0.008, 0.104, -0.25),
+      P(S(6, 4), 0xe8e0dc, -0.096, 0.004, -0.004, 0, 0, 0, 0.018, 0.032, 0.014),
+      P(S(6, 4), 0xe8e0dc, 0.096, 0.004, -0.004, 0, 0, 0, 0.018, 0.032, 0.014),
+      ...eyesAt(0x1a1412, 0.02, 0.092),
+      P(B(0.05, 0.011, 0.016), 0x302420, -0.04, 0.05, 0.096, 0, 0, 0.12), P(B(0.05, 0.011, 0.016), 0x302420, 0.04, 0.05, 0.096, 0, 0, -0.12),
+      P(B(0.046, 0.01, 0.012), 0x4a2826, 0, -0.064, 0.094),
+      P(C(0.05, 0.056, 0.14, 8), 0xe4dcd8, 0, -0.13, -0.008),
+    ]),
+    // hair: a cap of hair over the crown and back of the skull, a few tufts
+    hair: M([
+      P(S(12, 6, Math.PI * 0.56), W, 0, 0.018, -0.012, 0.5, 0, 0, 0.104, 0.124, 0.116),
+      P(S(6, 4), W, 0.05, 0.1, 0.02, 0, 0, 0, 0.04, 0.03, 0.05), P(S(6, 4), W, -0.045, 0.098, 0.035, 0, 0, 0, 0.04, 0.028, 0.045),
+    ]),
+    // looter's cap: crown and a brim over the eyes
+    cap: M([
+      P(S(12, 6, Math.PI * 0.5), W, 0, 0.04, -0.004, 0.12, 0, 0, 0.108, 0.1, 0.118),
+      P(C(0.075, 0.08, 0.012, 12), 0xd8d8d8, 0, 0.04, 0.1, 0.1, 0, 0, 1, 1, 0.75),
+    ]),
+    // thief's gamchha: cloth over the head, a band over nose and mouth (eyes left open), the knot behind
+    wrap: M([
+      P(S(12, 6, Math.PI * 0.55), W, 0, 0.022, -0.01, 0.5, 0, 0, 0.108, 0.13, 0.12),
+      P(C(0.1, 0.088, 0.085, 12, true), W, 0, -0.04, 0.012, 0, 0, 0, 1.02, 1, 1.12),
+      P(C(0.101, 0.101, 0.012, 12, true), 0x9a9a9a, 0, -0.01, 0.012, 0, 0, 0, 1.03, 1, 1.13),
+      P(C(0.093, 0.09, 0.012, 12, true), 0x9a9a9a, 0, -0.066, 0.012, 0, 0, 0, 1.03, 1, 1.13),
+      P(S(6, 4), W, 0, 0.0, -0.125, 0, 0, 0, 0.035, 0.03, 0.03),
+      P(B(0.05, 0.16, 0.012), W, 0.012, -0.08, -0.13, 0.15, 0, 0.12),
+    ]),
+    // zombie eyes: drawn with an unlit material so they glow in the dark
+    eyes: M(eyesAt(W, 0.017, 0.098)),
+    // tapered torso with shoulders, collar, button placket and a belt
+    chest: M([
+      P(C(0.2, 0.162, 0.5, 12), W, 0, 0.02, 0, 0, 0, 0, 1, 1, 0.6),
+      P(S(10, 6), W, -0.19, 0.22, 0, 0, 0, 0, 0.085, 0.07, 0.09), P(S(10, 6), W, 0.19, 0.22, 0, 0, 0, 0, 0.085, 0.07, 0.09),
+      P(S(12, 6, Math.PI / 2), W, 0, 0.265, 0, 0, 0, 0, 0.2, 0.06, 0.12),
+      P(C(0.058, 0.064, 0.04, 10, true), 0xb8b8b8, 0, 0.29, 0),
+      P(B(0.022, 0.42, 0.012), 0xc8c8c8, 0, 0.04, 0.1),
+      P(C(0.166, 0.166, 0.05, 12), 0x3a3030, 0, -0.245, 0, 0, 0, 0, 1, 1, 0.62),
+    ]),
+    // blood soaked into the zombie's shirt, front and back
+    gore: M([
+      P(S(8, 6), W, 0.06, 0.06, 0.112, 0, 0, 0.4, 0.075, 0.1, 0.012),
+      P(S(8, 6), W, -0.08, -0.1, 0.105, 0, 0, -0.3, 0.06, 0.08, 0.012),
+      P(S(8, 6), W, -0.02, 0.22, 0.09, 0, 0, 0, 0.09, 0.05, 0.03),
+      P(S(8, 6), W, 0.04, -0.05, -0.105, 0, 0, 0.2, 0.08, 0.11, 0.012),
+    ]),
+    pelvis: M([P(C(0.168, 0.16, 0.22, 12), W, 0, 0, 0, 0, 0, 0, 1, 1, 0.66)]),
+    ua: M([P(K(0.058, 0.2), W)]),
+    // forearm and hand (fingers as a mitt and a thumb)
+    fa: M([P(K(0.049, 0.19), W, 0, 0.005), P(S(8, 6), 0xf0eae8, 0, -0.18, 0.004, 0, 0, 0, 0.042, 0.062, 0.03), P(S(6, 4), 0xf0eae8, 0.01, -0.15, 0.03, 0, 0, 0, 0.016, 0.03, 0.016)]),
+    th: M([P(K(0.078, 0.3), W)]),
+    // shin and a shoe (dark sole and upper)
+    sn: M([P(K(0.062, 0.31), W, 0, 0.01), P(B(0.098, 0.075, 0.24), 0x3a3634, 0, -0.205, 0.045), P(B(0.1, 0.02, 0.25), 0x1a1818, 0, -0.24, 0.045)]),
+    // looter's gun: receiver, barrel, magazine, wooden stock (long axis = z)
+    gun: M([
+      P(B(0.05, 0.075, 0.3), 0x2a2a2c, 0, 0, -0.02), P(C(0.014, 0.014, 0.3, 6), 0x1e1e20, 0, 0.015, -0.32, Math.PI / 2),
+      P(B(0.035, 0.12, 0.05), 0x2a2a2c, 0, -0.08, -0.06, 0.3), P(B(0.045, 0.08, 0.22), 0x6a4024, 0, -0.015, 0.22),
+    ]),
+    // ---- far LOD (beyond ~30 m): a few tapered blocks per part, same proportions ----
+    farHead: M([P(B(0.19, 0.24, 0.21), W), P(B(0.2, 0.08, 0.22), 0x2a2420, 0, 0.09, -0.01), P(C(0.05, 0.05, 0.12, 4), W, 0, -0.14, 0)]),
+    farChest: M([P(C(0.2, 0.16, 0.56, 6), W, 0, 0, 0, 0, 0, 0, 1, 1, 0.6)]),
+    farPelvis: M([P(B(0.33, 0.22, 0.21), W)]),
+    farUa: M([P(B(0.11, 0.32, 0.11), W)]),
+    farFa: M([P(B(0.095, 0.38, 0.095), W, 0, -0.04)]),
+    farTh: M([P(B(0.15, 0.46, 0.15), W)]),
+    farSn: M([P(B(0.12, 0.46, 0.12), W), P(B(0.1, 0.07, 0.22), 0x3a3634, 0, -0.2, 0.05)]),
+    // thief's knife: wooden handle, steel blade (long axis = z)
+    knife: M([P(B(0.03, 0.038, 0.11), 0x4a3020, 0, 0, -0.02), P(B(0.026, 0.012, 0.03), 0x8a8a8a, 0, 0, 0.045), P(B(0.008, 0.034, 0.2), 0xd8dce4, 0, 0.004, 0.16), P(B(0.008, 0.02, 0.04), 0xd8dce4, 0, 0.012, 0.27, 0.5)]),
+  };
+}
 
 class Rig {
   constructor() {
     const O = () => new THREE.Object3D();
     this.root = O(); this.body = O(); this.pelvis = O(); this.spine = O(); this.chest = O(); this.neck = O(); this.head = O();
     this.sh = [O(), O()]; this.ua = [O(), O()]; this.el = [O(), O()]; this.fa = [O(), O()];
-    this.hip = [O(), O()]; this.th = [O(), O()]; this.kn = [O(), O()]; this.sn = [O(), O()]; this.gun = O();
+    this.hip = [O(), O()]; this.th = [O(), O()]; this.kn = [O(), O()]; this.sn = [O(), O()]; this.gun = O(); this.knife = O();
     this.root.add(this.body); this.body.add(this.pelvis); this.pelvis.position.y = 0.95;
     this.pelvis.add(this.spine); this.spine.position.y = 0.08;
     this.spine.add(this.chest); this.chest.position.y = 0.29;
@@ -48,6 +171,8 @@ class Rig {
       this.kn[i].add(this.sn[i]); this.sn[i].position.y = -0.23;
     }
     this.el[1].add(this.gun); this.gun.position.set(0, -0.26, -0.18); this.gun.rotation.x = Math.PI / 2;
+    // the knife sits in the fist, blade along the forearm
+    this.el[1].add(this.knife); this.knife.position.set(0, -0.29, 0.02); this.knife.rotation.x = Math.PI / 2;
   }
 }
 
@@ -56,18 +181,40 @@ export class Enemies {
     this.game = game;
     this.list = [];
     this.rig = new Rig();
-    const mat = new THREE.MeshLambertMaterial({ map: mats.grime });
-    const mk = (geo, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); m.setColorAt(0, new THREE.Color()); return m; };
-    this.im = {
-      head: mk(new THREE.BoxGeometry(0.21, 0.26, 0.24), MAX),
-      chest: mk(new THREE.BoxGeometry(0.42, 0.58, 0.24), MAX),
-      pelvis: mk(new THREE.BoxGeometry(0.37, 0.22, 0.22), MAX),
-      ua: mk(new THREE.BoxGeometry(0.11, 0.32, 0.11), MAX * 2),
-      fa: mk(new THREE.BoxGeometry(0.095, 0.3, 0.095), MAX * 2),
-      th: mk(new THREE.BoxGeometry(0.15, 0.46, 0.15), MAX * 2),
-      sn: mk(new THREE.BoxGeometry(0.13, 0.46, 0.13), MAX * 2),
-      gun: mk(new THREE.BoxGeometry(0.06, 0.09, 0.6), MAX),
+    const mat = new THREE.MeshLambertMaterial({ map: mats.grime, vertexColors: true });
+    // a faint cold rim of moonlight on the silhouette, so bodies outside the torch beam
+    // never sink into pure black (one extra line in the shader, no extra lights)
+    mat.onBeforeCompile = (sh) => {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
+        float rimK = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
+        outgoingLight += diffuseColor.rgb * (vec3(0.22, 0.27, 0.4) * pow(rimK, 2.2) + 0.035);
+        #include <opaque_fragment>`);
     };
+    // glowing zombie eyes: unlit, so they read in the dark from across a street
+    const eyeMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, fog: false });
+    const mk = (geo, n, m = mat) => { const im = new THREE.InstancedMesh(geo, m, n); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(im); im.setColorAt(0, new THREE.Color()); return im; };
+    const G = bodyParts();
+    this.im = {
+      head: mk(G.head, MAX), hair: mk(G.hair, MAX), cap: mk(G.cap, MAX), wrap: mk(G.wrap, MAX), eyes: mk(G.eyes, MAX, eyeMat),
+      chest: mk(G.chest, MAX), gore: mk(G.gore, MAX), pelvis: mk(G.pelvis, MAX),
+      ua: mk(G.ua, MAX * 2), fa: mk(G.fa, MAX * 2), th: mk(G.th, MAX * 2), sn: mk(G.sn, MAX * 2),
+      gun: mk(G.gun, MAX), knife: mk(G.knife, MAX),
+    };
+    // distant bodies use the cheap shapes (a few hundred triangles instead of ~3000)
+    this.imFar = {
+      head: mk(G.farHead, MAX), chest: mk(G.farChest, MAX), pelvis: mk(G.farPelvis, MAX),
+      ua: mk(G.farUa, MAX * 2), fa: mk(G.farFa, MAX * 2), th: mk(G.farTh, MAX * 2), sn: mk(G.farSn, MAX * 2),
+    };
+    // soft contact shadow under every body: grounds them, helps judge distance at night
+    const sc = document.createElement('canvas'); sc.width = sc.height = 64;
+    const sx = sc.getContext('2d'), sg = sx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    sg.addColorStop(0, 'rgba(0,0,0,0.75)'); sg.addColorStop(0.55, 'rgba(0,0,0,0.35)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    sx.fillStyle = sg; sx.fillRect(0, 0, 64, 64);
+    const shMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, color: 0xffffff });
+    this.shadow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), shMat, MAX);
+    this.shadow.count = 0; this.shadow.frustumCulled = false; this.shadow.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.shadow.renderOrder = 1;
+    scene.add(this.shadow);
+    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._s3 = new THREE.Vector3();
     this._c = new THREE.Color(); this._v = new THREE.Vector3();
     this.tmpBoxes = [];
   }
@@ -91,10 +238,15 @@ export class Enemies {
       state: o.state || (thief ? (o.wait ? 'WAIT' : 'PATROL') : human ? 'PATROL' : 'IDLE'), stateT: 0, t: r() * 10, phase: r() * 6,
       vel: { x: 0, z: 0 }, st: { vy: 0, peak: y, fall: 0 }, dead: false, deathT: 0, fallDir: 1,
       scale: T.scale * (0.94 + r() * 0.12), speedK: 0.85 + r() * 0.3, limp: !human && r() < 0.3 ? 0.3 + r() * 0.4 : 0,
-      colors: {
-        skin: thief ? 0x161616 : human ? pick(SKIN_H) : pick(SKIN_Z),   // thieves wear a black mask and gloves
-        top: thief ? pick([0xd8541a, 0xe0a010, 0xc02840]) : human ? pick([0x2a2a30, 0x3a3020, 0x30402a, 0x5a1a1a]) : pick(CLOTH),
-        legs: thief ? 0x1c1c22 : human ? pick([0x22283a, 0x2a2a2a, 0x3a3428]) : pick(LEGS),
+      limpArm: !human && type !== 'brute' && r() < 0.3 ? (r() < 0.5 ? 0 : 1) : -1,
+      colors: thief ? {
+        // dark kurta and trousers, black gloves, a bright gamchha over the face
+        skin: pick(SKIN_H), top: pick(THIEF_TOP), legs: pick([0x1c1c22, 0x24201c, 0x1a1e24]), fa: 0x161618, wrap: pick(GAMCHHA),
+      } : human ? {
+        skin: pick(SKIN_H), top: pick(LOOTER_TOP), legs: pick([0x22283a, 0x2a2a2a, 0x3a3428, 0x2c3448]), hair: pick(HAIR.slice(0, 4)), cap: r() < 0.7 ? pick(CAPS) : null,
+      } : {
+        skin: pick(SKIN_Z), top: pick(CLOTH), legs: pick(LEGS), hair: pick(HAIR), bald: r() < 0.18,
+        gore: pick([0x4a0806, 0x5a0a08, 0x3a0604]), eye: type === 'brute' ? 0xff3a20 : type === 'runner' ? 0xfff0a0 : pick([0xe8f070, 0xd8e8a0, 0xf0e070]),
       },
       wanderYaw: r() * 6.28, nextGrowl: 2 + r() * 8, attackT: 0, stagger: 0, flinch: 0,
       lastSeen: null, losT: 0, seeT: 0, alert: 0, investigate: null, stuckT: 0, sideT: 0, side: 1,
@@ -102,9 +254,13 @@ export class Enemies {
       gun: thief ? THIEF_GUN : human ? HUMAN_GUNS[o.gun || pick(['pistol', 'pistol', 'rifle', 'shotgun'])] : null,
       ammo: 0, coolT: 0, burstLeft: 0, cover: null, coverT: 0, peek: null, react: 0, hs: [], home: { x, z },
       inside: o.inside || false, frozen: o.frozen || false, aimT: 0,
+      // about a third of the armed looters carry one desi bomb
+      bomb: human && !thief && r() < 0.35 ? 1 : 0, throwT: 0,
     };
     if (e.gun && !thief) e.gunKey = o.gun || Object.keys(HUMAN_GUNS).find((k) => HUMAN_GUNS[k] === e.gun);
-    if (type === 'brute') e.colors.top = 0x3a2a20;
+    if (type === 'brute') { e.colors.top = 0x3a2a20; e.colors.legs = 0x2a2620; }
+    if (!human) e.colors.fa = e.colors.skin;
+    else if (!thief) e.colors.fa = e.colors.skin;
     this.list.push(e);
     return e;
   }
@@ -140,7 +296,8 @@ export class Enemies {
     const n = dmg * mul;
     e.hp -= n;
     e.flinch = Math.min(1, e.flinch + n / 40);
-    if (dir) { e.hitDir = Math.atan2(dir.x, dir.z); }
+    if (dir) { e.hitDir = Math.atan2(dir.x, dir.z); e.lastHitPos = { x: e.pos.x - dir.x * 2, z: e.pos.z - dir.z * 2 }; }
+    e.lastHitBy = src;
     if (!e.human && e.type !== 'brute' && n > 20) e.stagger = 0.35;
     if (part === 'leg' && !e.human) e.limp = Math.min(0.75, e.limp + 0.2);
     // being shot always reveals the shooter
@@ -289,14 +446,25 @@ export class Enemies {
     }
     // perception (throttled line of sight)
     e.losT -= dt;
+    let looked = false;
     if (!P.dead && d < 40 && e.losT <= 0) {
-      e.losT = 0.25 + Math.random() * 0.15;
+      e.losT = 0.25 + Math.random() * 0.15; looked = true;
       let sight = T.sight * (g.torchOn ? 1.6 : 1) * (P.crouched ? 0.6 : 1) * (g.playerLit ? 1.3 : 1);
       const hearing = P.noise * (e.type === 'runner' ? 1.4 : 1);
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); } }
+    }
+    // no player in sight: a living person close by is food too (thieves and looters get torn into)
+    if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {
+      let best = null, bd = 9;
+      for (const o of this.list) {
+        if (!o.human || o.dead || o.tunnel !== e.tunnel || Math.abs(o.pos.y - e.pos.y) > 1.5) continue;
+        const dd = Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z);
+        if (dd < bd) { bd = dd; best = o; }
+      }
+      if (best && this.canSee(e, best.pos.x, best.pos.y + 1.4, best.pos.z)) { e.prey = best; e.state = 'HUNT'; e.stateT = 0; }
     }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
     const speedK = e.speedK * (1 - e.limp * 0.5);
@@ -340,6 +508,25 @@ export class Enemies {
         }
         break;
       }
+      case 'HUNT': {
+        const h = e.prey;
+        const hd = h ? Math.hypot(h.pos.x - e.pos.x, h.pos.z - e.pos.z) : 99;
+        if (!h || h.dead || hd > 20 || e.stateT > 30) { e.state = 'ALERT'; e.investigate = h ? { x: h.pos.x, z: h.pos.z } : null; e.prey = null; e.stateT = 0; break; }
+        if (hd < T.reach) {
+          // same wind-up and cooldown as an attack on the player
+          this.move(e, 0, 0, 0, dt);
+          e.yaw += angleDiff(e.yaw, Math.atan2(h.pos.x - e.pos.x, h.pos.z - e.pos.z)) * Math.min(1, dt * 8);
+          e.attackT = (e.attackT > 0 ? e.attackT : T.wind) - dt;
+          e.huntAtk = true;
+          if (e.attackT <= 0) {
+            const dd = { x: (h.pos.x - e.pos.x) / (hd || 1), z: (h.pos.z - e.pos.z) / (hd || 1) };
+            this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
+            g.audio.play('flesh', { pos: [h.pos.x, h.pos.y + 1.2, h.pos.z], vol: 0.6 });
+            e.attackT = T.wind + 0.6;
+          }
+        } else { e.huntAtk = false; e.attackT = 0; this.goTo(e, h.pos.x, h.pos.z, T.chase * speedK, dt, false); }
+        break;
+      }
       case 'BANG': {
         const door = e.door;
         if (!door || door.open || door.broken) { e.state = e.lastSeen ? 'CHASE' : 'IDLE'; break; }
@@ -361,7 +548,7 @@ export class Enemies {
 
   updateHuman(e, dt, d, px, pz, peye, P) {
     const g = this.game, T = e.T;
-    e.stateT += dt; e.coolT -= dt;
+    e.stateT += dt; e.coolT -= dt; e.throwT = Math.max(0, e.throwT - dt);
     // nearest threatening zombie
     let zt = null, zd = 14;
     for (const o of this.list) {
@@ -439,6 +626,11 @@ export class Enemies {
           if (e.burstLeft <= 0 && !tg.z_) { e.state = 'COVER'; e.stateT = 0; e.cover = this.findCover(e, px, peye, pz); }
         } else {
           e.aimT = 0;
+          // you went behind cover: a looter with a bomb lobs it over to flush you out
+          if (e.bomb > 0 && !tg.z_ && e.lastSeen && e.stateT > 1.2 && !P.dead) {
+            const dd = Math.hypot(e.lastSeen.x - e.pos.x, e.lastSeen.z - e.pos.z);
+            if (dd > 7 && dd < 26) this.lobBomb(e, e.lastSeen);
+          }
           // reposition toward last known position
           if (e.lastSeen) {
             const dd = Math.hypot(e.lastSeen.x - e.pos.x, e.lastSeen.z - e.pos.z);
@@ -498,6 +690,8 @@ export class Enemies {
       e.state = 'DETECT'; e.stateT = 0; e.react = 0.25 + Math.random() * 0.3; e.hold = false;
     }
     const speed = T.speed * e.speedK;
+    // a zombie right on top of a thief: he bolts (they carry knives, not guns)
+    if (e.flinch > 0.2 && e.lastHitBy === 'zombie' && e.state !== 'FLEE' && e.state !== 'ATTACK') { e.state = 'FLEE'; e.stateT = 0; e.fleeFrom = e.lastHitPos; }
     switch (e.state) {
       case 'WAIT': {
         this.move(e, 0, 0, 0, dt);
@@ -575,13 +769,28 @@ export class Enemies {
         break;
       }
       case 'FLEE': {
-        const ax = e.pos.x - px, az = e.pos.z - pz, l = Math.hypot(ax, az) || 1;
+        const from = e.fleeFrom && e.stateT < 4 ? e.fleeFrom : { x: px, z: pz };
+        const ax = e.pos.x - from.x, az = e.pos.z - from.z, l = Math.hypot(ax, az) || 1;
         this.goTo(e, e.pos.x + ax / l * 10, e.pos.z + az / l * 10, T.chase * 1.1, dt, false);
-        if (e.stateT > 9 || d > 45) { e.state = 'SEARCH'; e.stateT = 0; e.alert = 0; }
+        if (e.stateT > 9 || d > 45) { e.state = 'SEARCH'; e.stateT = 0; e.alert = 0; e.fleeFrom = null; }
         break;
       }
       default: e.state = e.route ? 'PATROL' : 'WAIT';
     }
+  }
+
+  lobBomb(e, tgt) {
+    const g = this.game, P = g.player;
+    e.bomb--; e.throwT = 0.5;
+    e.yaw = Math.atan2(tgt.x - e.pos.x, tgt.z - e.pos.z);
+    const from = new THREE.Vector3(e.pos.x + Math.sin(e.yaw) * 0.4, e.pos.y + 1.7 * e.scale, e.pos.z + Math.cos(e.yaw) * 0.4);
+    // not a perfect throw: lands within a couple of metres of where you were
+    const tx = tgt.x + (Math.random() - 0.5) * 3.5, tz = tgt.z + (Math.random() - 0.5) * 3.5;
+    const dx = tx - from.x, dz = tz - from.z, T = clamp(Math.hypot(dx, dz) / 11, 0.75, 1.7), G = 16;
+    const vel = new THREE.Vector3(dx / T, (P.pos.y + 0.1 - from.y) / T + 0.5 * G * T, dz / T);
+    g.explosives.throwBomb(from, vel, 'human', BOMB.enemyFuse);
+    g.audio.play('whoosh', { pos: [from.x, from.y, from.z], vol: 0.6, rate: 0.9 });
+    g.noise(e.pos, 14, 'shout');
   }
 
   findCover(e, px, peye, pz) {
@@ -643,30 +852,51 @@ export class Enemies {
   // ---------- pose + instancing ----------
   draw(cam) {
     const R = this.rig, im = this.im;
-    const counts = { head: 0, chest: 0, pelvis: 0, ua: 0, fa: 0, th: 0, sn: 0, gun: 0 };
+    const imF = this.imFar;
+    const counts = { head: 0, hair: 0, cap: 0, wrap: 0, eyes: 0, chest: 0, gore: 0, pelvis: 0, ua: 0, fa: 0, th: 0, sn: 0, gun: 0, knife: 0 };
+    const countsF = { head: 0, chest: 0, pelvis: 0, ua: 0, fa: 0, th: 0, sn: 0 };
     const c = this._c;
+    let lod = false;
     const put = (key, node, col) => {
-      const i = counts[key]++;
-      im[key].setMatrixAt(i, node.matrixWorld);
-      im[key].setColorAt(i, c.set(col));
+      const far = lod && imF[key], set = far ? imF : im, cnt = far ? countsF : counts;
+      const i = cnt[key]++;
+      set[key].setMatrixAt(i, node.matrixWorld);
+      set[key].setColorAt(i, c.set(col));
     };
     const cx = cam.position.x, cz = cam.position.z;
+    let ns = 0;
+    const sh = this.shadow, m = this._m, q = this._q, sv = this._s3, v = this._v;
     for (const e of this.list) {
       const far = Math.hypot(e.pos.x - cx, e.pos.z - cz);
       if (far > 105) { e.hs.length = 0; continue; }
       this.pose(e);
       R.root.updateMatrixWorld(true);
       const col = e.colors;
+      lod = far > 30;
       put('head', R.head, col.skin); put('chest', R.chest, col.top); put('pelvis', R.pelvis, col.legs);
       for (let i = 0; i < 2; i++) {
-        put('ua', R.ua[i], e.human ? col.top : col.skin); put('fa', R.fa[i], col.skin);
-        put('th', R.th[i], col.legs); put('sn', R.sn[i], e.human ? 0x1a1a1a : col.legs);
+        put('ua', R.ua[i], e.human ? col.top : col.skin); put('fa', R.fa[i], col.fa);
+        put('th', R.th[i], col.legs); put('sn', R.sn[i], col.legs);
       }
-      if (e.human) put('gun', R.gun, e.thief ? 0xc4c8d0 : 0x1c1c1e);
+      // far away only what reads at a distance: the thief's bright mask, guns, the zombies' eyes
+      if (e.thief) { put('wrap', R.head, col.wrap); if (!lod) put('knife', R.knife, 0xffffff); }
+      else if (e.human) { if (!lod) { if (col.cap) put('cap', R.head, col.cap); else put('hair', R.head, col.hair); } put('gun', R.gun, 0xffffff); }
+      else {
+        if (!col.bald && !lod) put('hair', R.head, col.hair);
+        if (!lod) put('gore', R.chest, col.gore);
+        if (!e.dead) put('eyes', R.head, col.eye);
+      }
+      // contact shadow on the ground under the pelvis
+      if (far < 60) {
+        v.setFromMatrixPosition(R.pelvis.matrixWorld);
+        const k = e.dead ? 1.5 : 0.95;
+        sv.set(k * e.scale, 1, (e.dead ? 1.9 : 0.75) * e.scale); q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, e.yaw);
+        v.y = e.pos.y + 0.03;
+        m.compose(v, q, sv); sh.setMatrixAt(ns++, m);
+      }
       // hit spheres
       if (!e.dead) {
         const hs = e.hs; hs.length = 0;
-        const v = this._v;
         const add = (node, r, part) => { v.setFromMatrixPosition(node.matrixWorld); hs.push([v.x, v.y, v.z, r * e.scale, part]); };
         add(R.head, 0.15, 'head'); add(R.chest, 0.26, 'body'); add(R.pelvis, 0.22, 'body');
         add(R.th[0], 0.12, 'leg'); add(R.th[1], 0.12, 'leg'); add(R.sn[0], 0.11, 'leg'); add(R.sn[1], 0.11, 'leg');
@@ -675,10 +905,16 @@ export class Enemies {
       }
     }
     for (const k in im) {
-      im[k].count = counts[k];
+      im[k].count = counts[k]; im[k].visible = counts[k] > 0;
       im[k].instanceMatrix.needsUpdate = true;
       if (im[k].instanceColor) im[k].instanceColor.needsUpdate = true;
     }
+    for (const k in imF) {
+      imF[k].count = countsF[k]; imF[k].visible = countsF[k] > 0;
+      imF[k].instanceMatrix.needsUpdate = true;
+      if (imF[k].instanceColor) imF[k].instanceColor.needsUpdate = true;
+    }
+    sh.count = ns; sh.visible = ns > 0; sh.instanceMatrix.needsUpdate = true;
   }
 
   pose(e) {
@@ -704,7 +940,7 @@ export class Enemies {
     const fl = e.flinch;
     if (!e.human) {
       // zombie: arms reaching forward, head lolling, lurching gait
-      const reach = e.state === 'CHASE' || e.state === 'ATTACK' ? 1 : 0.55;
+      const reach = e.state === 'CHASE' || e.state === 'ATTACK' || e.state === 'HUNT' ? 1 : 0.55;
       for (let i = 0; i < 2; i++) {
         const s = i ? 1 : -1;
         R.sh[i].rotation.set(-1.35 * reach + Math.sin(e.t * 2 + i) * 0.12 + legA * 0.2 * s, 0, s * 0.12);
@@ -712,12 +948,18 @@ export class Enemies {
       }
       R.spine.rotation.set(0.18 + (e.type === 'runner' ? 0.25 * run : 0) - fl * 0.5, Math.sin(ph) * 0.12, Math.sin(e.t * 0.7) * 0.08 + e.limp * 0.15);
       R.neck.rotation.set(0.15 + Math.sin(e.t * 1.3) * 0.12, Math.sin(e.t * 0.5) * 0.3, Math.sin(e.t * 0.9) * 0.25);
-      if (e.state === 'ATTACK') {
-        const k = 1 - Math.max(0, e.attackT) / e.T.wind;
+      if (e.state === 'ATTACK' || (e.state === 'HUNT' && e.huntAtk)) {
+        const k = clamp(1 - Math.max(0, e.attackT) / e.T.wind, 0, 1);
         for (let i = 0; i < 2; i++) R.sh[i].rotation.x = -1.2 - Math.sin(k * Math.PI) * 0.9;
         R.spine.rotation.x = 0.1 + Math.sin(k * Math.PI) * 0.35;
       }
       if (e.state === 'BANG') { const k = Math.sin(e.t * 6); for (let i = 0; i < 2; i++) R.sh[i].rotation.x = -1.9 - k * 0.5; }
+      else if (e.limpArm >= 0 && e.state !== 'ATTACK') {
+        // a dead arm swinging loose at the side
+        const i = e.limpArm, s = i ? 1 : -1;
+        R.sh[i].rotation.set(-0.1 + Math.sin(ph + i * Math.PI) * 0.25 * sw, 0, s * 0.1);
+        R.el[i].rotation.set(-0.15 - Math.sin(e.t * 1.3) * 0.08, 0, 0);
+      }
       if (e.limp) R.hip[0].rotation.x *= 1 - e.limp;
     } else {
       // human: gun held forward, aim when attacking
@@ -733,9 +975,18 @@ export class Enemies {
         R.sh[1].rotation.set(chasing ? -1.0 : -0.5, 0, 0); R.el[1].rotation.set(-0.5, 0, 0);
         R.spine.rotation.x = chasing ? 0.3 - fl * 0.4 : -fl * 0.4;
         if (e.state === 'ATTACK') { const k = 1 - Math.max(0, e.attackT) / e.T.wind; R.sh[1].rotation.x = -1.0 - Math.sin(k * Math.PI) * 1.2; R.spine.rotation.x = 0.1 + Math.sin(k * Math.PI) * 0.4; }
+        // not yet onto you: a low, sneaking crouch with the knife held close
+        if (!e.dead && ['PATROL', 'WAIT', 'HEAR', 'INVESTIGATE', 'SEARCH'].includes(e.state)) {
+          R.body.position.y -= 0.1;
+          for (let i = 0; i < 2; i++) { R.hip[i].rotation.x = R.hip[i].rotation.x * 0.7 - 0.55; R.kn[i].rotation.x += 0.85; }
+          R.spine.rotation.x += 0.38; R.neck.rotation.x -= 0.32;
+          R.sh[1].rotation.x = -0.75; R.el[1].rotation.x = -0.9;
+        }
       }
       if (e.state === 'COVER' && e.stateT > 0.5) { R.body.position.y = -0.35; R.hip[0].rotation.x = -1.2; R.hip[1].rotation.x = -0.2; R.kn[0].rotation.x = 1.6; R.kn[1].rotation.x = 1.4; }
       if (!aiming && !e.thief) { R.sh[0].rotation.x += legA * 0.4; }
+      // overarm bomb throw with the free (left) arm
+      if (e.throwT > 0) { const k = e.throwT / 0.5; R.sh[0].rotation.set(-0.6 - 2.4 * k, 0, -0.2); R.el[0].rotation.set(-0.8 * k, 0, 0); R.spine.rotation.x += 0.25 * (1 - k) - 0.15 * k; }
     }
     if (e.dead) {
       // fall: rotate the whole body around the feet, then sink slowly much later

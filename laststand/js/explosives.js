@@ -1,9 +1,13 @@
 // Fire, smoke and things that go bang: a light GPU particle system (one draw
 // call for all flames, one for all smoke), the rocket launcher's rockets,
 // explosions with area damage that falls off with distance, and the chunks
-// of debris the railway giant throws.
+// of debris the railway giant throws, and the desi bombs (sutli bombs) that the
+// player and armed looters throw: they arc, bounce, fizz and then go off.
 import * as THREE from 'three';
 import { clamp } from './util.js';
+import { part, merge } from './props.js';
+
+export const BOMB = { radius: 6.5, dmg: 240, self: 55, fuse: 2.3, enemyFuse: 2.9, max: 5 };
 
 // ---------- sprite textures drawn in code ----------
 function canvasTex(size, draw) {
@@ -128,7 +132,14 @@ export class Explosives {
     const scene = game.scene;
     this.fire = new Particles(scene, 900, true, flameTex());
     this.smoke = new Particles(scene, 700, false, puffTex());
-    this.rockets = []; this.rocks = []; this.balls = [];
+    this.rockets = []; this.rocks = []; this.balls = []; this.bombs = [];
+    // sutli bomb: a jute-wrapped ball, twine bands, a stubby fuse
+    const ball = new THREE.SphereGeometry(0.068, 10, 8), band = new THREE.TorusGeometry(0.069, 0.007, 4, 14);
+    this.bombGeo = merge([
+      part(ball, 0x7e6238), part(band, 0x564228, 0, 0, 0, Math.PI / 2), part(band, 0x6a5232, 0, 0, 0, 0, Math.PI / 2), part(band, 0x6a5232, 0, 0, 0, Math.PI / 2, 0, Math.PI / 2),
+      part(new THREE.CylinderGeometry(0.008, 0.01, 0.07, 5), 0x2a2420, 0, 0.09, 0),
+    ]);
+    this.bombMat = new THREE.MeshLambertMaterial({ vertexColors: true });
     // rocket model, pooled
     const olive = new THREE.MeshLambertMaterial({ color: 0x4a5236 }), dark = new THREE.MeshLambertMaterial({ color: 0x262624 });
     this.rocketGeo = { body: new THREE.CylinderGeometry(0.045, 0.045, 0.5, 8).rotateX(Math.PI / 2), nose: new THREE.ConeGeometry(0.06, 0.26, 8).rotateX(Math.PI / 2), fin: new THREE.BoxGeometry(0.24, 0.01, 0.12) };
@@ -150,6 +161,8 @@ export class Explosives {
   }
 
   reset() {
+    this.silence();
+    for (const b of this.bombs) { b.live = false; b.mesh.visible = false; }
     for (const r of this.rockets) r.mesh.visible = false;
     for (const r of this.rocks) r.mesh.visible = false;
     this.rockets.forEach((r) => (r.live = false)); this.rocks.forEach((r) => (r.live = false));
@@ -211,6 +224,100 @@ export class Explosives {
     r.mesh.position.copy(r.pos); r.mesh.visible = true;
   }
 
+  // ---------- bombs ----------
+  // Stop every fizzing fuse (death, quit, a new run).
+  silence() { for (const b of this.bombs) if (b.hiss) { try { b.hiss.stop(); } catch (e) { /* already stopped */ } b.hiss = null; } }
+
+  // from, vel: THREE.Vector3. src 'player' or 'human'.
+  throwBomb(from, vel, src = 'player', fuse = BOMB.fuse) {
+    let b = this.bombs.find((q) => !q.live);
+    if (!b) {
+      const m = new THREE.Mesh(this.bombGeo, this.bombMat); m.visible = false;
+      const glow = new THREE.Sprite(this.glowMat); glow.scale.setScalar(0.28); glow.position.y = 0.13; m.add(glow);
+      this.g.scene.add(m);
+      b = { mesh: m, glow, pos: new THREE.Vector3(), vel: new THREE.Vector3() };
+      this.bombs.push(b);
+    }
+    // never start inside a wall: pull back to just in front of it
+    const P = this.g.physics, d = vel.clone().normalize();
+    b.live = true; b.t = 0; b.fuse = fuse; b.src = src; b.rest = false; b.landed = false; b.spin = [6 + Math.random() * 6, Math.random() * 6];
+    b.pos.copy(from); b.vel.copy(vel);
+    const w = P.raycast(from.x, from.y, from.z, d.x, d.y, d.z, 0.25);
+    if (w) b.pos.addScaledVector(d, Math.max(0, w.t - 0.12));
+    b.mesh.position.copy(b.pos); b.mesh.visible = true;
+    b.hiss = this.g.audio.loop('fuse', src === 'player' ? 0.35 : 0.6, this.g.audio.sfx, Object.assign([from.x, from.y, from.z], { ref: 2.5 }));
+    return b;
+  }
+
+  _bounce(b, nx, ny, nz, e) {
+    const v = b.vel, vn = v.x * nx + v.y * ny + v.z * nz;
+    if (vn >= 0) return;
+    v.x -= (1 + e) * vn * nx; v.y -= (1 + e) * vn * ny; v.z -= (1 + e) * vn * nz;
+    v.multiplyScalar(0.72);
+    if (!b.landed || -vn > 2.5) this._land(b, -vn);
+  }
+
+  // first touch-down (and hard bounces): a clunk that zombies come to investigate
+  _land(b, speed) {
+    const g = this.g, o = b.pos;
+    g.audio.play('wall', { pos: [o.x, o.y, o.z], vol: clamp(speed / 8, 0.15, 0.6), rate: 0.7 });
+    if (!b.landed) { b.landed = true; g.noise({ x: o.x, z: o.z }, 16, 'bomb'); }
+  }
+
+  _bomb(b, dt) {
+    const g = this.g, P = g.physics, o = b.pos;
+    b.t += dt;
+    if (!b.rest) {
+      b.vel.y -= 16 * dt;
+      const sx = b.vel.x * dt, sy = b.vel.y * dt, sz = b.vel.z * dt, len = Math.hypot(sx, sy, sz);
+      if (len > 1e-5) {
+        const d = { x: sx / len, y: sy / len, z: sz / len };
+        const wall = P.raycast(o.x, o.y, o.z, d.x, d.y, d.z, len + 0.07);
+        const eh = !b.landed && b.t > 0.08 ? g.enemies.hitTest(o, d, wall ? wall.t : len + 0.05) : null;
+        if (eh) {
+          // hits somebody: drops at their feet
+          o.addScaledVector(d, Math.max(0, eh.t - 0.1));
+          b.vel.set(-d.x * 0.8, 0.5, -d.z * 0.8); this._land(b, 3);
+        } else if (wall) {
+          o.addScaledVector(d, Math.max(0, wall.t - 0.07));
+          this._bounce(b, wall.nx, wall.ny, wall.nz, 0.35);
+        } else o.set(o.x + sx, o.y + sy, o.z + sz);
+      }
+      const gy = P.groundAt(o.x, o.z, 0.05, o.y + 0.3);
+      if (gy > -1e8 && o.y < gy + 0.07) {
+        o.y = gy + 0.07;
+        this._bounce(b, 0, 1, 0, 0.3);
+        if (Math.abs(b.vel.y) < 1.2) { b.vel.y = 0; if (Math.hypot(b.vel.x, b.vel.z) < 0.5) b.rest = true; }
+      }
+      if (b.landed && b.vel.y === 0) { const k = Math.exp(-dt * 3.5); b.vel.x *= k; b.vel.z *= k; }
+      b.mesh.rotation.x += b.spin[0] * dt * Math.min(1, Math.hypot(b.vel.x, b.vel.z) / 3 + (b.landed ? 0 : 1));
+      b.mesh.rotation.z += b.spin[1] * dt * (b.landed ? 0.2 : 1);
+    }
+    b.mesh.position.copy(o);
+    // the fuse spits sparks and a thread of smoke; the spark glows brighter as it burns down
+    const left = b.fuse - b.t, tip = this._v.set(0, 0.13, 0).applyQuaternion(b.mesh.quaternion).add(o);
+    b.glow.scale.setScalar(0.34 + Math.random() * 0.2 + (left < 0.8 ? 0.2 : 0));
+    for (let i = 0; i < 2; i++) this.fire.emit(tip.x, tip.y, tip.z, (Math.random() - 0.5) * 2.4, 0.6 + Math.random() * 1.8, (Math.random() - 0.5) * 2.4, 0.18 + Math.random() * 0.2, 0.07, 0.02, FIRE.white, FIRE.ember, 1, -6, 0.5);
+    if (Math.random() < 0.3) this.smoke.emit(tip.x, tip.y, tip.z, 0, 0.5, 0, 1.1, 0.06, 0.35, FIRE.smoke, FIRE.smoke, 0.25, 0.3, 1);
+    if (b.hiss && b.hiss.panner) { b.hiss.panner.positionX.value = o.x; b.hiss.panner.positionY.value = o.y; b.hiss.panner.positionZ.value = o.z; }
+    if (left <= 0 || o.y < -60) {
+      b.live = false; b.mesh.visible = false;
+      if (b.hiss) { try { b.hiss.stop(); } catch (e) { /* already stopped */ } b.hiss = null; }
+      if (o.y > -60) this.explode(o.x, o.y + 0.1, o.z, {
+        radius: BOMB.radius, dmg: BOMB.dmg, self: BOMB.self, src: b.src, shake: 0.9,
+        reason: b.src === 'player' ? null : 'लुटेरे के बम से · killed by a looter\'s bomb',
+      });
+    }
+  }
+
+  // closest live bomb to a point (for the HUD warning): [bomb, distance] or null.
+  // Your own bomb only counts once it has landed (not while it leaves your hand).
+  nearestBomb(x, z) {
+    let best = null, bd = 1e9;
+    for (const b of this.bombs) { if (!b.live || (b.src === 'player' && !b.landed)) continue; const d = Math.hypot(b.pos.x - x, b.pos.z - z); if (d < bd) { bd = d; best = b; } }
+    return best ? [best, bd] : null;
+  }
+
   // ---------- the blast ----------
   // o: { radius, dmg, src, self (max damage to the player), shake }
   explode(x, y, z, o = {}) {
@@ -267,7 +374,7 @@ export class Explosives {
     // the shooter is not immune: stand clear of your own rocket
     const selfMax = o.self ?? 34, selfR = R * 0.62;
     if (selfMax > 0 && pd < selfR && !P.dead) {
-      g.hurtPlayer(selfMax * (1 - pd / selfR), { pos: { x, z } }, 'अपने ही धमाके में · caught in your own blast');
+      g.hurtPlayer(selfMax * (1 - pd / selfR), { pos: { x, z } }, o.reason || 'अपने ही धमाके में · caught in your own blast');
     }
     // doors nearby blow in
     for (const dd of g.doors) if (!dd.broken && !dd.metal && Math.hypot(dd.cx - x, dd.cz - z) < 4) g.breakDoor(dd);
@@ -302,6 +409,7 @@ export class Explosives {
     }
     for (const r of this.rockets) if (r.live) this._rocket(r, dt);
     for (const r of this.rocks) if (r.live) this._rock(r, dt);
+    for (const b of this.bombs) if (b.live) this._bomb(b, dt);
   }
 
   _rocket(r, dt) {

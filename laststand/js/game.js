@@ -19,7 +19,7 @@ import { buildKaali, Kaali } from './kaali.js';
 import { ROADS, ZONES, RAIL, KAMAKHYA, roadInfo, BOUNDS } from './layout.js';
 import { makeRng, clamp, store } from './util.js';
 import { Physics } from './physics.js';
-import { Explosives } from './explosives.js';
+import { Explosives, BOMB } from './explosives.js';
 import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 
@@ -112,6 +112,7 @@ export class Game {
       sleeve: new THREE.MeshLambertMaterial({ color: 0x3c4148 }),
       brass: new THREE.MeshLambertMaterial({ color: 0xc8a040 }),
       olive: new THREE.MeshLambertMaterial({ color: 0x4a5236 }), olive2: new THREE.MeshLambertMaterial({ color: 0x5e6640 }),
+      jute: new THREE.MeshLambertMaterial({ color: 0x9a7a4a }),
     };
     this.wscene.add(new THREE.HemisphereLight(0x8090b0, 0x302820, 1.4));
     const wl = new THREE.DirectionalLight(0xffffff, 0.5); wl.position.set(1, 2, 1); this.wscene.add(wl);
@@ -346,6 +347,7 @@ export class Game {
     const W = this.W;
     this.audio.init(); this.audio.resume();
     if (this.vehicles.driving) this.vehicles.exit(true);
+    this.stopRunLoops();
     this.audio.stopAll();
     this.player.dead = false; this.player.health = 100; this.player.stamina = 100; this.player.distance = 0; this.player.recoil.x = this.player.recoil.y = 0;
     this.arsenal.reset();
@@ -431,6 +433,14 @@ export class Game {
       else if (kind === 'weapon') { if (r.chance(0.55)) L.add({ kind: 'weapon', id: rollWeapon(r), p: pos }); else { const a = rollAmmo(r, null); L.add({ kind: 'ammo', id: a.t, n: a.n, p: pos }); } }
     }
     this.placeHouseLoot(r, spots);
+    // desi bombs: a handful hidden around town (never right at the start house)
+    let nb = 0;
+    for (const s of spots) {
+      if (nb >= 7) break;
+      if (s.tag || s.kind === 'water' || s.kind === 'food') continue;
+      if (Math.hypot(s.p[0] - sp[0], s.p[2] - sp[2]) < 25 || !r.chance(0.12)) continue;
+      L.add({ kind: 'bomb', id: 'bomb', p: [s.p[0] + 0.2, s.p[1], s.p[2] - 0.15] }); nb++;
+    }
     // objective items: one key spot, one fuse spot per run
     const ks = r.pick(W.keySpots), fs = r.pick(W.fuseSpots);
     this.keySpot = ks; this.fuseSpot = fs;
@@ -464,8 +474,8 @@ export class Game {
         L.add({ ...item, p: [s.p[0] + (r() - 0.5) * j, s.p[1], s.p[2] + (r() - 0.5) * j] });
       };
       const gunWithAmmo = (id) => { put({ kind: 'weapon', id }); const t = WEAPONS[id].ammo, [a, c] = AMMO_PICK[t]; put({ kind: 'ammo', id: t, n: r.int(a, c) }); };
-      if (tier === 'armed') gunWithAmmo(rollWeapon(r));
-      else if (tier === 'arsenal') { gunWithAmmo(r.pick(['rifle', 'dunali', 'revolver'])); put({ kind: 'food', id: rollFood(r) }); const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); }
+      if (tier === 'armed') { gunWithAmmo(rollWeapon(r)); if (r.chance(0.25)) put({ kind: 'bomb', id: 'bomb' }); }
+      else if (tier === 'arsenal') { gunWithAmmo(r.pick(['rifle', 'dunali', 'revolver'])); put({ kind: 'food', id: rollFood(r) }); const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); put({ kind: 'bomb', id: 'bomb' }); }
       else if (tier === 'ammo') { const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); if (r.chance(0.4)) { const c = rollAmmo(r, null); put({ kind: 'ammo', id: c.t, n: c.n }); } }
       else if (tier === 'supplies') { put({ kind: 'food', id: rollFood(r) }); put({ kind: 'food', id: rollFood(r) }); if (r.chance(0.5)) { const a = rollAmmo(r, null); put({ kind: 'ammo', id: a.t, n: a.n }); } }
     }
@@ -557,6 +567,7 @@ export class Game {
     if (r < 0.4) { const a = rollAmmo(this.rng, null); this.loot.drop({ kind: 'ammo', id: a.t, n: a.n, p: [p[0] - 0.5, p[1], p[2]] }); }
     else if (r < 0.65) this.loot.drop({ kind: 'food', id: rollFood(this.rng), p: [p[0] - 0.4, p[1], p[2] - 0.3] });
     if (Math.random() < 0.18) this.loot.drop({ kind: 'weapon', id: 'katta', p: [p[0], p[1], p[2] - 0.6] });
+    else if (Math.random() < 0.14) this.loot.drop({ kind: 'bomb', id: 'bomb', p: [p[0] + 0.3, p[1], p[2] - 0.5] });
   }
 
   spawnEnemies(r) {
@@ -757,6 +768,7 @@ export class Game {
     const map = { pistol: '9mm', rifle: '7.62', dunali: '12G' };
     this.loot.drop({ kind: 'ammo', id: map[w], n: 6 + ((Math.random() * 10) | 0), p: [p[0] - 0.5, p[1], p[2]] });
     if (Math.random() < 0.5) this.loot.drop({ kind: 'food', id: rollFood(this.rng), p: [p[0], p[1], p[2] - 0.5] });
+    if (e.bomb > 0) this.loot.drop({ kind: 'bomb', id: 'bomb', p: [p[0] + 0.3, p[1], p[2] - 0.6] });
   }
 
   hitMarker(head, killed) {
@@ -825,6 +837,7 @@ export class Game {
         if (it.kind === 'weapon') return ['TAKE', WEAPONS[it.id].name];
         if (it.kind === 'key') return ['TAKE', 'सिग्नल केबिन की चाबी'];
         if (it.kind === 'fuse') return ['TAKE', 'फ्यूज़'];
+        if (it.kind === 'bomb') return ['TAKE', 'देसी बम · bomb'];
         return ['TAKE', ''];
       }
       case 'container': return ['SEARCH', t.c.label];
@@ -917,9 +930,19 @@ export class Game {
     else if (it.kind === 'weapon') { const fresh = A.give(it.id); this.feed(fresh ? '+ ' + WEAPONS[it.id].name : `+${WEAPONS[it.id].mag} ${AMMO[WEAPONS[it.id].ammo]}`); }
     else if (it.kind === 'key') { this.obj.key = true; this.feed('+ सिग्नल केबिन की चाबी'); this.updateObjective(); }
     else if (it.kind === 'fuse') { this.obj.fuse = true; this.feed('+ फ्यूज़'); this.updateObjective(); }
+    else if (it.kind === 'bomb') {
+      if (A.bombs >= BOMB.max) { this.toast('और बम नहीं रख सकते', `You can carry ${BOMB.max} bombs.`); return; }
+      A.bombs++; this.feed('+ देसी बम 💣');
+    }
     this.loot.take(it);
     this.stats.supplies++;
     this.audio.play('rustle', { vol: 0.7 });
+  }
+
+  throwBomb() {
+    const r = this.arsenal.throwBomb();
+    if (r === 'none') { this.audio.play('click', { vol: 0.5 }); this.toast('बम नहीं है', 'No bombs — look in houses, almirahs and on looters.'); }
+    if (r === 'ok') this.updateHud();
   }
 
   eat() {
@@ -941,6 +964,7 @@ export class Game {
     const o = this.obj;
     if (o.phase === 'radio') return ['रेडियो सुनें', 'Listen to the radio'];
     if (o.signal && this.train && this.train.stopped) return ['प्लेटफ़ॉर्म 1 पर ट्रेन में चढ़ें', 'Board the train on platform 1'];
+    if (o.signal && o.trainT <= 0) return ['ट्रेन प्लेटफ़ॉर्म पर आ रही है — तैयार रहें', 'The train is pulling in — get ready to board at platform 1'];
     if (o.signal) return [`ट्रेन आ रही है… ${Math.ceil(o.trainT)}s — प्लेटफ़ॉर्म 1 पर टिके रहें`, `Train arriving in ${Math.ceil(o.trainT)}s — hold out at platform 1`];
     if (o.key && o.fuse) return ['गुरु गोरखनाथ धाम के सिग्नल केबिन जाएँ', 'Go to the Guru Gorakhnath Dham signal cabin'];
     const need = [];
@@ -995,6 +1019,11 @@ export class Game {
     if (force || wn !== this._wn) { this._wn = wn; $('wName').textContent = wn; }
     const fc = this.food.length;
     if (force || fc !== this._fc) { this._fc = fc; $('foodCount').textContent = fc; $('btnEat').classList.toggle('dim', fc === 0); }
+    const bc = A.bombs;
+    if (force || bc !== this._bc) { this._bc = bc; $('bombNum').textContent = bc; $('bombCount').textContent = bc; $('bombHud').classList.toggle('none', bc === 0); $('btnBomb').classList.toggle('dim', bc === 0); }
+    // a lit bomb close by (anyone's): flash a warning with the direction to run from
+    const nb = this.explosives.nearestBomb(P.pos.x, P.pos.z), warn = !!(nb && nb[1] < BOMB.radius + 1.5 && Math.abs(nb[0].pos.y - P.pos.y) < 4);
+    if (warn !== this._bw) { this._bw = warn; $('bombWarn').classList.toggle('show', warn); }
     $('stam').style.width = P.stamina + '%';
     $('stamWrap').classList.toggle('show', P.stamina < 98);
     // crosshair spread
@@ -1042,7 +1071,7 @@ export class Game {
     if (I.consume('eat')) this.eat();
     if (V.driving) {
       // ---- in the jeep: no shooting or looting, USE / G / EXIT gets out ----
-      for (const k of ['reload', 'swap', 'melee', 'torch', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7']) I.consume(k);
+      for (const k of ['reload', 'swap', 'melee', 'torch', 'bomb', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7']) I.consume(k);
       I.fire = false;
       if (I.consume('use') || I.consume('drive')) V.exit();
       if (V.driving) V.drive(dt, I);
@@ -1058,7 +1087,9 @@ export class Game {
     if (I.consume('melee')) A.equip('lathi');
     for (let k = 1; k <= 7; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
     if (I.consume('torch')) { this.torchOn = !this.torchOn; this.audio.play('click', { vol: 0.4 }); }
-    if (I.consume('drive') && V.near()) { V.enter(); return; }
+    // G: get in the jeep when standing next to it, otherwise throw a bomb
+    if (I.consume('drive')) { if (V.near()) { V.enter(); return; } I.tap('bomb'); }
+    if (I.consume('bomb')) this.throwBomb();
     const mv = P.update(dt, I, this, A);
     this.torch.intensity = this.torchOn ? 26 : 0;
     // interaction
@@ -1088,6 +1119,7 @@ export class Game {
           if (g.kind === 'food') { if (this.food.length < 8) { this.food.push(g.id); this.feed('+ ' + FOOD[g.id].name); } }
           else if (g.kind === 'ammo') { A.reserve[g.id] += g.n; this.feed(`+${g.n} ${AMMO[g.id]}`); }
           else if (g.kind === 'weapon') { const fresh = A.give(g.id); this.feed(fresh ? '+ ' + WEAPONS[g.id].name : `+${WEAPONS[g.id].mag} ${AMMO[WEAPONS[g.id].ammo]}`); }
+          else if (g.kind === 'bomb') { if (A.bombs < BOMB.max) { A.bombs++; this.feed('+ देसी बम 💣'); } }
           this.stats.supplies++;
         }
         this.audio.play('rustle', { vol: 0.8 });
@@ -1378,16 +1410,26 @@ export class Game {
     this.townMap.drawMini(c.getContext('2d'), size, this);
   }
 
+  // Loops that belong to one run (signal alarm, train rumble, fizzing fuses) and are not part
+  // of the audio system's own loop list: stop them whenever a run ends.
+  stopRunLoops() {
+    const stop = (s) => { try { s && s.stop(); } catch (e) { /* already stopped */ } };
+    stop(this.signalAlarm); this.signalAlarm = null;
+    if (this.train) { stop(this.train.rumble); this.train.rumble = null; }
+    if (this.explosives) this.explosives.silence();
+    $('bombWarn')?.classList.remove('show'); this._bw = false;
+  }
+
   gameOver(reason) {
     if (this.state !== 'play') return;
     if (this.vehicles.driving) this.vehicles.exit(true);
+    this.stopRunLoops();
     this.state = 'dead'; this.input.enabled = false;
     document.exitPointerLock?.();
     document.body.classList.remove('playing');
     this.audio.stopAll();
     this.chaseOn = false; this._chaseHold = 0;
     if (this.secret.drone && this.secret.drone.gain) this.secret.drone.gain.gain.value = 0;
-    if (this.signalAlarm) { this.signalAlarm = null; }
     if (this.train) { this.train.g.visible = false; this.train = null; }
     $('bossHud').classList.remove('show');
     $('overTitle').textContent = 'YOU DIED';
@@ -1399,6 +1441,7 @@ export class Game {
   win(kind) {
     if (this.state !== 'play') return;
     if (this.vehicles.driving) this.vehicles.exit(true);
+    this.stopRunLoops();
     this.state = 'win'; this.input.enabled = false;
     document.exitPointerLock?.();
     document.body.classList.remove('playing');
@@ -1452,7 +1495,7 @@ export class Game {
     $('pMap').onclick = () => { $('pause').classList.add('hidden'); $('mapView').classList.remove('hidden'); this.drawMap($('mapCanvas')); };
     $('mapView').onclick = () => this.resume();
     document.body.classList.toggle('nomini', !this.input.settings.minimap);
-    $('pQuit').onclick = () => { $('pause').classList.add('hidden'); if (this.vehicles.driving) this.vehicles.exit(true); $('bossHud').classList.remove('show'); this.audio.stopAll(); this.state = 'menu'; document.body.classList.remove('playing'); $('menu').classList.remove('hidden'); this.audio.resume(); };
+    $('pQuit').onclick = () => { $('pause').classList.add('hidden'); if (this.vehicles.driving) this.vehicles.exit(true); $('bossHud').classList.remove('show'); this.stopRunLoops(); this.audio.stopAll(); this.state = 'menu'; document.body.classList.remove('playing'); $('menu').classList.remove('hidden'); this.audio.resume(); };
     $('pauseBtn').addEventListener('touchstart', (e) => { e.preventDefault(); this.pause(); }, { passive: false });
     $('pauseBtn').onclick = () => this.pause();
     document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && this.state === 'play' && !this.input.touch) this.pause(); });

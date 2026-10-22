@@ -18,6 +18,7 @@ export const WEAPONS = {
 };
 
 const DEG = Math.PI / 180;
+const THROW = 0.62;     // seconds for the whole bomb throw animation
 
 // ---------- view models ----------
 function vm(build) {
@@ -213,6 +214,16 @@ export class Arsenal {
     this.holder = new THREE.Group();
     wscene.add(this.holder);
     for (const k in this.models) { this.models[k].visible = false; this.holder.add(this.models[k]); }
+    // left hand with a sutli bomb, shown only while throwing
+    const bh = this.bombHand = new THREE.Group();
+    bx(bh, mats.skin, 0.07, 0.075, 0.08, 0, 0, 0); bx(bh, mats.skin, 0.06, 0.12, 0.06, 0, -0.09, 0.01); bx(bh, mats.sleeve, 0.085, 0.24, 0.085, 0, -0.27, 0.02);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), mats.jute || mats.wood); ball.position.set(0, 0.06, -0.02); bh.add(ball);
+    const fz = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.008, 0.05, 5), mats.gun); fz.position.set(0, 0.13, -0.02); bh.add(fz);
+    const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.glow, color: 0xffd080, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    spark.scale.setScalar(0.09); spark.position.set(0, 0.16, -0.02); bh.add(spark);
+    bh.userData.ball = ball; bh.userData.fz = fz; bh.userData.spark = spark;
+    bh.traverse((o) => { o.frustumCulled = false; o.renderOrder = 10; });
+    bh.visible = false; this.holder.add(bh);
     this.fx = new Effects(scene, tex);
     // muzzle flash
     this.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.glow, color: 0xffc070, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, toneMapped: false }));
@@ -229,6 +240,9 @@ export class Arsenal {
     this.cur = 'lathi';
     this.cool = 0; this.reloadT = 0; this.switchT = 0; this.adsT = 0;
     this.kick = 0; this.bloom = 0; this.swingT = 0; this.shotsFired = 0; this.sprintT = 0;
+    this.bombs = 1; this.throwT = 0; this.releaseT = 0;     // start with one desi bomb; find more
+    clearTimeout(this._autoReload);
+    if (this.bombHand) this.bombHand.visible = false;
     this.sway = { x: 0, y: 0 };
     this.lastYaw = null;
     for (const k in this.models) this.models[k].visible = k === 'lathi';
@@ -252,6 +266,28 @@ export class Arsenal {
 
   cycle() { const i = this.owned.indexOf(this.cur); this.equip(this.owned[(i + 1) % this.owned.length]); }
 
+  // Light the fuse and throw. Returns 'ok', 'none' (no bombs) or 'busy'.
+  throwBomb() {
+    if (this.bombs <= 0) return 'none';
+    if (this.throwT > 0 || this.switchT > 0 || this.reloadT > 0) return 'busy';
+    this.bombs--; this.throwT = THROW; this.releaseT = 0.2;
+    this.audio.play('click', { vol: 0.4, rate: 0.6 });
+    return 'ok';
+  }
+
+  _release(game, player) {
+    const cam = this.cam;
+    const fwd = new THREE.Vector3(); cam.getWorldDirection(fwd);
+    const right = new THREE.Vector3().crossVectors(fwd, cam.up).normalize();
+    const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+    const from = cam.position.clone().addScaledVector(fwd, 0.5).addScaledVector(right, -0.14).addScaledVector(up, -0.06);
+    // a firm overarm throw: about 20 m on flat ground when aimed level, further when aimed up
+    const vel = fwd.clone().multiplyScalar(13.5); vel.y += 3.6;
+    vel.x += player.vel.x * 0.6; vel.z += player.vel.y * 0.6;
+    game.explosives.throwBomb(from, vel, 'player');
+    this.audio.play('whoosh', { vol: 0.5, rate: 1.2 });
+  }
+
   startReload() {
     const w = this.w;
     if (w.melee || this.reloadT > 0 || this.mag[this.cur] >= w.mag || this.reserve[w.ammo] <= 0) return false;
@@ -267,6 +303,10 @@ export class Arsenal {
     const { player, input, game } = ctx;
     const w = this.w;
     this.cool -= dt; this.switchT = Math.max(0, this.switchT - dt); this.kick *= Math.pow(0.002, dt);
+    if (this.throwT > 0) {
+      this.throwT = Math.max(0, this.throwT - dt);
+      if (this.releaseT > 0) { this.releaseT -= dt; if (this.releaseT <= 0) this._release(game, player); }
+    }
     this.bloom = Math.max(0, this.bloom - dt * 3.5);
     const wantAds = input.aim && !w.melee && this.reloadT <= 0 && !ctx.sprinting;
     this.adsT = clamp(this.adsT + (wantAds ? dt : -dt) * 6, 0, 1);
@@ -286,7 +326,7 @@ export class Arsenal {
       }
     }
     // fire
-    if (input.fire && this.switchT <= 0 && this.reloadT <= 0 && this.cool <= 0) {
+    if (input.fire && this.switchT <= 0 && this.reloadT <= 0 && this.cool <= 0 && this.throwT <= 0) {
       if (w.melee) { this.swing(ctx); this.cool = 60 / w.rpm; }
       else if (this.mag[this.cur] > 0) { this.shoot(ctx); this.cool = 60 / w.rpm; if (!w.auto) input.fire = input.touch ? input.fire && false : false; }
       else { this.audio.play('click', { vol: 0.6 }); this.cool = 0.3; if (!w.auto) input.fire = false; if (!this.startReload() && !input.touch) { /* empty */ } }
@@ -330,6 +370,19 @@ export class Arsenal {
       y -= 0.12 * k; rz = 0.6 * k; rx += -0.3 * k;
     }
     if (this.switchT > 0) y -= this.switchT * 0.5;
+    // throwing: the gun dips out of the way while the left hand swings the bomb up and over
+    const bh = this.bombHand;
+    if (this.throwT > 0) {
+      const t = 1 - this.throwT / THROW, k = Math.sin(Math.min(1, t * 1.3) * Math.PI);
+      y -= 0.16 * k; rx -= 0.25 * k;
+      const held = this.releaseT > 0, u = held ? t / (0.2 / THROW) : (t - 0.2 / THROW) / (1 - 0.2 / THROW);
+      // wind-up: from low left up beside the head; then the arm whips forward and drops out of view
+      if (held) bh.position.set(-0.24 + 0.04 * u, -0.34 + 0.24 * u, -0.5 + 0.06 * u), bh.rotation.set(0.5 * u, 0, 0.25);
+      else bh.position.set(-0.2 + 0.1 * u, -0.1 - 0.4 * u * u, -0.44 - 0.16 * u), bh.rotation.set(0.5 - 1.5 * u, 0, 0.25);
+      bh.userData.ball.visible = bh.userData.fz.visible = bh.userData.spark.visible = held;
+      bh.userData.spark.scale.setScalar(0.06 + Math.random() * 0.06);
+      bh.visible = true;
+    } else bh.visible = false;
     if (w.melee && this.swingT > 0) {
       const t = 1 - this.swingT / 0.35;
       const k = Math.sin(t * Math.PI);
@@ -395,7 +448,9 @@ export class Arsenal {
     }
     this.audio.play(w.sound, { vol: 1, verbAmt: 0.9 });
     game.noise(player.pos, w.noise, 'gun');
-    if (this.mag[this.cur] === 0 && this.reserve[w.ammo] > 0) setTimeout(() => this.startReload(), 250);
+    // auto-reload an empty gun a moment later (only if it is still the gun in hand)
+    const id = this.cur;
+    if (this.mag[id] === 0 && this.reserve[w.ammo] > 0) { clearTimeout(this._autoReload); this._autoReload = setTimeout(() => { if (this.cur === id) this.startReload(); }, 250); }
   }
 
   swing(ctx) {
