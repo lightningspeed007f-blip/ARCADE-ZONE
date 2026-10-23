@@ -2,6 +2,7 @@
 // muzzle flash, ejected casings, impacts and the bamboo lathi for melee.
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
+import { part, merge } from './props.js';
 
 export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62': '7.62', rocket: 'रॉकेट' };
 
@@ -34,9 +35,57 @@ function cy(g, mat, r, len, x, y, z) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10), mat); m.rotation.x = Math.PI / 2; m.position.set(x, y, z); g.add(m); return m;
 }
 
+// A faint cool rim on view-model silhouettes, so the gun and hands separate from a dark
+// street without adding a light (same trick as the enemies' material).
+function addRim(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
+      float rimK = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
+      outgoingLight += diffuseColor.rgb * vec3(0.14, 0.17, 0.26) * pow(rimK, 3.0);
+      #include <opaque_fragment>`);
+  };
+  return mat;
+}
+
+// One merged mesh per hand: palm, four fingers curled round the grip, thumb, wrist,
+// cuff and a round sleeve (was two plain boxes = two draw calls per hand).
+function handGeometry(skinSrgb, sleeveSrgb) {
+  // part() writes hex/255 straight into the vertex colours, which the shader treats as
+  // linear, so convert first: the hands then match the old skin/sleeve materials exactly
+  const lin = (c) => c.getHex(THREE.LinearSRGBColorSpace);
+  const skinHex = lin(new THREE.Color(skinSrgb)), sleeveHex = lin(new THREE.Color(sleeveSrgb));
+  const dk = lin(new THREE.Color(skinSrgb).multiplyScalar(0.8));
+  const cuff = lin(new THREE.Color(sleeveSrgb).multiplyScalar(0.7));
+  const X = Math.PI / 2;
+  const p = [
+    part(new THREE.BoxGeometry(0.07, 0.072, 0.085), skinHex, 0, 0, 0.004),          // back of the hand
+    part(new THREE.BoxGeometry(0.024, 0.026, 0.06), skinHex, -0.041, 0.02, -0.022), // thumb along the grip
+  ];
+  for (let i = 0; i < 4; i++) p.push(part(new THREE.BoxGeometry(0.074, 0.016, 0.03), i % 2 ? dk : skinHex, 0.003, 0.026 - i * 0.018, -0.05)); // fingers
+  p.push(part(new THREE.CylinderGeometry(0.031, 0.034, 0.06, 10), skinHex, 0, -0.01, 0.07, X));   // wrist
+  p.push(part(new THREE.CylinderGeometry(0.054, 0.054, 0.026, 12), cuff, 0, -0.018, 0.1, X));    // cuff
+  p.push(part(new THREE.CylinderGeometry(0.05, 0.056, 0.17, 12), sleeveHex, 0, -0.022, 0.19, X)); // forearm in the sleeve
+  return merge(p);
+}
+
 function buildModels(mats) {
   const { gun, wood, skin, sleeve, brass } = mats;
-  const hand = (g, x, y, z) => { bx(g, skin, 0.075, 0.08, 0.1, x, y, z); bx(g, sleeve, 0.09, 0.1, 0.2, x, y - 0.02, z + 0.14); };
+  for (const m of [gun, wood, skin, sleeve, brass, mats.olive, mats.olive2]) if (m) addRim(m);
+  const handMat = addRim(new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const handGeo = handGeometry(skin.color.getHex(), sleeve.color.getHex());
+  const hand = (g, x, y, z) => { const m = new THREE.Mesh(handGeo, handMat); m.position.set(x, y, z); g.add(m); };
+  const B = (x, y, z) => new THREE.BoxGeometry(x, y, z);
+  // trigger guard + trigger (+ any extra small parts), merged into ONE extra mesh per gun.
+  // yb: bottom of the guard loop, zf: its front, zt: the trigger
+  const guard = (g, yb, zf, zt, extra = []) => {
+    const m = new THREE.Mesh(merge([
+      part(B(0.008, 0.004, 0.045), 0xffffff, 0, yb, zf + 0.0225),
+      part(B(0.008, 0.028, 0.004), 0xffffff, 0, yb + 0.014, zf),
+      part(B(0.006, 0.018, 0.005), 0xffffff, 0, yb + 0.014, zt, 0.25, 0, 0),
+      ...extra,
+    ]), gun);
+    g.add(m);
+  };
   const M = {};
   // lathi: a bamboo stick gripped in the right fist, forearm running down to the screen edge
   M.lathi = vm((g) => {
@@ -53,33 +102,42 @@ function buildModels(mats) {
     thumb.position.set(-0.035, 0.035, -0.02); g.add(thumb);
     // wrist + forearm in a sleeve, going down and back toward the bottom-right corner
     const e = new THREE.Vector3(0.28, -0.55, 0.79).normalize();
-    along(new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.12, 0.07), skin), e, e.clone().multiplyScalar(0.07));
-    along(new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.3, 0.1), sleeve), e, e.clone().multiplyScalar(0.26));
+    along(new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.037, 0.12, 10), skin), e, e.clone().multiplyScalar(0.07));
+    along(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.056, 0.3, 12), sleeve), e, e.clone().multiplyScalar(0.26));
     g.userData.melee = true;
   });
   M.pistol = vm((g) => {
     bx(g, gun, 0.035, 0.045, 0.2, 0, 0.03, -0.08); bx(g, gun, 0.032, 0.11, 0.05, 0, -0.035, -0.0, 0.25);
     bx(g, gun, 0.03, 0.02, 0.06, 0, -0.005, -0.06); hand(g, 0, -0.07, 0.02); g.userData.muzzle = new THREE.Vector3(0, 0.03, -0.19); g.userData.eject = new THREE.Vector3(0.02, 0.04, -0.06);
     g.userData.slide = g.children[0];
+    // sights ride on the slide (same mesh, so they recoil with it)
+    g.children[0].geometry = merge([part(new THREE.BoxGeometry(0.035, 0.045, 0.2), 0xffffff),
+      part(B(0.006, 0.01, 0.01), 0xffffff, 0, 0.0275, -0.088),
+      part(B(0.008, 0.01, 0.01), 0xffffff, -0.009, 0.0275, 0.09), part(B(0.008, 0.01, 0.01), 0xffffff, 0.009, 0.0275, 0.09)]);
+    guard(g, -0.038, -0.083, -0.056);
   });
   M.revolver = vm((g) => {
     cy(g, gun, 0.012, 0.18, 0, 0.035, -0.13); cy(g, gun, 0.026, 0.05, 0, 0.025, -0.03); bx(g, gun, 0.03, 0.03, 0.08, 0, 0.04, -0.02);
     bx(g, wood, 0.03, 0.1, 0.045, 0, -0.03, 0.02, 0.35); hand(g, 0, -0.07, 0.04); g.userData.muzzle = new THREE.Vector3(0, 0.035, -0.23); g.userData.cyl = g.children[1];
+    guard(g, -0.005, -0.055, -0.03, [part(B(0.005, 0.012, 0.012), 0xffffff, 0, 0.051, -0.21)]); // + front sight
   });
   M.katta = vm((g) => {
     cy(g, gun, 0.016, 0.22, 0, 0.03, -0.14); bx(g, gun, 0.04, 0.05, 0.08, 0, 0.025, -0.01);
     bx(g, wood, 0.035, 0.12, 0.05, 0, -0.04, 0.03, 0.45); hand(g, 0, -0.08, 0.05); g.userData.muzzle = new THREE.Vector3(0, 0.03, -0.26);
+    guard(g, -0.022, -0.05, -0.028);
   });
   M.dunali = vm((g) => {
     cy(g, gun, 0.018, 0.62, -0.019, 0.02, -0.38); cy(g, gun, 0.018, 0.62, 0.019, 0.02, -0.38);
     bx(g, gun, 0.06, 0.05, 0.12, 0, 0.0, -0.03); bx(g, wood, 0.05, 0.06, 0.3, 0, -0.02, -0.25); bx(g, wood, 0.045, 0.09, 0.32, 0, -0.06, 0.16, -0.2);
     hand(g, 0.0, -0.08, 0.06); hand(g, -0.02, -0.06, -0.32);
+    guard(g, -0.052, -0.045, -0.018);
     g.userData.muzzle = new THREE.Vector3(0, 0.02, -0.7); g.userData.barrels = true;
   });
   M.rifle = vm((g) => {
     bx(g, gun, 0.05, 0.07, 0.45, 0, 0.0, -0.2); cy(g, gun, 0.012, 0.3, 0, 0.015, -0.56); bx(g, gun, 0.035, 0.14, 0.06, 0, -0.08, -0.12, 0.35);
     bx(g, wood, 0.045, 0.07, 0.25, 0, -0.03, 0.15); bx(g, wood, 0.05, 0.05, 0.2, 0, -0.03, -0.34); bx(g, gun, 0.02, 0.04, 0.03, 0, 0.055, -0.36);
     hand(g, 0.0, -0.09, 0.0); hand(g, -0.01, -0.06, -0.33);
+    guard(g, -0.065, -0.07, -0.04, [part(B(0.022, 0.016, 0.02), 0xffffff, 0, 0.043, -0.03)]); // + rear sight
     g.userData.muzzle = new THREE.Vector3(0, 0.015, -0.72); g.userData.eject = new THREE.Vector3(0.03, 0.03, -0.15); g.userData.mag = g.children[2];
   });
   // rocket launcher: olive tube on the shoulder, flared back end, grip, sight and the warhead poking out

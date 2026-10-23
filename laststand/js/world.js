@@ -70,7 +70,9 @@ export function createWorldContext() {
 // ---------- facade (non-enterable) building ----------
 const AO_FADE = 1.3; // metres; matches AO_H in builder.js
 const cellUV = (i) => {
-  const col = i % 4, row = Math.floor(i / 4), m = 0.003;
+  // m: inset from the cell edge (16 px of 2048) so distant mip levels don't bleed the
+  // neighbouring bay in as a coloured seam
+  const col = i % 4, row = Math.floor(i / 4), m = 0.008;
   return [col / 4 + m, 1 - (row + 1) / 4 + m, (col + 1) / 4 - m, 1 - row / 4 - m];
 };
 

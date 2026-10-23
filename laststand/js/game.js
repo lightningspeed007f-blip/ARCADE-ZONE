@@ -24,6 +24,17 @@ import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 
 const $ = (id) => document.getElementById(id);
+const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
+
+// see Game.makeMaterials. amp: how far the brightness swings around 1 (mean stays ~1)
+function macroVariation(mat, macro, amp) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.macroMap = { value: macro };
+    sh.fragmentShader = 'uniform sampler2D macroMap;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      diffuseColor.rgb *= ${(1 - amp).toFixed(3)} + ${(2 * amp).toFixed(3)} * texture2D(macroMap, vMapUv * 0.113 + vec2(0.37, 0.71)).r;`);
+  };
+  mat.customProgramCacheKey = () => 'macro' + amp;
+}
 
 const BROADCAST = [
   ['...खर्र... यह आपातकालीन प्रसारण है... जो भी ज़िंदा है, सुनें...', '...this is an emergency broadcast... anyone alive, listen...'],
@@ -64,7 +75,8 @@ export class Game {
     await (document.fonts?.ready || Promise.resolve());
     try { await document.fonts.load('bold 40px "Noto Sans Devanagari"'); } catch (e) { /* system font */ }
     await tick();
-    const tex = this.tex = buildTextures();
+    const maxAniso = R.capabilities.getMaxAnisotropy();
+    const tex = this.tex = buildTextures({ aniso: Math.min(maxAniso, this.quality === 'high' ? 8 : this.quality === 'med' ? 4 : 2) });
     progress(0.18, 'जायस बन रहा है… building the town');
     await tick();
     const W = this.W = createWorldContext();
@@ -79,6 +91,7 @@ export class Game {
     await tick();
     this.doors = this.buildDoors();
     W.lowPoly = this.quality !== 'high';
+    W.quality = this.quality;
     this.props = buildProps(W, scene, mats, tex);
     this.vehicles = new Vehicles(this);
     this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
@@ -95,8 +108,13 @@ export class Game {
     this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.25, 'तस्वीरें और बैनर… your images'));
     this.displays = buildDisplays(W, scene, this.assets, tex);
     // lights
-    scene.add(new THREE.HemisphereLight(0x6f86c0, 0x2a2218, 1.05));
-    const moon = new THREE.DirectionalLight(0xa8bcff, 0.75); moon.position.set(-60, 120, -40); scene.add(moon);
+    // Fill light: dimmer and less saturated than a flat blue wash, so the moon, the street
+    // lamps and the torch shape the town. Indoors it fades down and warms (updateAmbience).
+    this.hemi = new THREE.HemisphereLight(0x5d6f9c, 0x342b20, HEMI_OUT);
+    this.hemiSky = { out: new THREE.Color(0x5d6f9c), in: new THREE.Color(0x6a6052) };
+    this.hemiK = 0;
+    scene.add(this.hemi);
+    const moon = this.moonLight = new THREE.DirectionalLight(0xb0c2ff, 0.95); moon.position.set(-60, 120, -40); scene.add(moon);
     this.lightPool = new LightPool(scene, W.lights, this.quality === 'high' ? 8 : this.quality === 'med' ? 5 : 3);
     this.torch = new THREE.SpotLight(0xfff1dc, 0, 32, 0.42, 0.55, 1.2);
     cam.add(this.torch); this.torch.position.set(0.15, -0.1, 0); cam.add(this.torch.target); this.torch.target.position.set(0, 0, -5);
@@ -106,16 +124,25 @@ export class Game {
     this.input = new Input(this.canvas, $('touch'));
     this.player = new Player(cam, this.physics, this.audio);
     const gunMats = {
-      gun: new THREE.MeshPhongMaterial({ color: 0x2c2d30, shininess: 60, specular: 0x444444 }),
-      wood: new THREE.MeshLambertMaterial({ map: tex.wood, color: 0xa87a54 }),
+      gun: new THREE.MeshPhongMaterial({ color: 0x34363a, shininess: 70, specular: 0x5a5a5a }),
+      wood: new THREE.MeshPhongMaterial({ map: tex.wood, color: 0xa87a54, shininess: 18, specular: 0x2a2018 }),
       skin: new THREE.MeshLambertMaterial({ color: 0xa8714c }),
       sleeve: new THREE.MeshLambertMaterial({ color: 0x3c4148 }),
       brass: new THREE.MeshLambertMaterial({ color: 0xc8a040 }),
       olive: new THREE.MeshLambertMaterial({ color: 0x4a5236 }), olive2: new THREE.MeshLambertMaterial({ color: 0x5e6640 }),
       jute: new THREE.MeshLambertMaterial({ color: 0x9a7a4a }),
     };
-    this.wscene.add(new THREE.HemisphereLight(0x8090b0, 0x302820, 1.4));
-    const wl = new THREE.DirectionalLight(0xffffff, 0.5); wl.position.set(1, 2, 1); this.wscene.add(wl);
+    // view-model lights: a fixed set (no shader recompiles), driven every frame by
+    // updateViewLights so the hands and gun pick up the scene they are in
+    const VL = this.vl = {
+      hemi: new THREE.HemisphereLight(0x8090b0, 0x302820, 1.2),
+      moon: new THREE.DirectionalLight(0xb0c2ff, 0.4),   // cool key from the moon's direction
+      lamp: new THREE.DirectionalLight(0xffc47a, 0),     // nearest street / room lamps
+      front: new THREE.DirectionalLight(0xffe2b8, 0),    // torch spill and muzzle flash
+      v: new THREE.Vector3(), d: new THREE.Vector3(), c: new THREE.Color(), lc: new THREE.Color(),
+    };
+    for (const k of ['hemi', 'moon', 'lamp', 'front']) this.wscene.add(VL[k]);
+    for (const k of ['moon', 'lamp', 'front']) this.wscene.add(VL[k].target);
     this.arsenal = new Arsenal(cam, scene, this.wscene, tex, gunMats, this.audio);
     this.fx = this.arsenal.fx;
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
@@ -138,6 +165,17 @@ export class Game {
   }
 
   makeMaterials(tex, signTex) {
+    const mats = this.baseMaterials(tex, signTex);
+    // Macro variation: modulate the big tiling surfaces with a soft noise sampled at ~1/9
+    // of their own frequency, so the 3-6 m texture repeat stops reading as a grid.
+    // One extra texture read per pixel on these materials; skipped on Low.
+    if (this.quality !== 'low') {
+      for (const [k, amp] of [['asphalt', 0.5], ['dirt', 0.6], ['khadanja', 0.45], ['plaster', 0.3]]) macroVariation(mats[k], tex.macro, amp);
+    }
+    return mats;
+  }
+
+  baseMaterials(tex, signTex) {
     const L = (o) => new THREE.MeshLambertMaterial(Object.assign({ vertexColors: true }, o));
     return {
       facade: L({ map: tex.facade, emissiveMap: tex.facadeEmissive, emissive: 0xffd9a0, emissiveIntensity: 0.9 }),
@@ -248,11 +286,36 @@ export class Game {
     const fogCol = new THREE.Color(0x0d1520);
     this.scene.fog = new THREE.FogExp2(fogCol, 0.0165);
     this.scene.background = fogCol;
+    // Sky dome. This shader writes its colour straight to the screen (no colour-space
+    // conversion), so `fogc` carries the fog colour as it is actually displayed: the bottom
+    // of the dome melts into it and fogged buildings no longer glow against a black horizon.
+    // Thin drifting clouds reuse the macro-noise texture (one texture read per sky pixel;
+    // switched off on Low), lit warm by the town near the horizon and cool by the moon above.
     const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 24, 12), new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { top: { value: new THREE.Color(0x03060d) }, hor: { value: new THREE.Color(0x1a2230) }, glow: { value: new THREE.Color(0x3a2c22) } },
+      uniforms: {
+        top: { value: new THREE.Color(0x03060d) }, hor: { value: new THREE.Color(0x1a2230) }, glow: { value: new THREE.Color(0x3a2c22) },
+        fogc: { value: fogCol.clone().convertLinearToSRGB() }, clouds: { value: this.tex.macro },
+        time: { value: 0 }, cloudAmt: { value: this.quality === 'low' ? 0 : 1 },
+      },
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: 'uniform vec3 top; uniform vec3 hor; uniform vec3 glow; varying vec3 vP; void main(){ float h = max(vP.y, 0.0); vec3 c = mix(hor, top, pow(h, 0.45)); c += glow * pow(1.0 - h, 6.0) * 0.6; gl_FragColor = vec4(c, 1.0); }',
+      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 glow; uniform vec3 fogc; uniform sampler2D clouds; uniform float time; uniform float cloudAmt;
+        varying vec3 vP;
+        void main(){
+          vec3 d = normalize(vP);
+          float h = max(d.y, 0.0);
+          vec3 c = mix(hor, top, pow(h, 0.45));
+          c += glow * pow(1.0 - h, 6.0) * 0.6;
+          if (cloudAmt > 0.0) {
+            vec2 uv = d.xz / (d.y + 0.2) * 0.16 + vec2(time * 0.0035, time * 0.0012);
+            float n = texture2D(clouds, uv).r * 0.7 + texture2D(clouds, uv * 2.7 + 0.3).r * 0.3;
+            float m = smoothstep(0.44, 0.62, n) * smoothstep(0.03, 0.3, h) * cloudAmt;
+            vec3 cc = mix(vec3(0.14, 0.115, 0.1), vec3(0.075, 0.085, 0.11), smoothstep(0.05, 0.6, h));
+            c = mix(c, cc, m * 0.85);
+          }
+          c = mix(fogc, c, smoothstep(-0.03, 0.16, d.y));
+          gl_FragColor = vec4(c, 1.0);
+        }`,
     }));
     sky.renderOrder = -10;
     this.sky = sky; this.scene.add(sky);
@@ -267,6 +330,9 @@ export class Game {
     this.scene.add(this.stars);
     this.moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.glow, color: 0xdfe8ff, fog: false, depthWrite: false, toneMapped: false }));
     this.moon.scale.setScalar(16); this.scene.add(this.moon);
+    // wide faint halo around the moon (a child, so it hides with the moon in the valleys)
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.glow, color: 0x8090b8, fog: false, depthWrite: false, toneMapped: false, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending }));
+    halo.scale.setScalar(4.5); this.moon.add(halo);
   }
 
   buildTrains() {
@@ -1339,15 +1405,71 @@ export class Game {
     if (this.signalAlarm) { this.signalAlarm.stop(); this.signalAlarm = null; }
   }
 
+  // Indoors the sky can't reach the walls: fade the blue fill down and toward a warm grey,
+  // and the moonlight with it. Outdoors (and in the valleys) the night values come back.
+  updateAmbience(dt) {
+    const st = this.state;
+    if (st !== 'play' && st !== 'menu' && st !== 'dead' && st !== 'win') return; // paused: hold
+    this.hemiK += ((st === 'play' && this.inside ? 1 : 0) - this.hemiK) * Math.min(1, dt * 3);
+    const k = this.hemiK;
+    this.hemi.intensity = HEMI_OUT - 0.42 * k;
+    this.hemi.color.copy(this.hemiSky.out).lerp(this.hemiSky.in, k);
+    this.moonLight.intensity = 0.95 - 0.6 * k;
+  }
+
+  updateViewLights() {
+    const VL = this.vl, cam = this.camera, cp = cam.position;
+    // ambient follows the world's fill (so it dims indoors too), a little brighter for readability
+    const amb = this.hemi.intensity / HEMI_OUT;
+    VL.hemi.color.copy(this.hemi.color); VL.hemi.groundColor.copy(this.hemi.groundColor);
+    VL.hemi.intensity = 1.15 * amb;
+    VL.moon.intensity = 0.45 * this.moonLight.intensity;
+    VL.moon.position.copy(cp).add(VL.v.copy(this.moonLight.position).normalize());
+    VL.moon.target.position.copy(cp);
+    // lamps: weight the pooled point lights by how strongly they reach the camera
+    const dir = VL.d.set(0, 0, 0), col = VL.c.setRGB(0, 0, 0);
+    let wsum = 0;
+    for (const l of this.lightPool.pool) {
+      if (l.intensity <= 0.01) continue;
+      VL.v.subVectors(l.position, cp);
+      const dist = VL.v.length();
+      if (dist >= l.distance) continue;
+      const f = 1 - dist / l.distance, w = l.intensity * f * f;
+      dir.addScaledVector(VL.v.normalize(), w);
+      col.r += l.color.r * w; col.g += l.color.g * w; col.b += l.color.b * w;
+      wsum += w;
+    }
+    if (wsum > 0.001) {
+      col.multiplyScalar(1 / wsum);
+      VL.lamp.color.copy(col);
+      VL.lamp.intensity = Math.min(1.3, wsum * 0.16);
+      if (dir.lengthSq() < 1e-6) dir.set(0, 1, 0);
+      VL.lamp.position.copy(cp).add(dir.normalize());
+    } else VL.lamp.intensity = 0;
+    VL.lamp.target.position.copy(cp);
+    // front: torch spill from just above the hands, muzzle flash from ahead of the gun
+    const fl = this.arsenal.flashLight.intensity;
+    const flash = Math.min(1, fl / 14);
+    const torch = this.torchOn ? 0.5 : 0;
+    VL.front.intensity = torch + flash * 2.4;
+    VL.front.color.setHex(0xfff1dc).lerp(VL.lc.setHex(0xffa850), flash > 0 ? Math.min(1, flash * 3) : 0);
+    cam.getWorldDirection(VL.v);
+    VL.front.position.copy(cp).addScaledVector(VL.v, flash > torch ? 1.2 : 0.3).add(VL.d.copy(cam.up).applyQuaternion(cam.quaternion).multiplyScalar(0.8));
+    VL.front.target.position.copy(cp).addScaledVector(VL.v, 0.4);
+  }
+
   // ================= render =================
   render(dt) {
     const R = this.renderer, cam = this.camera;
     if (this.state === 'play') this.lightPool.update(dt, cam, this.time);
+    this.updateAmbience(dt);
     this.sky.position.copy(cam.position); this.stars.position.copy(cam.position);
+    const su = this.sky.material.uniforms;
+    su.time.value = this.time; su.fogc.value.copy(this.scene.fog.color).convertLinearToSRGB(); // valleys change the fog
     this.moon.position.set(cam.position.x - 60, cam.position.y + 75, cam.position.z - 90);
     R.info.reset(); R.clear();
     R.render(this.scene, cam);
-    if (this.state === 'play') { R.clearDepth(); R.render(this.wscene, cam); }
+    if (this.state === 'play') { this.updateViewLights(); R.clearDepth(); R.render(this.wscene, cam); }
     this.adaptResolution(dt);
   }
 
