@@ -3,6 +3,10 @@
 // only a few dozen draw calls and still gets frustum culled.
 import * as THREE from 'three';
 
+const AO_MIN = 0.62;    // side-face brightness right at the floor
+const AO_H = 1.3;       // metres above the floor where the darkening has faded out
+const BOTTOM_SH = 0.72; // undersides (eaves, balconies, ceilings) get little sky
+
 class Acc {
   constructor() { this.pos = []; this.nor = []; this.uv = []; this.col = []; this.idx = []; this.n = 0; }
 }
@@ -57,16 +61,41 @@ export class Builder {
     const ref = [cx, cz];
     const sh = opts.flat ? 1 : 0.86; // a touch darker on sides => readable shapes at night
     const sc = [color[0] * sh, color[1] * sh, color[2] * sh];
+    // Baked ambient occlusion: side faces darken toward the floor they stand on, so walls,
+    // furniture and kerbs sit on the ground instead of floating. The floor level is the
+    // box's own bottom when it stands at ground/platform height, or opts.aoBase (walls on
+    // upper storeys). Faces that cross the fade height are split there, so wall pieces
+    // around windows and doors shade continuously. Costs vertices at load, nothing per frame.
+    const bottom = cy - hy;
+    const aoBase = opts.ao === false || mat === 'glow' ? null : opts.aoBase !== undefined ? opts.aoBase : bottom <= 0.9 ? bottom : null;
+    const aoK = (ly) => {
+      const t = Math.min(1, Math.max(0, (ly + cy - aoBase) / AO_H));
+      return AO_MIN + (1 - AO_MIN) * t * (2 - t); // ease-out: dark only right at the floor
+    };
+    const bc = [color[0] * BOTTOM_SH, color[1] * BOTTOM_SH, color[2] * BOTTOM_SH]; // under eaves, ceilings
     const face = (name, n, corners, uvf, col) => {
       if (skip.includes(name)) return;
       this.quad(mat, ...corners.map((p) => W(...p)), N(...n), corners.map(uvf), col, ref);
     };
+    // side face: corners [b0, b1, t1, t0] (two bottom, then the top two above b1 and b0)
+    const side = (name, n, corners, uvf, col) => {
+      if (skip.includes(name)) return;
+      if (aoBase === null) return face(name, n, corners, uvf, col);
+      const shade = (p) => { const k = aoK(p[1]); return [col[0] * k, col[1] * k, col[2] * k]; };
+      const knot = aoBase + AO_H - cy; // local y where the fade ends
+      if (knot > -hy + 0.02 && knot < hy - 0.02) {
+        const m0 = [corners[0][0], knot, corners[0][2]], m1 = [corners[1][0], knot, corners[1][2]];
+        const lo = [corners[0], corners[1], m1, m0], hi = [m0, m1, corners[2], corners[3]];
+        this.quad(mat, ...lo.map((p) => W(...p)), N(...n), lo.map(uvf), lo.map(shade), ref);
+        this.quad(mat, ...hi.map((p) => W(...p)), N(...n), hi.map(uvf), col, ref);
+      } else this.quad(mat, ...corners.map((p) => W(...p)), N(...n), corners.map(uvf), corners.map(shade), ref);
+    };
     face('top', [0, 1, 0], [[-hx, hy, -hz], [hx, hy, -hz], [hx, hy, hz], [-hx, hy, hz]], (p) => [(p[0] + ox) * us, (p[2] + oy) * us], color);
-    face('bottom', [0, -1, 0], [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz]], (p) => [(p[0] + ox) * us, (p[2]) * us], sc);
-    face('px', [1, 0, 0], [[hx, -hy, -hz], [hx, -hy, hz], [hx, hy, hz], [hx, hy, -hz]], (p) => [(p[2] + ox) * us, (p[1] + cy + oy) * us], sc);
-    face('nx', [-1, 0, 0], [[-hx, -hy, hz], [-hx, -hy, -hz], [-hx, hy, -hz], [-hx, hy, hz]], (p) => [(-p[2] + ox) * us, (p[1] + cy + oy) * us], sc);
-    face('pz', [0, 0, 1], [[hx, -hy, hz], [-hx, -hy, hz], [-hx, hy, hz], [hx, hy, hz]], (p) => [(-p[0] + ox) * us, (p[1] + cy + oy) * us], color);
-    face('nz', [0, 0, -1], [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz]], (p) => [(p[0] + ox) * us, (p[1] + cy + oy) * us], color);
+    face('bottom', [0, -1, 0], [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz]], (p) => [(p[0] + ox) * us, (p[2]) * us], opts.flat ? sc : bc);
+    side('px', [1, 0, 0], [[hx, -hy, -hz], [hx, -hy, hz], [hx, hy, hz], [hx, hy, -hz]], (p) => [(p[2] + ox) * us, (p[1] + cy + oy) * us], sc);
+    side('nx', [-1, 0, 0], [[-hx, -hy, hz], [-hx, -hy, -hz], [-hx, hy, -hz], [-hx, hy, hz]], (p) => [(-p[2] + ox) * us, (p[1] + cy + oy) * us], sc);
+    side('pz', [0, 0, 1], [[hx, -hy, hz], [-hx, -hy, hz], [-hx, hy, hz], [hx, hy, hz]], (p) => [(-p[0] + ox) * us, (p[1] + cy + oy) * us], color);
+    side('nz', [0, 0, -1], [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz]], (p) => [(p[0] + ox) * us, (p[1] + cy + oy) * us], color);
     if (opts.collide !== false) return this.physics.add(cx, cy, cz, hx, hy, hz, yaw, opts.tag || null);
     return null;
   }

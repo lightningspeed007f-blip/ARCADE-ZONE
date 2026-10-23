@@ -196,6 +196,24 @@ function parkedVehicles(W) {
   }
 }
 
+// ---------- soft contact shadows under parked things ----------
+// One instanced draw for the whole town: a dark, blurred rounded rectangle on the
+// ground under each car, auto, bus, cart, bike and cow, so they sit on the road.
+function contactShadows(scene, pr) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  x.filter = 'blur(7px)';
+  x.fillStyle = 'rgba(0,0,0,0.85)';
+  x.beginPath(); x.roundRect ? x.roundRect(12, 12, 40, 40, 10) : x.rect(12, 12, 40, 40); x.fill();
+  const t = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, color: 0xffffff, opacity: 0.8 });
+  const list = [];
+  const add = (arr, w, l) => { for (const it of arr) list.push({ p: it.p, yaw: it.yaw || 0, w, l }); };
+  add(pr.cars, 2.3, 4.6); add(pr.autos, 1.8, 3.1); add(pr.buses, 3.2, 11.5); add(pr.carts, 1.6, 2.7); add(pr.bikes, 0.8, 2.1); add(pr.cows, 1.1, 2.0);
+  // y 0.085: just above the highest road strip
+  return instanced(scene, new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, list, (s) => ({ x: s.p[0], y: 0.085, z: s.p[2], yaw: s.yaw, sv: [s.w, 1, s.l] }));
+}
+
 // ---------- build everything ----------
 export function buildProps(W, scene, mats, tex) {
   poleLines(W);
@@ -217,7 +235,7 @@ export function buildProps(W, scene, mats, tex) {
     const color = p.rail ? 0xfff2d6 : r.chance(0.6) ? 0xffc47a : 0xe8f0ff; // sodium vs LED
     p.head = [hx, hy, hz]; p.broken = broken;
     if (!broken) W.lights.push({ baseY: p.p[1], x: hx, y: hy - 0.3, z: hz, color, intensity: p.major ? 9 : 6, dist: p.major ? 22 : 17, flicker: flicker ? 1 : 0, street: true, pool: true, glow: true });
-    out.lampHeads.push({ x: hx, y: hy, z: hz, on: !broken, color });
+    out.lampHeads.push({ x: hx, y: hy, z: hz, on: !broken, color, major: !!p.major, baseY: p.p[1] });
   }
   // trees: trunk + three canopy blobs
   const trees = pr.trees;
@@ -248,6 +266,7 @@ export function buildProps(W, scene, mats, tex) {
   instanced(scene, GEO.sleeper(), vc, pr.sleepers, (s) => ({ x: s[0], y: 0.05, z: s[1], yaw: Math.PI / 2 }));
   instanced(scene, GEO.barrier(), vc, pr.barriers, (b) => { P.add(b.p[0], 0.55, b.p[2], 0.15, 0.55, 0.15); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.0 }; });
   out.fans = instanced(scene, GEO.fan(), vc, W.fans, (f) => ({ x: f[0], y: f[1], z: f[2] }));
+  out.contact = contactShadows(scene, pr);
 
   // wires: one LineSegments for the whole town
   const wp = [], wc = [];
@@ -295,5 +314,45 @@ export function buildProps(W, scene, mats, tex) {
   if (W.special.highMast) pools.push({ x: W.special.highMast[0], z: W.special.highMast[2], color: 0xffd9a0, big: true });
   out.pools = instanced(scene, new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mats.pool, pools, (l) => ({ x: l.x, y: (l.baseY || 0) + 0.09, z: l.z, s: l.big ? 30 : 11, color: l.color }));
   out.poolLights = pools;
+  out.cones = lampCones(scene, out.lampHeads, W.quality);
   return out;
+}
+
+// ---------- soft light cones under working street lamps ----------
+// One instanced, additive, unlit draw. Each cone is brightest under the lamp head and
+// where you look through its middle, fades toward the ground and its silhouette, and
+// fades out with distance; beyond ~55 m (and very close up) the vertex shader collapses
+// it so it costs no pixels at all. High: every working lamp. Medium: only main-road lamps.
+// Low: none (extra transparent pixels are what low-end GPUs can least afford).
+function lampCones(scene, heads, quality) {
+  if (quality === 'low') return null;
+  const list = heads.filter((h) => h.on && (quality === 'high' || h.major));
+  if (!list.length) return null;
+  const H = 6.3;
+  const geo = new THREE.CylinderGeometry(0.16, 2.6, H, 14, 1, true);
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    uniforms: { far: { value: 55 }, k: { value: 0.4 } },
+    vertexShader: `uniform float far; uniform float k;
+      varying vec3 vC;
+      void main(){
+        mat4 m = modelMatrix * instanceMatrix;
+        vec3 centre = (m * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        float dc = distance(cameraPosition, centre);
+        float fade = (1.0 - smoothstep(far * 0.5, far, dc)) * smoothstep(2.5, 6.0, dc);
+        vec4 wp = m * vec4(position, 1.0);
+        vec3 wn = normalize(mat3(m) * normal);
+        float facing = abs(dot(wn, normalize(cameraPosition - wp.xyz)));
+        vec3 col = vec3(1.0);
+        #ifdef USE_INSTANCING_COLOR
+          col = instanceColor;
+        #endif
+        vC = col * k * fade * pow(uv.y, 1.6) * pow(facing, 1.4);
+        gl_Position = fade <= 0.0 ? vec4(2.0, 2.0, 2.0, 1.0) : projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader: 'varying vec3 vC; void main(){ gl_FragColor = vec4(vC, 1.0); }',
+  });
+  const im = instanced(scene, geo, mat, list, (h) => ({ x: h.x, y: h.y - 0.18 - H / 2, z: h.z, color: h.color }));
+  im.renderOrder = 2;
+  return im;
 }

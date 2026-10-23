@@ -52,11 +52,13 @@ export class Frame {
 function wallRun(F, along, fixed, a0, a1, y0, h, mat, color, openings = [], t = WT, opts = {}) {
   const ops = openings.filter((o) => o.c - o.w / 2 < a1 && o.c + o.w / 2 > a0).sort((p, q) => p.c - q.c);
   let cur = a0;
+  // every piece of this wall shades toward the same floor (baked AO in Builder.box)
+  const o2 = Object.assign({ aoBase: F.y0 + y0 }, opts);
   const seg = (s0, s1, sy0, sy1) => {
     if (s1 - s0 < 0.01 || sy1 - sy0 < 0.01) return;
     const mid = (s0 + s1) / 2, len = s1 - s0;
-    if (along === 'x') F.box(mat, mid, (sy0 + sy1) / 2, fixed, len, sy1 - sy0, t, color, opts);
-    else F.box(mat, fixed, (sy0 + sy1) / 2, mid, t, sy1 - sy0, len, color, opts);
+    if (along === 'x') F.box(mat, mid, (sy0 + sy1) / 2, fixed, len, sy1 - sy0, t, color, o2);
+    else F.box(mat, fixed, (sy0 + sy1) / 2, mid, t, sy1 - sy0, len, color, o2);
   };
   for (const o of ops) {
     const o0 = o.c - o.w / 2, o1 = o.c + o.w / 2;

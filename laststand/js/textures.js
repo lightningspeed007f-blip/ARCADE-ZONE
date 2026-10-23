@@ -13,10 +13,17 @@ function canvas(w, h) {
   return [c, c.getContext('2d')];
 }
 
+// Anisotropic filtering for the tiling surfaces, set per quality by buildTextures():
+// sharper roads and floors at grazing angles on High, cheaper sampling on Low.
+let ANISO = 4;
+// Extra details are drawn with their own random stream so every texture that existed
+// before looks exactly as it did.
+const R2 = makeRng(9113);
+
 function toTex(c, repeat = true, srgb = true) {
   const t = new THREE.CanvasTexture(c);
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 4;
+  t.anisotropy = ANISO;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;
@@ -119,7 +126,56 @@ function asphalt() {
     for (let k = 0; k < 8; k++) { px += (R() - 0.5) * 30; py += (R() - 0.5) * 30; x.lineTo(px, py); }
     x.stroke();
   }
+  asphaltWear(x);
   return toTex(c);
+}
+
+// Road wear on top of the base asphalt. Canvas y runs along the road (see buildRoads):
+// polished tyre paths, oil drips between them, dark wet stains and the odd paan splat.
+function asphaltWear(x) {
+  for (const cx of [0.17, 0.33, 0.67, 0.83]) {
+    const px = cx * 512 + (R2() - 0.5) * 10, w = 30 + R2() * 10;
+    const g = x.createLinearGradient(px - w / 2, 0, px + w / 2, 0);
+    g.addColorStop(0, 'rgba(140,138,132,0)'); g.addColorStop(0.5, 'rgba(140,138,132,0.09)'); g.addColorStop(1, 'rgba(140,138,132,0)');
+    x.fillStyle = g; x.fillRect(px - w / 2, 0, w, 512);
+  }
+  for (const cx of [0.25, 0.75]) {
+    for (let i = 0; i < 26; i++) {
+      x.fillStyle = `rgba(12,12,14,${0.15 + R2() * 0.25})`;
+      x.beginPath(); x.ellipse(cx * 512 + (R2() - 0.5) * 26, R2() * 512, 2 + R2() * 6, 4 + R2() * 12, 0, 0, 7); x.fill();
+    }
+  }
+  for (let i = 0; i < 6; i++) {                               // dried wet patches
+    const px = R2() * 512, py = R2() * 512, r = 18 + R2() * 28, a = 0.2 + R2() * 0.2;
+    wrapDraw(x, 512, 512, px, py, r, (qx, qy) => {
+      const g = x.createRadialGradient(qx, qy, 0, qx, qy, r);
+      g.addColorStop(0, `rgba(8,8,10,${a})`); g.addColorStop(1, 'rgba(8,8,10,0)');
+      x.fillStyle = g; x.fillRect(qx - r, qy - r, r * 2, r * 2);
+    });
+  }
+  for (let i = 0; i < 7; i++) {                               // paan splats
+    const px = R2() * 512, py = R2() * 512, r = 3 + R2() * 6;
+    x.fillStyle = `rgba(110,28,22,${0.35 + R2() * 0.25})`;
+    for (let k = 0; k < 5; k++) { x.beginPath(); x.arc(px + (R2() - 0.5) * r * 2.4, py + (R2() - 0.5) * r * 2.4, r * (0.3 + R2() * 0.6), 0, 7); x.fill(); }
+  }
+}
+
+// Large, soft, tiling brightness noise. Sampled at a much lower frequency than the
+// surface textures (see macroVariation in game.js) to hide their repetition.
+function macroNoise() {
+  const [c, x] = canvas(256, 256);
+  x.fillStyle = '#808080'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 70; i++) {
+    const px = R2() * 256, py = R2() * 256, r = 20 + R2() * 70, light = R2() < 0.5;
+    const a = 0.12 + R2() * 0.2;
+    wrapDraw(x, 256, 256, px, py, r, (qx, qy) => {
+      const g = x.createRadialGradient(qx, qy, 0, qx, qy, r);
+      g.addColorStop(0, light ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${a})`);
+      g.addColorStop(1, 'rgba(128,128,128,0)');
+      x.fillStyle = g; x.fillRect(qx - r, qy - r, r * 2, r * 2);
+    });
+  }
+  return toTex(c, true, false);
 }
 
 function dirt() {
@@ -535,9 +591,11 @@ function holeTexture() {
   return toTex(c, false);
 }
 
-export function buildTextures() {
+export function buildTextures(opts = {}) {
+  ANISO = opts.aniso || 4;
   const fac = facadeAtlas();
   return {
+    macro: macroNoise(),
     plaster: plaster(), brick: brick(), asphalt: asphalt(), dirt: dirt(), khadanja: khadanja(),
     tile: tile(), concrete: concrete(), wood: wood(), metal: metal(), fabric: fabric(), grime: grime(),
     facade: fac.map, facadeEmissive: fac.emissive,
