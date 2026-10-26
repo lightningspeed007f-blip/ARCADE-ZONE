@@ -325,7 +325,8 @@ export class Vehicles {
     const H = I.hold || {};
     // inputs: keys / joystick (move), touch pedals and steering buttons
     let thr = I.move.y + (H.gas ? 1 : 0) - (H.brake ? 1 : 0);
-    let st = I.move.x + (H.steerR ? 1 : 0) - (H.steerL ? 1 : 0);
+    // positive yaw turns the jeep left, so right input steers negative
+    let st = -(I.move.x + (H.steerR ? 1 : 0) - (H.steerL ? 1 : 0));
     thr = clamp(thr, -1, 1); st = clamp(st, -1, 1);
     const hand = !!(I.keys.Space);
     const MAX = 17, REV = 6;
