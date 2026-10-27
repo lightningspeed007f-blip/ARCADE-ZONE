@@ -27,6 +27,11 @@ const AMBUSH_AT = 0.1;          // Mutant's health share when the Joker steps in
 const BOXES = [[5.84,-1.38,1.68,1.75,-0.13,1.84,1.4],[-3.68,-7,1.57,1.85,-0.01,1.92,0.23],[-11.93,-2.47,1.43,1.43,-0.05,1.87,1.5],[-11.93,-2.47,1.43,1.43,1.75,3.67,1.5],[-6.12,-16.17,1.76,1.01,1.07,3.07,0.4],[-6.12,-16.17,1.76,1.01,-0.96,1.04,0.4],[-11.84,-8.74,1.76,1,0.32,2.32,1.31],[1.91,4.29,1,1.76,-0.05,1.95,0],[6.48,2.86,1,1.76,-0.05,1.95,0],[-0.21,-0.4,1,1.76,-0.05,1.95,0],[3.69,-8.19,1.76,1,-0.05,1.95,0],[-6.05,3.96,1,1.76,-0.05,1.95,0],[-3.62,8.87,1.1,1.51,0,1.42,1.38],[7.31,-2.27,1.09,1.5,1.4,2.83,0],[7.31,-5.28,1.09,1.5,1.4,2.83,0],[-6.29,-1.54,1.09,1.5,0,1.42,0],[0.23,6.09,1.09,1.5,0,1.42,0],[6.87,-2.27,1.09,1.5,0,1.42,0],[6.63,5.97,1.09,1.5,0,1.42,0],[6.87,-5.23,1.09,1.5,0,1.42,0],[-0.66,8.8,1.01,1.01,-0.08,1.89,0.33],[1.09,-7.62,1,1,-0.08,1.89,1.54],[-6.09,1.16,1,1,-0.08,1.89,0],[3.74,7.71,1.16,1.5,-0.06,1.02,1.13],[7.3,-8.02,1.16,1.5,1.04,2.13,0.82],[7.3,-7.08,1.16,1.5,-0.06,1.02,0.82],[1.08,-0.85,1.49,1.16,-0.06,1.02,0.82],[-6.51,-4.55,1.15,1.49,-0.06,1.02,0],[1.69,-2.75,1.15,1.49,-0.06,1.02,0],[-5.2,-7.34,1.01,1.01,-0.04,1.3,0.7],[0.05,3.58,1,1,-0.08,1.28,0],[-8.47,-14.98,1,1,1.08,2.42,0.4],[-8.47,-14.98,1,1,-0.22,1.12,0.4],[-12.35,-6.16,1,1,0.33,1.67,1.31],[-2.85,-8.18,1,1,-0.04,1.3,0],[-0.85,-8.18,1,1,-0.04,1.3,0],[-0.38,-3.03,1,1,-0.04,1.3,0],[6.3,0.23,1,1,-0.04,1.3,0],[-5.87,6.59,1,1,-0.04,1.3,0],[-12.05,-2.37,1.31,1,3.56,4.56,1.5],[0.05,3.58,0.62,0.95,1.27,2.56,0],[-5.46,-0.42,0.83,0.86,-0.13,0.84,1.4],[4.08,7.47,0.6,1.27,1.03,1.72,1.13],[2.04,-2.55,0.6,1.27,1.03,1.72,0],[-6.16,-4.35,0.6,1.27,1.03,1.72,0],[-8.56,-15.02,0.92,0.7,2.35,3.05,0.4],[-12.44,-6.11,0.91,0.7,1.6,2.3,1.31],[6.38,0.16,0.7,0.91,1.23,1.92,0],[-5.95,6.66,0.7,0.91,1.23,1.92,0],[-0.31,-3.1,0.7,0.91,1.23,1.92,0],[-2.92,-8.26,0.91,0.7,1.23,1.92,0],[-1.12,-8.26,0.91,0.7,1.23,1.92,0],[-3.21,8.97,0.6,0.92,1.4,2.09,1.38],[-6.49,-15.94,0.92,0.6,3.05,3.74,0.4],[-8.2,-15.21,0.92,0.6,3.05,3.74,0.4],[-12.37,-6.51,0.91,0.6,3.01,3.7,1.31],[-12.37,-6.51,0.91,0.6,2.3,2.99,1.31],[-11.88,-8.31,0.91,0.6,2.3,2.99,1.31],[-11.88,-8.31,0.91,0.6,3.02,3.72,1.31],[6.41,2.43,0.6,0.91,1.93,2.62,0],[-0.27,-2.69,0.6,0.91,1.93,2.62,0],[-5.98,6.26,0.6,0.91,1.93,2.62,0],[6.41,0.57,0.6,0.91,1.93,2.62,0],[-0.27,-0.83,0.6,0.91,1.93,2.62,0],[-6.32,-1.12,0.6,0.91,1.4,2.09,0],[-5.98,4.39,0.6,0.91,1.93,2.62,0],[-0.66,8.81,0.63,0.63,1.15,1.86,0.33],[1.09,-7.63,0.62,0.62,1.15,1.86,1.54],[-6.1,1.16,0.62,0.62,1.15,1.86,0],[-0.86,3.58,0.32,1,1.27,1.5,0]];
 // the paved square inside the ring of buildings (model units)
 const SQ = { x0: -7.55, x1: 8.25, z0: -7.5, z1: 8.3 };
+// Ramps up onto low platforms, in metres: the player steps up 0.45 m (player.js), so each stair rises
+// 0.4 m. A platform is [x0, x1, z0, z1] in model units; its stairs run east from x1 and climb to PLAT_H.
+const RISE = 0.4, TREAD = 0.5, PLAT_H = 1.6;
+const PLATFORMS = [[-3.8, -2.8, -4.1, -3.1]];
+const RAMP_BOXES = [];                    // [cx, cy, cz, hx, hy, hz] of every ramp piece, for the meshes
 const W = (mx, mz) => [STREET.x + mx * STREET.S, STREET.z + mz * STREET.S];
 const PLAYER_IN = W(-3.4, 6.6), JOKER_IN = W(-3.6, 1.4);     // the far end of the west lane, ~21 m apart
 const CAT_SPOTS = [[-3.6, -5.6], [4.3, -5.4], [-3.4, 6.4], [4.6, 3.0], [-4.2, 0.4], [4.5, 7.4], [-1.2, -5.8], [2.6, 1.6]];
@@ -46,6 +51,19 @@ export function buildArena(W_) {
     const lo = Math.max(0, y0 * S + STREET.y), hi = y1 * S + STREET.y;
     if (hi < 0.2) continue;
     P.add(x, (lo + hi) / 2, z, hx * S, (hi - lo) / 2, hz * S, yaw);
+  }
+  // ramps: a platform, and four stairs of TREAD depth climbing from the ground up to its top
+  for (const [x0, x1, z0, z1] of PLATFORMS) {
+    const [px0, pz0] = W(x0, z0), [px1, pz1] = W(x1, z1), pcz = (pz0 + pz1) / 2, hz = (pz1 - pz0) / 2;
+    const pieces = [[(px0 + px1) / 2, PLAT_H / 2, pcz, (px1 - px0) / 2, PLAT_H / 2, hz]];
+    for (let i = 0; i < 4; i++) {
+      const top = PLAT_H - i * RISE;
+      pieces.push([px1 + (i + 0.5) * TREAD, top / 2, pcz, TREAD / 2, top / 2, hz]);
+    }
+    for (const [cx, cy, cz, hx, hy, zh] of pieces) {
+      P.add(cx, cy, cz, hx, hy, zh);
+      RAMP_BOXES.push([cx, cy, cz, hx, hy, zh]);
+    }
   }
   // invisible walls round the square so nobody wanders off into the void
   const [x0, z0] = W(SQ.x0, SQ.z0), [x1, z1] = W(SQ.x1, SQ.z1), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
@@ -174,6 +192,13 @@ export class Joker {
     this.root = new THREE.Group(); this.root.add(this.rig.root); this.root.visible = false; this.root.rotation.order = 'YXZ';
     g.scene.add(this.root);
     this.street = m.street.root; this.street.visible = false; g.scene.add(this.street);
+    // the ramps' collision is invisible, so draw them: the street group scales model units by STREET.S
+    const rampMat = new THREE.MeshLambertMaterial({ color: 0x6b5a48 }), S = STREET.S;
+    for (const [cx, cy, cz, hx, hy, hz] of RAMP_BOXES) {
+      const piece = new THREE.Mesh(new THREE.BoxGeometry(2 * hx / S, 2 * hy / S, 2 * hz / S), rampMat);
+      piece.position.set((cx - STREET.x) / S, (cy - STREET.y) / S, (cz - STREET.z) / S);
+      this.street.add(piece);
+    }
     // his revolver: long purple barrel, ivory grip
     const gm = new THREE.MeshLambertMaterial({ color: 0x2a2630 }), pm = new THREE.MeshLambertMaterial({ color: 0x6a2a8a }), im = new THREE.MeshLambertMaterial({ color: 0xe8dcc0 });
     const gun = this.gun = new THREE.Group();
