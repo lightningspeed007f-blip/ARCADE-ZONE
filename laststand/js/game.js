@@ -24,6 +24,7 @@ import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { Joker, buildArena } from './joker.js';
 import { Outlands } from './outlands.js';
+import { Companions } from './companions.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -154,6 +155,7 @@ export class Game {
     this.explosives = new Explosives(this);
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
     this.joker = new Joker(this);                        // the real villain: steps in when Lohasur is nearly dead
+    this.crew = new Companions(this);                    // four fighters waiting in houses (their models load later)
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
     this.secret = new Secret(this);
@@ -442,6 +444,7 @@ export class Game {
     this.loot.build();
     // enemies
     this.enemies.clear();
+    this.crew.reset(r);                                  // before the thieves: no thief waits in a crew house
     this.spawnEnemies(r);
     // radios: shuffle songs into the radio houses each run
     const songs = r.shuffle([0, 1, 2, 3, 4, 5]);
@@ -589,7 +592,7 @@ export class Game {
     const mob = this.lite;
     // 1) waiting inside houses (they wake when you walk in)
     for (const b of W.enterables || []) {
-      if (b.name === 'start') continue;
+      if (b.name === 'start' || this.crew.houses.has(b.name)) continue;
       const aband = (b.name || '').startsWith('abandoned');
       if (!r.chance(aband ? 0.8 : 0.3)) continue;
       for (let k = 0; k < 8; k++) {
@@ -898,6 +901,7 @@ export class Game {
     this.vehicles.consider(consider);
     this.outlands.consider(consider);
     this.boss.consider(consider);
+    this.crew.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
       const x = clamp(P.pos.x, this.train.x + 2, this.train.x + this.rescue.userData.len - 2);
@@ -944,6 +948,7 @@ export class Game {
       case 'vehicle': return ['DRIVE', `${t.car.S.name} · get in the ${t.car.S.en.toLowerCase()}`];
       case 'boss': return ['WAKE', 'सोता हुआ दानव · wake the sleeping giant'];
       case 'outland': return this.outlands.prompt(t);
+      case 'crew': return this.crew.prompt(t);
     }
     return null;
   }
@@ -1005,6 +1010,7 @@ export class Game {
       case 'vehicle': return this.vehicles.enter(t.car);
       case 'boss': return this.boss.wake('player');
       case 'outland': return this.outlands.use(t);
+      case 'crew': return this.crew.use(t);
     }
   }
 
@@ -1228,6 +1234,7 @@ export class Game {
     this.flowT -= dt;
     if (this.flowT <= 0) { this.flowT = 0.35; this.nav.build(P.pos.x, P.pos.z); }
     this.enemies.update(dt, this.camera);
+    this.crew.update(dt);
     if (this.bossWakeAt && this.time >= this.bossWakeAt) { this.bossWakeAt = 0; this.boss.wake('final'); }
     this.boss.update(dt);
     this.joker.update(dt);
@@ -1547,8 +1554,10 @@ export class Game {
   drawMinimap(dt) {
     const c = $('minimap');
     if (!c || !this.input.settings.minimap) return;
-    c.style.visibility = this.inValley() ? 'hidden' : '';
-    if (this.inValley()) return;
+    // the hidden valleys and the Playground have no map; the places beyond the highway do
+    const noMap = this.inValley() && !(this.outlands && this.outlands.zone && this.outlands.places[this.outlands.zone]);
+    c.style.visibility = noMap ? 'hidden' : '';
+    if (noMap) return;
     this._mmT = (this._mmT || 0) - dt;
     if (this._mmT > 0) return;
     this._mmT = 0.066;
@@ -1565,6 +1574,7 @@ export class Game {
     if (this.train) { stop(this.train.rumble); this.train.rumble = null; }
     if (this.explosives) this.explosives.silence();
     $('bombWarn')?.classList.remove('show'); this._bw = false;
+    if (this.crew) this.crew.hideAll();
   }
 
   gameOver(reason) {

@@ -489,6 +489,8 @@ export class Enemies {
         const dd = Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z);
         if (dd < bd) { bd = dd; best = o; }
       }
+      const cp = g.crew && g.crew.prey(e, bd);           // your crew smell like food too
+      if (cp) { best = cp[0]; bd = cp[1]; }
       if (best && this.canSee(e, best.pos.x, best.pos.y + 1.4, best.pos.z)) { e.prey = best; e.state = 'HUNT'; e.stateT = 0; }
     }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
@@ -514,7 +516,10 @@ export class Enemies {
         if (e.roarT > 0) { e.roarT -= dt; this.move(e, 0, 0, 0, dt); e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 5); break; }
         if (!e.sees) { e.lostT = (e.lostT || 0) + dt; if (e.lostT > 8) { e.state = 'ALERT'; e.investigate = e.lastSeen; e.stateT = 0; } }
         const dy = Math.abs(P.pos.y - e.pos.y);
-        if (d < T.reach && dy < 1.3) { e.state = 'ATTACK'; e.attackT = T.wind; break; }
+        // one of your crew is in the way: it goes for them
+        const cv = g.crew && g.crew.victim(e, T.reach, dy < 1.3 ? d : 99);
+        if (cv) { e.state = 'ATTACK'; e.attackT = T.wind; e.victim = cv; break; }
+        if (d < T.reach && dy < 1.3) { e.state = 'ATTACK'; e.attackT = T.wind; e.victim = null; break; }
         // player upstairs in a building: head for its stairs
         let tx = e.lastSeen ? e.lastSeen.x : px, tz = e.lastSeen ? e.lastSeen.z : pz;
         let flow = e.sees || d < 25;
@@ -523,10 +528,15 @@ export class Enemies {
         break;
       }
       case 'ATTACK': {
+        const v = e.victim && !g.crew.isDown(e.victim) ? e.victim : null;
         this.move(e, 0, 0, 0, dt);
-        e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 8);
+        e.yaw += angleDiff(e.yaw, Math.atan2((v ? v.pos.x : px) - e.pos.x, (v ? v.pos.z : pz) - e.pos.z)) * Math.min(1, dt * 8);
         e.attackT -= dt;
-        if (e.attackT <= 0) {
+        if (e.attackT <= 0 && v) {
+          if (Math.hypot(v.pos.x - e.pos.x, v.pos.z - e.pos.z) < T.reach + 0.4) { g.crew.hurt(v, T.dmg * (0.85 + Math.random() * 0.3)); g.audio.play('flesh', { pos: [v.pos.x, v.pos.y + 1.2, v.pos.z], vol: 0.7 }); }
+          else g.audio.play('whoosh', { pos: [e.pos.x, e.pos.y + 1.2, e.pos.z], vol: 0.4 });
+          e.state = 'CHASE'; e.recover = 0.4; e.victim = null;
+        } else if (e.attackT <= 0) {
           if (d < T.reach + 0.35 && Math.abs(P.pos.y - e.pos.y) < 1.4 && !P.dead) {
             g.hurtPlayer(T.dmg * (0.85 + Math.random() * 0.3), e);
             g.audio.play('flesh', { pos: [px, P.pos.y + 1.2, pz], vol: 0.8 });
@@ -536,9 +546,9 @@ export class Enemies {
         break;
       }
       case 'HUNT': {
-        const h = e.prey;
+        const h = e.prey, crew = !!(h && h.S);
         const hd = h ? Math.hypot(h.pos.x - e.pos.x, h.pos.z - e.pos.z) : 99;
-        if (!h || h.dead || hd > 20 || e.stateT > 30) { e.state = 'ALERT'; e.investigate = h ? { x: h.pos.x, z: h.pos.z } : null; e.prey = null; e.stateT = 0; break; }
+        if (!h || (crew ? g.crew.isDown(h) : h.dead) || hd > 20 || e.stateT > 30) { e.state = 'ALERT'; e.investigate = h ? { x: h.pos.x, z: h.pos.z } : null; e.prey = null; e.stateT = 0; break; }
         if (hd < T.reach) {
           // same wind-up and cooldown as an attack on the player
           this.move(e, 0, 0, 0, dt);
@@ -547,7 +557,7 @@ export class Enemies {
           e.huntAtk = true;
           if (e.attackT <= 0) {
             const dd = { x: (h.pos.x - e.pos.x) / (hd || 1), z: (h.pos.z - e.pos.z) / (hd || 1) };
-            this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
+            if (crew) g.crew.hurt(h, T.dmg); else this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
             g.audio.play('flesh', { pos: [h.pos.x, h.pos.y + 1.2, h.pos.z], vol: 0.6 });
             e.attackT = T.wind + 0.6;
           }

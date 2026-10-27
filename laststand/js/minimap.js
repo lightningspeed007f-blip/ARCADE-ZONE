@@ -116,10 +116,18 @@ export class TownMap {
     ctx.fillStyle = '#1c2026'; ctx.fillRect(0, 0, size, size);
     ctx.translate(r, r);
     ctx.rotate(P.yaw);
-    ctx.scale(k / PX, k / PX);
-    ctx.translate(-(P.pos.x - BOUNDS.minX) * PX, -(P.pos.z - BOUNDS.minZ) * PX);
-    ctx.globalAlpha = 0.95;
-    ctx.drawImage(this.base, 0, 0);
+    const pl = game.outlands && game.outlands.zone && game.outlands.places[game.outlands.zone];
+    if (pl) {
+      const img = this.placeImg(pl), f = pl.field, ppm = 1 / f.cs;
+      ctx.scale(k / ppm, k / ppm);
+      ctx.translate(-(P.pos.x - f.x0) * ppm, -(P.pos.z - f.z0) * ppm);
+      ctx.globalAlpha = 0.95; ctx.drawImage(img, 0, 0);
+    } else {
+      ctx.scale(k / PX, k / PX);
+      ctx.translate(-(P.pos.x - BOUNDS.minX) * PX, -(P.pos.z - BOUNDS.minZ) * PX);
+      ctx.globalAlpha = 0.95;
+      ctx.drawImage(this.base, 0, 0);
+    }
     ctx.restore();
     // objective markers (clamped to the rim when far away)
     for (const t of this.targets(game)) {
@@ -139,6 +147,15 @@ export class TownMap {
       const sx = (dx * c - dz * s) * k, sy = (dx * s + dz * c) * k;
       if (Math.hypot(sx, sy) < r - 6) jeepMark(ctx, r + sx, r + sy, 4);
     }
+    // your crew
+    if (game.crew) for (const m of game.crew.list) {
+      if (!m.I || m.ride || (m.state === 'wait' && !m.seen)) continue;
+      const dx = m.pos.x - P.pos.x, dz = m.pos.z - P.pos.z, c = Math.cos(P.yaw), s = Math.sin(P.yaw);
+      let sx = (dx * c - dz * s) * k, sy = (dx * s + dz * c) * k;
+      const d = Math.hypot(sx, sy), lim = r - 6;
+      if (d > lim) { sx *= lim / d; sy *= lim / d; }
+      crewMark(ctx, r + sx, r + sy, 3.5, m.S.col, m.state === 'wait', m.state === 'down');
+    }
     // player arrow (always points up)
     ctx.save(); ctx.translate(r, r);
     ctx.fillStyle = '#ffd36a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
@@ -150,6 +167,77 @@ export class TownMap {
     ctx.fillText('N', ax, ay);
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(r, r, r - 1, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // ---------- the places beyond Jais (outlands.js): their walkable ground, painted once ----------
+  placeImg(pl) {
+    if (pl._img) return pl._img;
+    const f = pl.field, c = document.createElement('canvas');
+    c.width = f.nx; c.height = f.nz;
+    const x = c.getContext('2d'), im = x.createImageData(f.nx, f.nz);
+    let lo = Infinity, hi = -Infinity;
+    for (const h of f.H) if (!Number.isNaN(h)) { lo = Math.min(lo, h); hi = Math.max(hi, h); }
+    const tint = { forest: [70, 92, 64], city: [112, 116, 124], metro: [96, 92, 104] }[pl.key] || [100, 100, 100];
+    for (let i = 0; i < f.H.length; i++) {
+      const h = f.H[i], o = i * 4;
+      if (Number.isNaN(h)) { im.data[o] = 28; im.data[o + 1] = 32; im.data[o + 2] = 38; }
+      else { const k = 0.75 + 0.5 * (hi > lo ? (h - lo) / (hi - lo) : 0.5); im.data[o] = tint[0] * k; im.data[o + 1] = tint[1] * k; im.data[o + 2] = tint[2] * k; }
+      im.data[o + 3] = 255;
+    }
+    x.putImageData(im, 0, 0);
+    // the forest road, drawn over the ground
+    if (pl.key === 'forest' && pl.road) {
+      x.strokeStyle = '#b89a6a'; x.lineWidth = 6 / f.cs; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath();
+      pl.road.forEach(([lx, lz], i) => { const [wx, wz] = pl.L(lx, lz), cx = (wx - f.x0) / f.cs, cz = (wz - f.z0) / f.cs; i ? x.lineTo(cx, cz) : x.moveTo(cx, cz); });
+      x.stroke();
+    }
+    pl._img = c;
+    return c;
+  }
+
+  // The road out of town goes on: highway -> forest road -> dead city -> old metro -> back to Jais City.
+  // A strip of three small maps in the bottom left corner of the full map (open fields, no landmarks), with the way between them.
+  drawOutlands(x, game, P, dpr, cv) {
+    const O = game.outlands; if (!O) return;
+    const keys = [['forest', 'जंगल का रास्ता', 'FOREST ROAD'], ['city', 'मुर्दा शहर', 'DEAD CITY'], ['metro', 'पुरानी मेट्रो', 'OLD METRO']];
+    const box = Math.round(Math.min(cv.width * 0.13, cv.height * 0.2)), gap = Math.round(box * 0.32), pad = 8 * dpr;
+    const W3 = keys.length * box + (keys.length - 1) * gap, x0 = pad * 2, y0 = cv.height - pad - box - 26 * dpr;
+    x.save();
+    x.fillStyle = 'rgba(8,10,14,0.78)'; x.fillRect(x0 - pad, y0 - 18 * dpr, W3 + pad * 2, box + 44 * dpr);
+    x.fillStyle = '#e8b04a'; x.font = `700 ${Math.round(10 * dpr)}px Rajdhani, sans-serif`; x.textAlign = 'left'; x.textBaseline = 'middle';
+    x.fillText('BEYOND JAIS · हाईवे के पार', x0, y0 - 9 * dpr);
+    const pl = game.player, centres = [];
+    keys.forEach(([k, hi, en], i) => {
+      const bx = x0 + i * (box + gap), by = y0, place = O.places[k];
+      x.fillStyle = '#1c2026'; x.fillRect(bx, by, box, box);
+      if (place) {
+        const f = place.field, img = this.placeImg(place), s = Math.min(box / f.nx, box / f.nz), w = f.nx * s, h = f.nz * s, ox = bx + (box - w) / 2, oy = by + (box - h) / 2;
+        x.drawImage(img, ox, oy, w, h);
+        const W2 = (wx, wz) => [ox + (wx - f.x0) / f.cs * s, oy + (wz - f.z0) / f.cs * s];
+        if (game.crew) for (const m of game.crew.list) if (m.I && !m.ride && m.state !== 'wait' && O.zone === k) { const [cx, cy] = W2(m.pos.x, m.pos.z); crewMark(x, cx, cy, 3.5 * dpr, m.S.col, false, m.state === 'down'); }
+        if (O.zone === k) {
+          const [ax, ay] = W2(pl.pos.x, pl.pos.z), a = 6 * dpr;
+          x.save(); x.translate(ax, ay); x.rotate(-pl.yaw); x.fillStyle = '#ffd36a'; x.strokeStyle = '#000'; x.lineWidth = 1.5 * dpr;
+          x.beginPath(); x.moveTo(0, -a); x.lineTo(a * 0.7, a * 0.7); x.lineTo(0, a * 0.35); x.lineTo(-a * 0.7, a * 0.7); x.closePath(); x.fill(); x.stroke(); x.restore();
+        }
+      } else {
+        const p = O.prog[k];
+        x.fillStyle = '#6a7280'; x.textAlign = 'center'; x.font = `600 ${Math.round(9 * dpr)}px Rajdhani, sans-serif`;
+        x.fillText(p === -1 ? 'UNAVAILABLE' : p > 0 ? `LOADING ${Math.round(p * 100)}%` : 'NOT LOADED', bx + box / 2, by + box / 2);
+      }
+      x.strokeStyle = O.zone === k ? '#ffd36a' : 'rgba(255,255,255,0.35)'; x.lineWidth = (O.zone === k ? 2 : 1) * dpr; x.strokeRect(bx, by, box, box);
+      x.textAlign = 'center'; x.fillStyle = '#f2ead8'; x.font = `700 ${Math.round(10 * dpr)}px ${HI}`; x.fillText(hi, bx + box / 2, by + box + 9 * dpr);
+      x.fillStyle = '#b9b2a2'; x.font = `600 ${Math.round(8 * dpr)}px Rajdhani, sans-serif`; x.fillText(en, bx + box / 2, by + box + 19 * dpr);
+      centres.push([bx, by, box]);
+      if (i) { const [px0] = centres[i - 1]; arrow(x, px0 + box + 3 * dpr, by + box / 2, bx - 3 * dpr, by + box / 2, dpr); }
+    });
+    // dashed links: the highway sign to the forest road, the metro back to the Jais City entrance
+    const hw = LANDMARKS.find((L) => L.en === 'Highway'), mt = LANDMARKS.find((L) => L.en === 'Metro');
+    x.setLineDash([5 * dpr, 4 * dpr]); x.lineWidth = 1.5 * dpr;
+    if (hw) { const [hx, hy] = P(hw.x, hw.z), [bx, by, b] = centres[0]; x.strokeStyle = 'rgba(232,176,74,0.8)'; x.beginPath(); x.moveTo(hx, hy); x.quadraticCurveTo(hx, by - 26 * dpr, bx + b / 2, by - 18 * dpr); x.stroke(); }
+    if (mt) { const [mx, my] = P(mt.x, mt.z), [bx, by, b] = centres[2]; x.strokeStyle = 'rgba(200,220,255,0.7)'; x.beginPath(); x.moveTo(mx, my); x.quadraticCurveTo(mx, by - 40 * dpr, bx + b / 2, by - 18 * dpr); x.stroke(); }
+    x.setLineDash([]);
+    x.restore();
   }
 
   // ---------- full map ----------
@@ -181,10 +269,18 @@ export class TownMap {
       if (!car.ready || (V.driving && car === V.car) || car.x < BOUNDS.minX || car.x > BOUNDS.maxX || car.z < BOUNDS.minZ || car.z > BOUNDS.maxZ) continue;
       const [jx, jy] = P(car.x, car.z); jeepMark(x, jx, jy, 6 * dpr);
     }
+    // your crew (the ones you found)
+    if (game.crew) for (const m of game.crew.list) {
+      if (!m.I || m.ride || (m.state === 'wait' && !m.seen)) continue;
+      if (m.pos.x < BOUNDS.minX || m.pos.x > BOUNDS.maxX || m.pos.z < BOUNDS.minZ || m.pos.z > BOUNDS.maxZ) continue;
+      const [cx, cy] = P(m.pos.x, m.pos.z); crewMark(x, cx, cy, 5 * dpr, m.S.col, m.state === 'wait', m.state === 'down');
+    }
+    this.drawOutlands(x, game, P, dpr, c);
     // player
     const pl = game.player;
     const [px, py] = P(pl.pos.x, pl.pos.z);
-    x.save(); x.translate(px, py); x.rotate(-pl.yaw);
+    const inTown = pl.pos.x > BOUNDS.minX && pl.pos.x < BOUNDS.maxX && pl.pos.z > BOUNDS.minZ && pl.pos.z < BOUNDS.maxZ;
+    if (inTown) x.save(), x.translate(px, py), x.rotate(-pl.yaw); else x.save(), x.globalAlpha = 0;
     x.fillStyle = '#ffd36a'; x.strokeStyle = '#000'; x.lineWidth = 2 * dpr;
     const a = 9 * dpr;
     x.beginPath(); x.moveTo(0, -a); x.lineTo(a * 0.7, a * 0.7); x.lineTo(0, a * 0.35); x.lineTo(-a * 0.7, a * 0.7); x.closePath(); x.fill(); x.stroke();
@@ -206,5 +302,20 @@ function marker(ctx, x, y, r, boss) {
   ctx.fillStyle = boss ? '#8a0000' : '#ff4a3a'; ctx.strokeStyle = boss ? '#ff6a40' : '#fff'; ctx.lineWidth = Math.max(1.5, r * 0.3);
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r * 0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function crewMark(ctx, x, y, r, col, waiting, down) {
+  ctx.save();
+  ctx.lineWidth = Math.max(1.2, r * 0.45); ctx.strokeStyle = waiting ? col : '#000'; ctx.fillStyle = down ? '#5a1a14' : waiting ? 'rgba(0,0,0,0.5)' : col;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (waiting) { ctx.fillStyle = col; ctx.font = `700 ${Math.round(r * 2)}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', x, y + 0.5); }
+  ctx.restore();
+}
+
+function arrow(ctx, x0, y0, x1, y1, dpr) {
+  ctx.save(); ctx.strokeStyle = '#e8b04a'; ctx.fillStyle = '#e8b04a'; ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1 - 4 * dpr, y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - 5 * dpr, y1 - 3.5 * dpr); ctx.lineTo(x1 - 5 * dpr, y1 + 3.5 * dpr); ctx.closePath(); ctx.fill();
   ctx.restore();
 }

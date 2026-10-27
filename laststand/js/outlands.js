@@ -24,6 +24,7 @@ import { rollAmmo, rollFood } from './loot.js';
 import { part, merge, Bx, Cy } from './props.js';
 import { LANDMARKS } from './minimap.js';
 import { FIRE } from './explosives.js';
+import { CREW } from './companions.js';
 
 // where each place sits in the world (x > -600 and z > -600: clear of the Shivdham / Kalidham checks)
 export const PLACES = {
@@ -213,6 +214,8 @@ export class Outlands {
     this._chain([
       () => new Promise((r) => setTimeout(r, this.g.mobile ? 2500 : 800)),
       step('truck', 'models/truck.glb', (m) => this._truck(m)),
+      // the crew waiting in the houses (about 5.6 MB)
+      ...Object.keys(CREW).map((k) => step('crew-' + k, CREW[k].file, (m) => this.g.crew.add(k, m))),
       step('hound', 'models/hound.glb', (m) => this._creature('hound', m)),
       step('ghoul', 'models/ghoul.glb', (m) => this._creature('ghoul', m)),
     ]);
@@ -271,7 +274,7 @@ export class Outlands {
       return w > 0 ? s / w : 0;
     };
     if (Z.terrain) (P.fields || (P.fields = [])).push(field);
-    const pl = { key, root, field, nav: new PlaceNav(field), rect: [field.x0 - 2, field.z0 - 2, field.x1 + 2, field.z1 + 2], L: (x, z) => [ox + x, oz + z] };
+    const pl = { key, road: key === 'forest' ? ROAD_F : null, root, field, nav: new PlaceNav(field), rect: [field.x0 - 2, field.z0 - 2, field.x1 + 2, field.z1 + 2], L: (x, z) => [ox + x, oz + z] };
     this.places[key] = pl;
     // lights, signs and the rest of the dressing for each place
     const W = this.W, lit = (x, z, y, color, intensity, dist, flicker = 0) => { const [wx, wz] = pl.L(x, z); const s = { x: wx, y, z: wz, color, intensity, dist, flicker, on: true, phase: Math.random() * 100 }; W.lights.push(s); return s; };

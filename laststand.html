@@ -243,6 +243,23 @@ kbd { display: inline-block; min-width: 22px; padding: 0 5px; border: 1px solid 
 @keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 @media (orientation: portrait) and (max-width: 900px) { body.touch #rotate { display: flex; } }
 a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; color: var(--muted); text-decoration: none; letter-spacing: 1px; }
+/* the crew: name tags over their heads, a small party panel above your health */
+#crewTags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.ctag { position: absolute; left: 0; top: 0; display: none; text-align: center; font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.ctag b { color: var(--c); }
+.ctag i { display: block; width: 46px; height: 4px; margin: 2px auto 0; background: rgba(0,0,0,0.55); border-radius: 2px; overflow: hidden; }
+.ctag u { display: block; height: 100%; background: var(--c); }
+.ctag.waiting i { display: none; }
+.ctag.waiting b::after { content: ' · ?'; color: #fff; }
+.ctag.down b::after { content: ' · DOWN'; color: #ff6a5a; }
+#crew { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: 66px; width: 150px; display: none; font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 1px; text-shadow: 0 1px 3px #000; pointer-events: none; }
+#crew.show { display: block; }
+.cmem { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.cmem b { width: 48px; color: var(--c); }
+.cmem i { flex: 1; height: 4px; background: rgba(255,255,255,0.14); border-radius: 2px; overflow: hidden; }
+.cmem u { display: block; height: 100%; background: var(--c); }
+.cmem s { width: 40px; text-decoration: none; color: var(--muted); font-size: 10px; text-align: right; }
+.cmem.down s { color: #ff6a5a; }
 </style>
 </head>
 <body>
@@ -262,6 +279,8 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <div id="feed"></div>
   <div id="hp"><div class="row"><span id="hpNum">100</span><small>HEALTH</small></div><div class="bar"><div id="hpFill"></div></div><div id="stamWrap"><div id="stam"></div></div></div>
   <div id="lowhp"></div>
+  <div id="crew"></div>
+  <div id="crewTags"></div>
   <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div><div id="bombHud">💣 बम ×<span id="bombNum">1</span></div></div>
   <div id="bombWarn">⚠ बम! भागो · BOMB — GET CLEAR</div>
   <div id="bossHud"><div id="bossName"></div><div class="bar"><div id="bossTrail"></div><div id="bossFill"></div></div><div id="catHud"><span>कैटनैप · CATNAP</span><div class="bar"><div id="catFill"></div></div></div></div>
@@ -383,7 +402,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
     <p><b>JAIS: LAST STAND</b> — a fictional survival game set in a playable, imagined version of Jais, Uttar Pradesh: Wahabganj, Naugazi Tiraha, Alia Market, Maa Kamakhya Mandir, the bus adda, Jais City (formerly Kasimpur Halt) and Guru Gorakhnath Dham station.</p><br>
     <p>All buildings, textures, signboards and sounds are generated in code for this game. No map imagery was copied. Shop names are invented. Places are inspired by the real town; the layout is a game version, not a survey map.</p><br>
     <p>Built with three.js (MIT licence). Photos, banners, music and the Shivji and Maa Kamakhya images belong to their owners and are supplied by the game zone.</p>
-    <p>3D models (Sketchfab): “Fixed Prototype Rigged” (the Joker) by Unschooling with Fin, CC BY 4.0; “[NEW] Catnap | Escape from Playtime” by Unusual Games Official, CC BY 4.0; “abandoned city street for games” by dasy444; “ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0; “Zombie” (the ghoul) by David Glynch; “Zombie Dog” (the hound) by LostBoyz2078, CC BY 4.0; “a forest (3) with a road at night for game” by dasy444, CC BY 4.0; “street city (7) for games FREE” and “old metro tunnel FREE” by dasy444. Models were cut down and compressed for phones.</p>
+    <p>3D models (Sketchfab): “Fixed Prototype Rigged” (the Joker) by Unschooling with Fin, CC BY 4.0; “[NEW] Catnap | Escape from Playtime” by Unusual Games Official, CC BY 4.0; “abandoned city street for games” by dasy444; “ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0; “Zombie” (the ghoul) by David Glynch; “Zombie Dog” (the hound) by LostBoyz2078, CC BY 4.0; “a forest (3) with a road at night for game” by dasy444, CC BY 4.0; “street city (7) for games FREE” and “old metro tunnel FREE” by dasy444; the crew: “Viking/Medieval Game Character” (Ragnar) by CGenesis, CC BY 4.0; “Samurai character” (Hanzo) by Marfa4; “Soldier Full Tactical Gear” (Sgt. Mark) and “Game Ready low poly character tactical” (Ghost) by DanlyVostok, CC BY 4.0. Models were cut down and compressed for phones.</p>
   </div></div>
 </div>
 
