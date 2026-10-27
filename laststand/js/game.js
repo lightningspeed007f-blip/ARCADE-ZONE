@@ -846,6 +846,15 @@ export class Game {
 
   noise(pos, radius, kind) { this.enemies.hear(pos, radius, kind); }
 
+  // is a point inside an enterable building (the same box test as the player's own room check)
+  inBuilding(b, x, y, z) {
+    const [lx, lz] = b.F.toLocal(x, z);
+    return Math.abs(lx) < b.w / 2 - 0.1 && lz > 0.1 && lz < b.d - 0.1 && y < (b.floors || 1) * 3.2 + 0.5;
+  }
+
+  // indoors, zombies outside the building are silent to the player until they come in
+  audibleFrom(x, y, z) { return !this.inside || this.inBuilding(this.inside, x, y, z); }
+
   // Zombies on the player's heels: the chase track comes in while any zombie is chasing close by,
   // rises as they close the gap, and fades out a few seconds after the last one gives up or dies.
   updateChaseAudio(dt) {
@@ -853,6 +862,7 @@ export class Game {
     let near = Infinity;
     if (!P.dead) for (const e of this.enemies.list) {
       if (e.dead || e.human || (e.state !== 'CHASE' && e.state !== 'ATTACK') || !(e.dist < 32) || Math.abs(e.pos.y - P.pos.y) > 4) continue;
+      if (!this.audibleFrom(e.pos.x, e.pos.y, e.pos.z)) continue;
       near = Math.min(near, e.dist);
     }
     if (near < Infinity) { this._chaseHold = 3; this._chaseNear = near; } else this._chaseHold = Math.max(0, (this._chaseHold || 0) - dt);
@@ -862,14 +872,15 @@ export class Game {
   }
 
   // A zombie screaming far away: a warning, never close. With the user's scream it comes from a real
-  // zombie 45-110 m off (or a random far point), at most every ~35-60 s and never over a chase.
+  // zombie 45-110 m off (or a random far point), at most every ~90-150 s and never over a chase or from indoors.
   distantScream(pos) {
+    if (this.inside) return;
     if (!this.audio.has('zombieScream')) { this.audio.play('scream', { pos, vol: 0.35, rate: 0.8 }); return; }
     if (this.chaseOn || this.time < (this._screamAt || 0)) return;
     const P = this.player;
     const far = this.enemies.list.filter((e) => !e.dead && !e.human && e.dist > 45 && e.dist < 110 && Math.abs(e.pos.y - P.pos.y) < 8);
     if (far.length) { const e = far[(Math.random() * far.length) | 0]; pos = [e.pos.x, e.pos.y + 1.6, e.pos.z]; }
-    this._screamAt = this.time + 35 + Math.random() * 25;
+    this._screamAt = this.time + 90 + Math.random() * 60;
     this.audio.play('zombieScream', { pos, vol: 0.8, ref: 12, far: 30, verbAmt: 1, max: 160, vary: 0.04 });
   }
 
@@ -1308,8 +1319,7 @@ export class Game {
       this._inT = 0.25;
       let inside = null;
       for (const b of this.enterables) {
-        const [lx, lz] = b.F.toLocal(P.pos.x, P.pos.z);
-        if (Math.abs(lx) < b.w / 2 - 0.1 && lz > 0.1 && lz < b.d - 0.1 && P.pos.y < (b.floors || 1) * 3.2 + 0.5) { inside = b; break; }
+        if (this.inBuilding(b, P.pos.x, P.pos.y, P.pos.z)) { inside = b; break; }
       }
       if (inside !== this.inside) {
         this.inside = inside;
@@ -1363,7 +1373,6 @@ export class Game {
       if (roll < 0.45) this.audio.play('bark', { pos, vol: 0.7, far: 20 });
       else if (roll < 0.6) this.distantScream(pos);
       else if (roll < 0.72) { this.audio.play(Math.random() < 0.5 ? 'rifle' : 'pistol', { pos, vol: 0.5, far: 8 }); this.noise({ x: pos[0], z: pos[2] }, 60, 'gun'); }
-      else if (roll < 0.82) this.audio.play('growl', { pos, vol: 0.5, rate: 0.8 });
     }
     // keep the streets populated, far from the player
     this.spawnT -= dt;

@@ -464,10 +464,12 @@ export class Enemies {
     e.stateT += dt;
     // growls
     e.nextGrowl -= dt;
-    if (e.nextGrowl <= 0 && d < 45) {
+    // heard only nearby (a chasing one a little further), and not at all from outside while the player is indoors
+    if (e.nextGrowl <= 0 && d < (e.state === 'CHASE' ? 28 : 16) && g.audibleFrom(e.pos.x, e.pos.y, e.pos.z)) {
       const dog = e.type === 'hound';
-      g.audio.play(dog ? (e.state === 'CHASE' ? 'bark' : 'growl') : e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl, { pos: [e.pos.x, e.pos.y + (dog ? 0.8 : 1.6), e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' || e.type === 'ghoul' ? 0.8 : dog ? 0.85 + Math.random() * 0.3 : 1, ref: 2.5 });
-      e.nextGrowl = (e.state === 'CHASE' ? 2.5 : 6) + Math.random() * 6;
+      g.audio.play(dog ? (e.state === 'CHASE' ? 'bark' : 'growl') : e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl, { pos: [e.pos.x, e.pos.y + (dog ? 0.8 : 1.6), e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' || e.type === 'ghoul' ? 0.8 : dog ? 0.85 + Math.random() * 0.3 : 1, ref: 2.5, max: 30 });
+      // a runner's chase cry is a scream, so it comes much less often than the other growls
+      e.nextGrowl = (e.state === 'CHASE' ? (e.type === 'runner' ? 7 : 2.5) : 6) + Math.random() * 6;
     }
     // perception (throttled line of sight)
     e.losT -= dt;
