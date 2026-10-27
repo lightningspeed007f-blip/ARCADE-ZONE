@@ -146,3 +146,30 @@ Everything here downloads in the background once the town is ready (about 10 MB,
 the hound, the ghoul, then the three places). Until a place has arrived, its road or stairs tell you it is still
 loading; if a file can't be downloaded, that way stays closed and the rest of the game is unchanged.
 
+## The crew — `models/viking`, `samurai`, `soldier`, `tactical`
+Four fighters hide in the houses of Jais. Every run they sit waiting in four different houses (picked at random among
+the eight nearest the start house — never one with a thief in it). Walk in, look at one and press **USE** to recruit
+him: he follows you and fights. Press **USE** on a follower to make him **hold** that spot (USE again: follow).
+If one goes down, get to him and press **USE** to revive him (he also gets up on his own after 45 s). They heal
+slowly out of a fight, ride along when you drive, and catch up if you get far ahead (roads, metro, tunnels).
+Name tags with health bars float over their heads; the party panel above your health shows all of them.
+Zombies go after them too.
+
+| File | Who | Fights with |
+|------|-----|-------------|
+| `models/viking.glb` | **Ragnar** (“Viking/Medieval Game Character” by CGenesis, CC BY 4.0) | Axe: slow, heavy chops that cleave up to three zombies and knock them back. Most health. |
+| `models/samurai.glb` | **Hanzo**, the masked ninja (“Samurai character” by Marfa4, Sketchfab Standard licence) | Katana: fast slashes. The sword was moved into his hand and the scabbard into his belt. |
+| `models/soldier.glb` | **Sergeant Mark** (“Soldier Full Tactical Gear” by DanlyVostok, CC BY 4.0) | Assault rifle: three-round bursts, about 30 m. |
+| `models/tactical.glb` | **Ghost** (“Game Ready low poly character tactical” by DanlyVostok, CC BY 4.0) | Pump shotgun: devastating close up. The upload was cut short (the boots' normal map was lost and dropped), the gloves had been exported mirrored and were put back on the hands, and the head was lowered onto the neck. |
+
+Ragnar and Hanzo came as statues with no skeleton: each was given a simple humanoid skeleton and skin weights
+offline, so all four are posed in code (sitting, walking, running, swinging, aiming, lying wounded).
+The four load in the background right after the pickup (about 5.6 MB together); a fighter whose model hasn't
+arrived yet simply isn't in his house yet.
+
+## The map
+The full map (M / the map button) now has a **Beyond Jais** strip in the bottom-left corner: the forest road, the
+dead city and the old metro, each painted from its walkable ground once it has loaded, with arrows for the way
+between them and dashed lines to the highway sign and the Jais City metro entrance. While you are in one of them
+it is outlined and shows where you are. The corner minimap now works in those places too, and your crew shows on both.
+
