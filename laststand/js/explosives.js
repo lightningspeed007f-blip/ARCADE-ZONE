@@ -371,6 +371,7 @@ export class Explosives {
     }
     if (g.boss) { const r = g.boss.blast(x, y, z, R, maxD, o.src || 'player'); if (r) hits++; }
     if (g.joker) { const r = g.joker.blast(x, y, z, R, maxD, o.src || 'player'); if (r) hits++; }
+    if (g.giants) { const r = g.giants.blast(x, y, z, R, maxD, o.src || 'player'); if (r) hits++; }
     if (hits && (o.src || 'player') === 'player') g.hitMarker(false, kills > 0);
     // the shooter is not immune: stand clear of your own rocket
     const selfMax = o.self ?? 34, selfR = R * 0.62;

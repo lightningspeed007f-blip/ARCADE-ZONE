@@ -225,12 +225,13 @@ export class Companions {
     const g = this.g, out = g.enemies.list.slice(), B = g.boss, J = g.joker;
     if (B && B.solid() && B.state !== 'DOOMED') out.push(B);
     if (J && J.solid() && !J.dead) out.push(J);
+    if (g.giants) for (const f of g.giants.foes()) if (f.solid()) out.push(f);
     return out;
   }
   // hit a target with the right damage call: the two big ones take hits on their own methods
   _hit(T, dmg, part, dir) {
     const g = this.g;
-    if (T === g.boss || T === g.joker) return T.damage(dmg, part, dir, 'crew');
+    if (T === g.boss || T === g.joker || (g.giants && (T === g.giants.warrior || T === g.giants.worm))) return T.damage(dmg, part, dir, 'crew');
     return g.enemies.damage(T, dmg, part, dir, 'crew');
   }
 

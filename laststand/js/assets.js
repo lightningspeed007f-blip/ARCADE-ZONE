@@ -21,6 +21,12 @@ export const MANIFEST = {
     kaaliMusic:   { dirs: ['music/', 'sounds/'], names: ['maakaalisong', 'maa kaali song', 'maakaali_song', 'kaalisong'], loop: true }, // the Kalidham tunnel + valley
     jokerLaugh:   { dirs: ['music/', 'sounds/'], names: ['jokerlaugh'] }, // the Joker's laugh (a built-in cackle otherwise)
     jokerMusic:   { dirs: ['music/', 'sounds/'], names: ['jokermusic'], loop: true }, // the Joker's Playground (a music box otherwise)
+    // the Joker's five silly sounds in the Playground (built-in versions otherwise)
+    jkHonk:       { dirs: ['music/'], names: ['joker1'] },   // clown horn: he honks as he runs off after being hit
+    jkKazoo:      { dirs: ['music/'], names: ['joker2'] },   // kazoo tune: his little dance
+    jkWhistle:    { dirs: ['music/'], names: ['joker3'] },   // slide whistle: his pirouette
+    jkBoing:      { dirs: ['music/'], names: ['joker4'] },   // spring boing: his cartwheel, the jack-in-the-box crate
+    jkTaunt:      { dirs: ['music/'], names: ['joker5'] },   // "nyah-nyah" taunt: hands at his ears
   },
   userAudioExts: ['.mp3', '.m4a', '.wav', '.ogg'],
 };
