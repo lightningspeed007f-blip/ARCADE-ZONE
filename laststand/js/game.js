@@ -22,6 +22,7 @@ import { Physics } from './physics.js';
 import { Explosives, BOMB } from './explosives.js';
 import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
+import { Joker, buildArena } from './joker.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -96,6 +97,7 @@ export class Game {
     this.vehicles = new Vehicles(this);
     this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
     Boss.buildLair(W);
+    buildArena(W);                                    // the Joker's Playground, far from town (its model loads later)
     W.B.build(scene, mats);
     this.buildWell();
     this.buildSky();
@@ -148,6 +150,7 @@ export class Game {
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
     this.explosives = new Explosives(this);
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
+    this.joker = new Joker(this);                        // the real villain: steps in when Lohasur is nearly dead
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
     this.secret = new Secret(this);
@@ -390,7 +393,7 @@ export class Game {
   // footsteps are silent while a hidden tunnel's music plays (Shivdham, Kalidham)
   stepsMuted() { return !!(this.secret && this.secret.musicOn) || !!(this.kaali && this.kaali.musicOn); }
   // in one of the open-sky valleys (Shivdham or Kalidham)
-  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode); }
+  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode) || !!(this.joker && this.joker.arena); }
 
   // ================= stairs lookup for zombies =================
   collectStairs() { return this.W.stairsList || []; }
@@ -449,6 +452,7 @@ export class Game {
     this.explosives.reset();
     this.vehicles.reset();
     this.boss.reset();
+    this.joker.reset();
     document.body.classList.remove('driving', 'canDrive');
     $('banner').classList.remove('show');
     // trains
@@ -715,10 +719,10 @@ export class Game {
     const wall = P.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, 160);
     const maxT = wall ? wall.t : 160;
     const hit = this.enemies.hitTest(origin, dir, maxT);
-    const bh = this.boss.hitTest(origin, dir, hit ? hit.t : maxT);
+    const bh = this.bigHit(origin, dir, hit ? hit.t : maxT);
     if (bh) {
       const pt = [origin.x + dir.x * bh.t, origin.y + dir.y * bh.t, origin.z + dir.z * bh.t];
-      const killed = this.boss.damage(dmg * (bh.t > 40 ? 0.8 : 1), bh.part, dir, src);
+      const killed = bh.e.damage(dmg * (bh.t > 40 ? 0.8 : 1), bh.part, dir, src);
       this.fx.burst(pt, [-dir.x * 0.4, 0.2, -dir.z * 0.4], bh.part === 'head' ? 16 : 9, [0.38, 0.05, 0.03], 2.4, 0.7);
       this.audio.play('flesh', { pos: pt, vol: 0.55 });
       if (src === 'player') this.hitMarker(bh.part === 'head', killed);
@@ -748,9 +752,9 @@ export class Game {
 
   melee(origin, dir, dmg, range) {
     const hit = this.enemies.hitTest(origin, dir, range);
-    const bh = this.boss.hitTest(origin, dir, hit ? hit.t : range);
+    const bh = this.bigHit(origin, dir, hit ? hit.t : range);
     if (bh) {
-      const killed = this.boss.damage(dmg * (bh.part === 'head' ? 1.2 : 1), bh.part, dir, 'player');
+      const killed = bh.e.damage(dmg * (bh.part === 'head' ? 1.2 : 1), bh.part, dir, 'player');
       this.audio.play('flesh', { pos: [origin.x + dir.x * bh.t, origin.y + dir.y * bh.t, origin.z + dir.z * bh.t], vol: 0.9 });
       this.hitMarker(false, killed);
       this.noise(this.player.pos, 6, 'melee');
@@ -770,9 +774,17 @@ export class Game {
     }
   }
 
+  // the nearest of the big ones on a ray: Lohasur, the Joker or his cat
+  bigHit(o, d, maxT) {
+    const a = this.boss.hitTest(o, d, maxT);
+    const b = this.joker.hitTest(o, d, a ? a.t : maxT);
+    return b || a;
+  }
+
   hurtPlayer(dmg, from, reason) {
     const P = this.player;
     if (P.dead || this.state !== 'play') return;
+    if (this.joker.shielded()) return;                    // knocked out by the gas / waking up in the Playground
     if (this.vehicles.driving) dmg *= 0.5;                 // the jeep's body takes some of it
     P.damage(dmg, from);
     P.shake = Math.max(P.shake, 0.45);
@@ -788,7 +800,7 @@ export class Game {
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
       if (reason) { this.gameOver(reason); return; }
-      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -1115,6 +1127,7 @@ export class Game {
   menuCam(dt) {
     if (this.secret && this.secret.mode) this.secret.setMode(false);
     if (this.kaali && this.kaali.mode) this.kaali.setMode(false);
+    if (this.joker && this.joker.arena) this.joker.leave();
     this.time += dt;
     const t = this.time * 0.05;
     const T = KAMAKHYA.temple;
@@ -1206,6 +1219,7 @@ export class Game {
     this.enemies.update(dt, this.camera);
     if (this.bossWakeAt && this.time >= this.bossWakeAt) { this.bossWakeAt = 0; this.boss.wake('final'); }
     this.boss.update(dt);
+    this.joker.update(dt);
     this.explosives.update(dt);
     this.vehicles.update(dt);
     this.loot.update(this.time);
@@ -1569,7 +1583,10 @@ export class Game {
     document.body.classList.remove('playing');
     this.audio.stopAll();
     $('bossHud').classList.remove('show');
-    if (kind === 'boss') {
+    if (kind === 'joker') {
+      $('overTitle').textContent = 'MISSION COMPLETE';
+      $('overSub').textContent = 'जोकर मारा गया — the Joker is dead, his Playground is silent, and the night is yours. Who is laughing now?';
+    } else if (kind === 'boss') {
       $('overTitle').textContent = 'MISSION COMPLETE';
       $('overSub').textContent = 'लोहासुर मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
     } else {
@@ -1579,6 +1596,13 @@ export class Game {
     this.fillStats();
     $('over').classList.remove('hidden');
     $('over').classList.add('won');
+  }
+
+  // The Joker is dead: his death sequence calls this once, a few seconds after the banner.
+  jokerVictory() {
+    if (this.bossWon || this.state !== 'play' || this.player.dead) return;
+    this.bossWon = true;
+    this.win('joker');
   }
 
   // The boss is dead: his own death sequence calls this once, a few seconds after the banner.

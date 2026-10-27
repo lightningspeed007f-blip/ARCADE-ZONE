@@ -110,6 +110,24 @@ body.touch #bombHud { display: none; }   /* phones: the BOMB button shows the co
 #bossHud.pulse .bar { animation: bpulse .5s 4; }
 @keyframes bpulse { 50% { box-shadow: 0 0 18px rgba(255,60,30,.9); } }
 body.touch #bossHud { top: 8px; width: min(44vw, 420px); }
+/* the Joker: purple and green, his pet's small bar, the laughing-gas screen */
+#bossHud.joker #bossName { color: #e6c8ff; }
+#bossHud.joker #bossName small { color: #9cf0a0; }
+#bossHud.joker .bar { border-color: rgba(170,90,255,.7); }
+#bossHud.joker #bossFill { background: linear-gradient(90deg, #3a0a6a, #9a3aff); }
+#bossHud.joker.rage #bossFill { background: linear-gradient(90deg, #2a8a3a, #7aff6a); }
+#catHud { display: none; margin: 6px auto 0; width: 62%; }
+#bossHud.joker #catHud.show { display: block; }
+#catHud span { font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 3px; color: #ff9a9a; font-weight: 700; }
+#catHud .bar { height: 6px; margin-top: 2px; border-color: rgba(255,80,80,.55); }
+#catFill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #5a0a10, #ff3a3a); }
+#banner.joker b { color: #c070ff; text-shadow: 0 0 26px rgba(150,60,255,.8), 0 2px 6px #000; }
+#banner.joker span { color: #a8ffb0; }
+#jokerFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s, background 1.4s; }
+#jokerFx.gas { opacity: 1; background: radial-gradient(ellipse at center, rgba(120,255,110,.18) 20%, rgba(40,160,50,.75) 100%); animation: gaswob 1.2s ease-in-out infinite alternate; }
+#jokerFx.white { opacity: 1; background: #f4fff2; animation: none; transition: opacity 1.6s, background 1.6s; }
+#jokerFx.fadeout { opacity: 0; background: #f4fff2; transition: opacity 2.6s; }
+@keyframes gaswob { from { filter: hue-rotate(0deg) blur(0); } to { filter: hue-rotate(40deg); } }
 #banner { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); text-align: center; opacity: 0; pointer-events: none; white-space: nowrap; }
 #banner.show { animation: banner 4.4s ease forwards; }
 #banner b { display: block; font-family: 'Noto Sans Devanagari', 'Rajdhani', sans-serif; font-size: clamp(30px, 6vw, 66px); font-weight: 800; letter-spacing: 6px; color: #ff5a3a; text-shadow: 0 0 26px rgba(255,60,30,.65), 0 2px 6px #000; }
@@ -242,7 +260,8 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <div id="lowhp"></div>
   <div id="weapon"><div id="ammoNum">—</div><div id="wName">लाठी</div><div id="bombHud">💣 बम ×<span id="bombNum">1</span></div></div>
   <div id="bombWarn">⚠ बम! भागो · BOMB — GET CLEAR</div>
-  <div id="bossHud"><div id="bossName"></div><div class="bar"><div id="bossTrail"></div><div id="bossFill"></div></div></div>
+  <div id="bossHud"><div id="bossName"></div><div class="bar"><div id="bossTrail"></div><div id="bossFill"></div></div><div id="catHud"><span>कैटनैप · CATNAP</span><div class="bar"><div id="catFill"></div></div></div></div>
+  <div id="jokerFx"></div>
   <div id="banner"></div>
   <div id="flash"></div>
   <div id="fps" class="hidden"></div>
@@ -358,6 +377,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
     <p><b>JAIS: LAST STAND</b> — a fictional survival game set in a playable, imagined version of Jais, Uttar Pradesh: Wahabganj, Naugazi Tiraha, Alia Market, Maa Kamakhya Mandir, the bus adda, Jais City (formerly Kasimpur Halt) and Guru Gorakhnath Dham station.</p><br>
     <p>All buildings, textures, signboards and sounds are generated in code for this game. No map imagery was copied. Shop names are invented. Places are inspired by the real town; the layout is a game version, not a survey map.</p><br>
     <p>Built with three.js (MIT licence). Photos, banners, music and the Shivji and Maa Kamakhya images belong to their owners and are supplied by the game zone.</p>
+    <p>3D models (Sketchfab): “Fixed Prototype Rigged” (the Joker) by Unschooling with Fin, CC BY 4.0; “[NEW] Catnap | Escape from Playtime” by Unusual Games Official, CC BY 4.0; “abandoned city street for games” by dasy444.</p>
   </div></div>
 </div>
 

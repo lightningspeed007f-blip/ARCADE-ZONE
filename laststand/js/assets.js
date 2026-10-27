@@ -19,6 +19,8 @@ export const MANIFEST = {
     zombieScream: { dirs: ['music/', 'sounds/'], names: ['zombiescream', 'zombie scream', 'zombie_scream'] },                              // far-off screams
     shivMusic:    { dirs: ['music/', 'sounds/'], names: ['shivjibackground', 'Shiv Ji background music', 'shiv ji background music', 'shivji_music'], loop: true }, // the Shivdham reveal
     kaaliMusic:   { dirs: ['music/', 'sounds/'], names: ['maakaalisong', 'maa kaali song', 'maakaali_song', 'kaalisong'], loop: true }, // the Kalidham tunnel + valley
+    jokerLaugh:   { dirs: ['music/', 'sounds/'], names: ['jokerlaugh'] }, // the Joker's laugh (a built-in cackle otherwise)
+    jokerMusic:   { dirs: ['music/', 'sounds/'], names: ['jokermusic'], loop: true }, // the Joker's Playground (a music box otherwise)
   },
   userAudioExts: ['.mp3', '.m4a', '.wav', '.ogg'],
 };

@@ -191,7 +191,7 @@ export class Explosives {
   launch(eye, dir, right, src = 'player') {
     const g = this.g, near = 1.05;
     const wall = g.physics.raycast(eye.x, eye.y, eye.z, dir.x, dir.y, dir.z, near);
-    const eh = g.enemies.hitTest(eye, dir, near), bh = g.boss && g.boss.hitTest(eye, dir, near);
+    const eh = g.enemies.hitTest(eye, dir, near), bh = g.bigHit ? g.bigHit(eye, dir, near) : g.boss && g.boss.hitTest(eye, dir, near);
     const t = Math.min(wall ? wall.t : 9, eh ? eh.t : 9, bh ? bh.t : 9);
     if (t < 9) { const k = Math.max(0.2, t - 0.1); this.explode(eye.x + dir.x * k, eye.y + dir.y * k, eye.z + dir.z * k, { src }); return; }
     this.fireRocket(eye.clone().addScaledVector(dir, near).addScaledVector(right, 0.1), dir, src);
@@ -305,7 +305,7 @@ export class Explosives {
       if (b.hiss) { try { b.hiss.stop(); } catch (e) { /* already stopped */ } b.hiss = null; }
       if (o.y > -60) this.explode(o.x, o.y + 0.1, o.z, {
         radius: BOMB.radius, dmg: BOMB.dmg, self: BOMB.self, src: b.src, shake: 0.9,
-        reason: b.src === 'player' ? null : 'लुटेरे के बम से · killed by a looter\'s bomb',
+        reason: b.src === 'player' ? null : b.src === 'joker' ? 'जोकर के बम से · blown up by the Joker' : 'लुटेरे के बम से · killed by a looter\'s bomb',
       });
     }
   }
@@ -370,6 +370,7 @@ export class Explosives {
       if (killed) fx.bloodPool(e.pos.x, e.pos.y, e.pos.z, 1.1);
     }
     if (g.boss) { const r = g.boss.blast(x, y, z, R, maxD, o.src || 'player'); if (r) hits++; }
+    if (g.joker) { const r = g.joker.blast(x, y, z, R, maxD, o.src || 'player'); if (r) hits++; }
     if (hits && (o.src || 'player') === 'player') g.hitMarker(false, kills > 0);
     // the shooter is not immune: stand clear of your own rocket
     const selfMax = o.self ?? 34, selfR = R * 0.62;
@@ -423,7 +424,7 @@ export class Explosives {
     if (wall) { best = wall.t; hit = true; }
     const eh = g.enemies.hitTest(o, d, best);
     if (eh && eh.t < best) { best = eh.t; hit = true; }
-    const bh = g.boss && g.boss.hitTest(o, d, best);
+    const bh = g.bigHit ? g.bigHit(o, d, best) : g.boss && g.boss.hitTest(o, d, best);
     if (bh && bh.t < best) { best = bh.t; hit = true; }
     const nx = o.x + d.x * best, ny = o.y + d.y * best, nz = o.z + d.z * best;
     const gy = P.groundAt(nx, nz, 0.05, ny + 0.3);

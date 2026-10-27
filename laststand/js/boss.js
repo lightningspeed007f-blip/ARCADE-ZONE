@@ -6,7 +6,9 @@
 // ramming him with the jeep) — never on his own. Then he rises, roars and
 // hunts the player with the town's flow field, swiping, slamming the ground,
 // charging and, when he cannot reach you, throwing chunks of concrete.
-// Killing him completes the game.
+// He never dies by your hand: when he is nearly finished the Joker (joker.js) steps out and
+// shoots him, and the game goes on with the Joker. If the Joker's models cannot be loaded at
+// all, killing Lohasur completes the game as before.
 //
 // The body is built from merged coloured boxes, one mesh per bone (about 20
 // draw calls), animated procedurally like the ordinary zombies.
@@ -140,7 +142,7 @@ export class Boss {
     this.cool = { act: 1, slam: 3, charge: 5, throw: 4 };
     this.phase = 0; this.stagger = 0; this.flinch = 0; this.stuckT = 0; this.stuckLong = 0; this.sideT = 0; this.side = 1;
     this.losT = 0; this.sees = false; this.snoreT = 3; this.twitchT = 4; this.twitch = null; this.stepS = 0;
-    this.victoryT = -1; this.announced = false; this.woken = null;
+    this.victoryT = -1; this.announced = false; this.woken = null; this.byJoker = false;
     this.eyeK = 0; this.ring.visible = false;
     this.ui(false);
     this.pose(0); this.finish();
@@ -154,6 +156,7 @@ export class Boss {
     if (this.state !== 'SLEEP') return;           // exactly once per run
     const g = this.g;
     this.state = 'WAKE'; this.stateT = 0; this.woken = reason;
+    if (g.joker) g.joker.preload();                // the real villain's models start downloading now
     g.audio.play('growlBig', { pos: this.chestPos(), vol: 1.1, rate: 0.45, max: 300 });
     if (reason === 'final') g.toast('पटरी पर कुछ जाग गया है…', 'Something huge has woken on the tracks west of the station…');
     else g.toast('लोहासुर जाग गया!', 'You woke LOHASUR. Run — or fight.');
@@ -212,9 +215,18 @@ export class Boss {
   damage(dmg, part, dir, src) {
     if (this.state === 'DEAD') return false;
     if (this.state === 'SLEEP') this.wake('player');
+    if (this.state === 'DOOMED') return false;     // the Joker has him in his sights
     const mul = part === 'head' ? 2.0 : part === 'leg' || part === 'arm' ? 0.7 : 1;
     const n = dmg * mul;
     this.hp -= n;
+    // nearly finished: the Joker takes over (or, while his models are still downloading,
+    // the giant just won't go below the line)
+    const J = this.g.joker, line = this.maxHp * 0.1;
+    if (J && this.hp <= line) {
+      const c = J.canAmbush();
+      if (c === 'yes') { this.hp = Math.max(1, Math.min(this.hp + n, line)); this.to('DOOMED'); this.vel.x = this.vel.z = 0; J.ambush(this); return false; }
+      if (c === 'wait') { this.hp = Math.max(this.hp, line * 0.5); }
+    }
     this.flinch = Math.min(1, this.flinch + n / 120);
     if (n >= 110 && (this.state === 'CHASE' || this.state === 'RECOVER')) this.stagger = 0.55;
     if (Math.random() < 0.25 || n > 100) this.g.audio.play('growlBig', { pos: this.chestPos(), vol: 0.8, rate: 0.5 + Math.random() * 0.15 });
@@ -236,11 +248,18 @@ export class Boss {
     return true;
   }
 
+  // shot through the head by the Joker
+  killedByJoker() {
+    if (this.state === 'DEAD') return;
+    this.byJoker = true; this.hp = 0; this.shownHp = 0;
+    this.die();
+  }
+
   die() {
     const g = this.g;
     this.state = 'DEAD'; this.stateT = 0; this.dead = true; this.ring.visible = false;
     g.audio.play('roar', { pos: this.chestPos(), vol: 1.7, rate: 0.7, max: 500 });
-    g.stats.kills++;
+    if (!this.byJoker) g.stats.kills++;
     g.stats.boss = true;
   }
 
@@ -329,10 +348,10 @@ export class Boss {
     }
     if (t > 3.0 && !this.announced) {
       this.announced = true;
-      g.banner('BOSS DEFEATED', 'लोहासुर मारा गया · MISSION COMPLETE', 'win');
+      if (!this.byJoker) g.banner('BOSS DEFEATED', 'लोहासुर मारा गया · MISSION COMPLETE', 'win');
       document.getElementById('bossHud').classList.add('gone');
     }
-    if (t > 7.5 && this.victoryT < 0) { this.victoryT = t; g.bossVictory(); }
+    if (t > 7.5 && this.victoryT < 0 && !this.byJoker) { this.victoryT = t; g.bossVictory(); }
   }
 
   dustRing(r, n) {
@@ -372,7 +391,7 @@ export class Boss {
 
   // A passing freight train hurls him off the line.
   trainHit(T) {
-    if (!this.solid() || this.g.time < (this._trainT || 0)) return;
+    if (!this.solid() || this.state === 'DOOMED' || this.g.time < (this._trainT || 0)) return;
     this._trainT = this.g.time + 1.2;
     const side = this.pos.z > T.z ? 1 : -1;
     this.g.physics.moveCharacter(this.pos, Math.sign(T.v) * 2, side * 3.5, 0, 0.016, 0.95, 4.3, 0.95, this.st);
@@ -524,6 +543,11 @@ export class Boss {
         if (this.stateT > 2.0) { this.to('CHASE'); this.cool.act = 0.5; }
         break;
       }
+      case 'DOOMED': {
+        // reeling, waiting for the bullet
+        this._move(0, 0, 0, dt);
+        break;
+      }
       case 'RECOVER': {
         this._move(0, 0, 0, dt);
         this.face(P.pos.x, P.pos.z, dt, 2);
@@ -633,7 +657,7 @@ export class Boss {
         const k = T < 0.9 ? ease(T / 0.9) : 1 - ease((T - 0.9) / 0.2);
         R.sh[1].rotation.set(-0.3 - 2.4 * k + (T >= 0.9 ? -1.0 : 0), 0, 0.2); R.el[1].rotation.x = -1.2 * k;
         R.spine.rotation.y = 0.5 * k; R.spine.rotation.x = 0.35 - 0.3 * k;
-      } else if (st === 'STUN') {
+      } else if (st === 'STUN' || st === 'DOOMED') {
         R.neck.rotation.set(0.3 + Math.sin(T * 5) * 0.25, Math.sin(T * 3.3) * 0.5, Math.sin(T * 4.1) * 0.3); R.jaw.rotation.x = 0.4;
         for (let i = 0; i < 2; i++) R.sh[i].rotation.x = -0.1;
       } else if (st === 'RECOVER') {

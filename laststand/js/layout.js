@@ -52,6 +52,7 @@ export const ZONES = [
   { name: 'बस अड्डा', en: 'BUS ADDA', x0: 40, x1: 130, z0: 95, z1: 165 },
   { name: 'वहाबगंज', en: 'WAHABGANJ', x0: -200, x1: 6, z0: -80, z1: 36 },
   { name: 'स्टेशन रोड', en: 'STATION ROAD', x0: 0, x1: 112, z0: -140, z1: -116 },
+  { name: 'जोकर का मैदान', en: "THE JOKER'S PLAYGROUND", x0: -460, x1: -380, z0: -460, z1: -380 },
   { name: 'जायस', en: 'JAIS', x0: -1e4, x1: 1e4, z0: -1e4, z1: 1e4 },
 ];
 
