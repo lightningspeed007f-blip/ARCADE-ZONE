@@ -102,7 +102,7 @@ export class TownMap {
     if (o.signal) out.push({ x: 140, z: -164, label: 'प्लेटफ़ॉर्म 1', en: 'Platform 1' });
     else if (o.key && o.fuse) { const p = S.signalPanel; out.push({ x: p[0], z: p[2], label: 'सिग्नल केबिन', en: 'Signal cabin' }); }
     const B = game.boss;
-    if (B && B.awake && !B.dead) out.push({ x: B.pos.x, z: B.pos.z, label: 'लोहासुर', en: 'Lohasur', boss: true });
+    if (B && B.awake && !B.dead) out.push({ x: B.pos.x, z: B.pos.z, label: 'MUTANT', en: 'Mutant', boss: true });
     return out;
   }
 

@@ -106,7 +106,7 @@ Transparent PNGs work best for the three standing images. The exact names above 
 The images load in the background after the town is ready, so they don't slow the loading screen.
 
 ## The Joker finale — `models/`, `music/jokerlaugh`, `music/jokermusic`
-Lohasur is no longer the last fight. When he is nearly dead, **the Joker** (the jester) steps out of
+Mutant is no longer the last fight. When he is nearly dead, **the Joker** (the jester) steps out of
 purple smoke beside him, shoots him dead, laughs and throws a laughing-gas canister at you. You wake up in
 **the Joker's Playground** — an abandoned city street far from Jais — and fight him there. He skips around
 the square, shoots three-round bursts (watch for the red laser: that's your cue to take cover), lobs bombs,
@@ -121,8 +121,8 @@ slashes if you get close and vanishes in a puff of smoke when hurt. At 60% healt
 | `music/jokerlaugh` (optional) | The Joker's laugh. Without it the game uses its own cackle. |
 | `music/jokermusic` (optional, loops) | Music for the Playground. Without it a creepy music box plays. |
 
-The models are compressed (about 8 MB together) and only start downloading when Lohasur wakes up. If they
-can't be downloaded at all, killing Lohasur ends the game the old way.
+The models are compressed (about 8 MB together) and only start downloading when Mutant wakes up. If they
+can't be downloaded at all, killing Mutant ends the game the old way.
 
 ## Beyond Jais — `models/truck`, `ghoul`, `hound`, `forest`, `city`, `metro`
 The Amethi road now ends at a **highway sign**. Drive (or walk) past it and you come out on **the forest road**:
