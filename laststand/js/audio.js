@@ -182,6 +182,42 @@ const R = {
     for (let i = 0; i < a.length; i++) { const t = i / SR; a[i] *= Math.min(1, t / 0.25) * (t > len - 0.8 ? (len - t) / 0.8 : 1) * (0.75 + 0.25 * Math.sin(t * 31) ** 2); }
     return norm(a, 0.95);
   },
+  // the Joker's cackle: a run of "ha"s, each a buzzy glottal pulse through an open "a" vowel,
+  // falling in pitch and speeding up, with a long wheeze at the end
+  laugh(pitch = 1) {
+    const len = 2.4, a = buf(len), n = 8;
+    let t0 = 0.05;
+    for (let k = 0; k < n; k++) {
+      const last = k === n - 1, dur = last ? 0.42 : 0.12 + Math.random() * 0.03;
+      const f0 = (k === 0 ? 420 : 360 - k * 16) * pitch;
+      const src = mix(saw(dur, f0 * 1.12, f0 * (last ? 0.6 : 0.86), 0.03), scale(noise(dur), last ? 0.7 : 0.3));
+      const v = mix(bp(src, 800 * pitch, 5), scale(bp(src, 1250 * pitch, 6), 0.75), scale(bp(src, 2700 * pitch, 7), 0.3));
+      env(v, 0.01, dur * (last ? 0.6 : 0.4));
+      const at = Math.floor(t0 * SR);
+      for (let i = 0; i < v.length && at + i < a.length; i++) a[at + i] += v[i];
+      t0 += dur + 0.07 - k * 0.004;
+    }
+    return norm(a, 0.92);
+  },
+  // a slightly out-of-tune music box playing a minor waltz (loops: 8 bars of 3/4)
+  musicbox() {
+    const beat = 0.42, len = beat * 24, a = buf(len);
+    const mel = [69, 72, 76, 74, 72, 71, 69, 64, 69, 68, 71, 76, 74, 72, 71, 72, 69, 65, 64, 68, 71, 69, 0, 0];
+    const bass = [45, 52, 40, 47, 45, 53, 40, 45];
+    const note = (m, t, vol, dec) => {
+      const f = 440 * Math.pow(2, (m - 69) / 12) * (1 + (Math.random() - 0.5) * 0.012);
+      const n = Math.floor(Math.min(1.6, len - t) * SR), at = Math.floor(t * SR);
+      for (let i = 0; i < n; i++) {
+        const tt = i / SR, e = Math.exp(-tt / dec) * Math.min(1, tt / 0.003);
+        a[(at + i) % a.length] += vol * e * (Math.sin(2 * Math.PI * f * tt) + 0.35 * Math.sin(2 * Math.PI * f * 2.01 * tt) * Math.exp(-tt * 3) + 0.12 * Math.sin(2 * Math.PI * f * 4.2 * tt) * Math.exp(-tt * 9));
+      }
+    };
+    mel.forEach((m, i) => { if (m) note(m, i * beat, 0.5, 0.55); });
+    bass.forEach((m, i) => { note(m, i * beat * 3, 0.32, 0.9); note(m + 12, i * beat * 3 + beat, 0.16, 0.4); note(m + 19, i * beat * 3 + beat * 2, 0.16, 0.4); });
+    return norm(lp(a, 5000), 0.6);
+  },
+  // a burst of pressurised gas
+  gas() { const n = hp(noise(2.2), 1200); for (let i = 0; i < n.length; i++) { const t = i / SR; n[i] *= Math.min(1, t / 0.03) * Math.exp(-t / 0.9); } return norm(mix(n, scale(env(lp(noise(2.2), 400), 0.01, 0.4), 0.6)), 0.8); },
   // shimmering divine chime: rising glissandi with sparkles
   magic() {
     const len = 4.5, parts = [];
@@ -231,6 +267,7 @@ export class Audio {
     set('static', () => R.staticNoise(2.5));
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
     set('rocket', R.rocket); set('fuse', R.fuse); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
+    set('laugh', () => R.laugh(0.88 + Math.random() * 0.25), 3); set('musicbox', R.musicbox); set('gas', R.gas);
     this._loadGunSounds();
     this._loadUserAudio();
   }

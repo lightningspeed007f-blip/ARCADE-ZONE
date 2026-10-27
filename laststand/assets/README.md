@@ -104,3 +104,22 @@ into a valley far north of Jais (the Shivdham is not touched by any of this).
 Transparent PNGs work best for the three standing images. The exact names above are tried first
 (`maakaali3.JPG` / `maakaali4.JPG` with capital JPG, as uploaded), then the other extensions.
 The images load in the background after the town is ready, so they don't slow the loading screen.
+
+## The Joker finale — `models/`, `music/jokerlaugh`, `music/jokermusic`
+Lohasur is no longer the last fight. When he is nearly dead, **the Joker** (the jester) steps out of
+purple smoke beside him, shoots him dead, laughs and throws a laughing-gas canister at you. You wake up in
+**the Joker's Playground** — an abandoned city street far from Jais — and fight him there. He skips around
+the square, shoots three-round bursts (watch for the red laser: that's your cue to take cover), lobs bombs,
+slashes if you get close and vanishes in a puff of smoke when hurt. At 60% health he lets out his pet,
+**CatNap**, who hunts you and breathes red smoke. At 30% he goes wild. Kill the Joker to win.
+
+| File | What it is |
+|------|------------|
+| `models/joker.glb` | The Joker (“Fixed Prototype Rigged” by Unschooling with Fin, CC BY 4.0). The broken collar was removed and the right forearm rebuilt by mirroring the left. |
+| `models/catnap.glb` | CatNap with its animations (“[NEW] Catnap \| Escape from Playtime” by Unusual Games Official, CC BY 4.0). |
+| `models/street.glb` | The arena (“abandoned city street for games” by dasy444), scaled up 4×. |
+| `music/jokerlaugh` (optional) | The Joker's laugh. Without it the game uses its own cackle. |
+| `music/jokermusic` (optional, loops) | Music for the Playground. Without it a creepy music box plays. |
+
+The models are compressed (about 8 MB together) and only start downloading when Lohasur wakes up. If they
+can't be downloaded at all, killing Lohasur ends the game the old way.
