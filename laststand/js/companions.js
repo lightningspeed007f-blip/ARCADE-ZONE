@@ -313,7 +313,9 @@ export class Companions {
       else {
         const [sx, sz] = this._slot(c);
         const ds = Math.hypot(sx - c.pos.x, sz - c.pos.z);
-        if (ds > 1.0) { tx = sx; tz = sz; run = ds > 5; }
+        // indoors the slots sit against walls and every turn of yours shifts them: keep still unless far off
+        const deadband = g.inside ? 2.2 : 1.0;
+        if (ds > deadband) { tx = sx; tz = sz; run = ds > 5; }
         else c.yaw += angleDiff(c.yaw, P.yaw + Math.PI) * Math.min(1, dt * 2);
       }
     }
