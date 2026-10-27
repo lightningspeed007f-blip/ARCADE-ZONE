@@ -220,6 +220,20 @@ export class Companions {
   // a crew member's dead weight for e.prey checks in enemies.js
   isDown(c) { return c.state !== 'follow' && c.state !== 'hold'; }
 
+  // everything the crew can pick a fight with: the zombies and thieves, plus Mutant and the Joker once they are up and fighting
+  _targets() {
+    const g = this.g, out = g.enemies.list.slice(), B = g.boss, J = g.joker;
+    if (B && B.solid() && B.state !== 'DOOMED') out.push(B);
+    if (J && J.solid() && !J.dead) out.push(J);
+    return out;
+  }
+  // hit a target with the right damage call: the two big ones take hits on their own methods
+  _hit(T, dmg, part, dir) {
+    const g = this.g;
+    if (T === g.boss || T === g.joker) return T.damage(dmg, part, dir, 'crew');
+    return g.enemies.damage(T, dmg, part, dir, 'crew');
+  }
+
   // ================= every frame =================
   update(dt) {
     const g = this.g, P = g.player;
@@ -284,7 +298,7 @@ export class Companions {
       const anchor = c.state === 'hold' ? c.holdAt : P.pos;
       const range = c.S.gun ? c.S.gun.range : 11;
       let best = null, bs = 1e9;
-      for (const e of E.list) {
+      for (const e of this._targets()) {
         if (e.dead || (e.human && !['ATTACK', 'CHASE', 'DETECT', 'COVER', 'RETREAT', 'FLEE'].includes(e.state))) continue;
         if (Math.abs(e.pos.y - c.pos.y) > 2.2) continue;
         const de = Math.hypot(e.pos.x - c.pos.x, e.pos.z - c.pos.z);
@@ -313,7 +327,9 @@ export class Companions {
       else {
         const [sx, sz] = this._slot(c);
         const ds = Math.hypot(sx - c.pos.x, sz - c.pos.z);
-        if (ds > 1.0) { tx = sx; tz = sz; run = ds > 5; }
+        // indoors they stand quietly, turned to face you, until a zombie shows up
+        if (g.inside) c.yaw += angleDiff(c.yaw, P.yaw + Math.PI) * Math.min(1, dt * 2);
+        else if (ds > 1.0) { tx = sx; tz = sz; run = ds > 5; }
         else c.yaw += angleDiff(c.yaw, P.yaw + Math.PI) * Math.min(1, dt * 2);
       }
     }
@@ -364,21 +380,22 @@ export class Companions {
 
   // ---------- melee: one swing hits everything in the arc in front ----------
   _strike(c) {
-    const g = this.g, M = c.S.melee, E = g.enemies;
+    const g = this.g, M = c.S.melee;
     let n = 0;
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
-    const hits = E.list.filter((e) => !e.dead && Math.abs(e.pos.y - c.pos.y) < 1.4)
+    const hits = this._targets().filter((e) => !e.dead && Math.abs(e.pos.y - c.pos.y) < 1.4)
       .map((e) => [e, Math.hypot(e.pos.x - c.pos.x, e.pos.z - c.pos.z)]).filter(([e, d]) => d < M.reach + 0.3 && Math.abs(angleDiff(c.yaw, Math.atan2(e.pos.x - c.pos.x, e.pos.z - c.pos.z))) < M.arc / 2 + (d < 0.9 ? 1 : 0))
       .sort((a, b) => a[1] - b[1]);
     for (const [e] of hits) {
       if (n++ >= M.hits) break;
       const dir = { x: fx, z: fz }, head = Math.random() < 0.25;
-      const killed = E.damage(e, M.dmg * (0.9 + Math.random() * 0.2), head ? 'head' : 'body', dir, 'crew');
+      const killed = this._hit(e, M.dmg * (0.9 + Math.random() * 0.2), head ? 'head' : 'body', dir);
       g.fx.burst([e.pos.x, e.pos.y + 1.3, e.pos.z], [fx * 0.6, 0.3, fz * 0.6], head ? 14 : 9, [0.45, 0.03, 0.02], 2.4, 0.6);
       g.audio.play('flesh', { pos: [e.pos.x, e.pos.y + 1.3, e.pos.z], vol: 0.85 });
       if (!killed) {
-        e.stagger = Math.max(e.stagger || 0, M.kb > 1 ? 0.7 : 0.3);
-        if (e.type !== 'brute' && e.type !== 'ghoul') g.physics.moveCharacter(e.pos, fx * M.kb * 0.5, fz * M.kb * 0.5, 0, 0.016, 0.3, 1.7, 0.45, e.st);
+        const big = e === g.boss || e === g.joker;
+        if (!big) { e.stagger = Math.max(e.stagger || 0, M.kb > 1 ? 0.7 : 0.3); }
+        if (!big && e.type !== 'brute' && e.type !== 'ghoul') g.physics.moveCharacter(e.pos, fx * M.kb * 0.5, fz * M.kb * 0.5, 0, 0.016, 0.3, 1.7, 0.45, e.st);
         this._provoke(e, c);
       } else c.kills++;
     }
@@ -387,13 +404,13 @@ export class Companions {
   }
   // a zombie hit by the crew turns on them (unless it is already after you)
   _provoke(e, c) {
-    if (e.human || e.dead || e.state === 'CHASE' || e.state === 'ATTACK') return;
+    if (e.human || e.dead || e.state === 'CHASE' || e.state === 'ATTACK' || e === this.g.boss || e === this.g.joker) return;
     e.state = 'HUNT'; e.prey = c; e.stateT = 0; e.hold = false;
   }
 
   // ---------- guns ----------
   _shoot(c, T, de, dt) {
-    const g = this.g, G = c.S.gun, E = g.enemies;
+    const g = this.g, G = c.S.gun;
     if (c.reloadT > 0) { c.reloadT -= dt; if (c.reloadT <= 0) c.ammo = G.mag; return; }
     if (c.cool > 0) return;
     if (c.burstLeft <= 0) c.burstLeft = G.burst;
@@ -412,7 +429,7 @@ export class Companions {
     }
     if (dmg > 0) {
       const dir = { x: (T.pos.x - c.pos.x) / (de || 1), z: (T.pos.z - c.pos.z) / (de || 1) };
-      const killed = E.damage(T, dmg, head ? 'head' : 'body', dir, 'crew');
+      const killed = this._hit(T, dmg, head ? 'head' : 'body', dir);
       g.fx.tracer(mz, [T.pos.x, ty, T.pos.z]);
       g.fx.burst([T.pos.x, ty, T.pos.z], [-dir.x * 0.4, 0.2, -dir.z * 0.4], head ? 12 : 7, [0.45, 0.02, 0.02], 2.2, 0.6);
       if (killed) { c.kills++; c.target = null; } else this._provoke(T, c);
