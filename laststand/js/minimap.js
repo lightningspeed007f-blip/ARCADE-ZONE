@@ -131,10 +131,11 @@ export class TownMap {
       if (d > lim) { sx *= lim / d; sy *= lim / d; }
       marker(ctx, r + sx, r + sy, t.boss ? 6 : 5, t.boss);
     }
-    // the jeep (when you are not in it)
+    // the cars you are not sitting in
     const V = game.vehicles;
-    if (V && V.car && !V.driving) {
-      const dx = V.car.x - P.pos.x, dz = V.car.z - P.pos.z, c = Math.cos(P.yaw), s = Math.sin(P.yaw);
+    if (V) for (const car of V.cars) {
+      if (!car.ready || (V.driving && car === V.car)) continue;
+      const dx = car.x - P.pos.x, dz = car.z - P.pos.z, c = Math.cos(P.yaw), s = Math.sin(P.yaw);
       const sx = (dx * c - dz * s) * k, sy = (dx * s + dz * c) * k;
       if (Math.hypot(sx, sy) < r - 6) jeepMark(ctx, r + sx, r + sy, 4);
     }
@@ -176,7 +177,10 @@ export class TownMap {
     // objective
     for (const t of this.targets(game)) { const [px, py] = P(t.x, t.z); marker(x, px, py, 8 * dpr, t.boss); }
     const V = game.vehicles;
-    if (V && V.car && !V.driving) { const [jx, jy] = P(V.car.x, V.car.z); jeepMark(x, jx, jy, 6 * dpr); }
+    if (V) for (const car of V.cars) {
+      if (!car.ready || (V.driving && car === V.car) || car.x < BOUNDS.minX || car.x > BOUNDS.maxX || car.z < BOUNDS.minZ || car.z > BOUNDS.maxZ) continue;
+      const [jx, jy] = P(car.x, car.z); jeepMark(x, jx, jy, 6 * dpr);
+    }
     // player
     const pl = game.player;
     const [px, py] = P(pl.pos.x, pl.pos.z);

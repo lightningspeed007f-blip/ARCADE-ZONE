@@ -123,3 +123,26 @@ slashes if you get close and vanishes in a puff of smoke when hurt. At 60% healt
 
 The models are compressed (about 8 MB together) and only start downloading when Lohasur wakes up. If they
 can't be downloaded at all, killing Lohasur ends the game the old way.
+
+## Beyond Jais — `models/truck`, `ghoul`, `hound`, `forest`, `city`, `metro`
+The Amethi road now ends at a **highway sign**. Drive (or walk) past it and you come out on **the forest road**:
+a winding dirt road through pines at night, with hound packs and a burnt-out camp at the bend. The far end of
+the road reaches **the dead city**: a lamp-lit avenue between tower blocks, full of ghouls, with a **metro
+entrance** at the top. The metro is **the old metro**: two station halls joined by a loop of graffiti tunnel.
+The south hall climbs back to the city; the north hall comes out at the new metro entrance on the forecourt of
+Jais City station. Cars come along on the road; the metro is on foot.
+
+| File | What it is |
+|------|------------|
+| `models/truck.glb` | The armoured zombie pickup you can drive, parked on the Amethi road facing the highway (“ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0). Faster and heavier than the jeep. The upload was cut short; the missing part of one texture was rebuilt from what arrived. The wheels were cut out of the body so they spin and steer. |
+| `models/ghoul.glb` | The ghoul: a tough rotting zombie that roars when it sees you (“Zombie” by David Glynch). Reduced from 109k to 16k triangles. In town, the forest, the city and the metro. |
+| `models/hound.glb` | The hound: a fast zombie dog that hunts in packs and howls to call them (“Zombie Dog” by LostBoyz2078, CC BY 4.0). Packs roam the town edges and the forest. |
+| `models/forest.glb` | The forest road (“a forest (3) with a road at night for game” by dasy444, CC BY 4.0), scaled 12×. |
+| `models/city.glb` | The dead city (“street city (7) for games FREE” by dasy444), scaled 4×. |
+| `models/metro.glb` | The old metro (“old metro tunnel FREE” by dasy444), scaled 2.6×. |
+| `models/forest.json`, `city.json`, `metro.json` | Collision and walkable ground baked from the three models (walls, floors, stairs, the forest's hills). Re-bake them if you replace a model. |
+
+Everything here downloads in the background once the town is ready (about 10 MB, smallest first: the pickup,
+the hound, the ghoul, then the three places). Until a place has arrived, its road or stairs tell you it is still
+loading; if a file can't be downloaded, that way stays closed and the rest of the game is unchanged.
+

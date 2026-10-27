@@ -133,3 +133,32 @@ export function poseBone(rig, name, D) {
   b.quaternion.copy(r.q).multiply(_q);
 }
 export function restAll(rig) { for (const [b, r] of rig.rest) b.quaternion.copy(r.q); }
+
+// ---------- the night's other uploads: the pickup, the ghoul, the hound and three far-off places ----------
+// Each loads on its own, in the background, once the town is ready (see outlands.js).
+//   models/truck.glb   the zombie pickup (wheels cut out of the body so they can spin and steer)
+//   models/ghoul.glb   a rotting zombie (Mixamo rig, one clip: a scream, then a swaying idle)
+//   models/hound.glb   a zombie dog (one clip: a howl)
+//   models/forest.glb, city.glb, metro.glb   the forest road, the dead city and the old metro
+// Materials become Lambert like everything else in town.
+const loader = { l: null };
+export function loadGLB(path, onProgress) {
+  if (!loader.l) { loader.l = new GLTFLoader(); loader.l.setMeshoptDecoder(MeshoptDecoder); }
+  return new Promise((res, rej) => loader.l.load(ASSET_ROOT + path, res, (e) => onProgress && e.total && onProgress(e.loaded / e.total), rej));
+}
+export function lambertize(root, keepNormal = false, glow = 0) { swapMaterials(root, keepNormal, glow); return root; }
+
+// A skinned model's own copy (meshes share geometry and materials, each gets its own bones).
+export function cloneSkinned(src) {
+  const map = new Map();
+  const copy = src.clone(true);
+  const a = [], b = [];
+  src.traverse((o) => a.push(o)); copy.traverse((o) => b.push(o));
+  a.forEach((o, i) => map.set(o, b[i]));
+  copy.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const s = a[b.indexOf(o)].skeleton;
+    o.bind(new THREE.Skeleton(s.bones.map((x) => map.get(x)), s.boneInverses), o.bindMatrix);
+  });
+  return copy;
+}

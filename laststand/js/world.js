@@ -52,7 +52,7 @@ export function rectsOverlap(a, b) {
 }
 
 export function createWorldContext() {
-  const P = new Physics(BOUNDS.minX - 1010, BOUNDS.minZ - 1400, BOUNDS.maxX + 10, BOUNDS.maxZ + 10); // west part: Shivdham valley; far north: Kalidham valley
+  const P = new Physics(BOUNDS.minX - 1010, BOUNDS.minZ - 1400, BOUNDS.maxX + 700, BOUNDS.maxZ + 700); // west: Shivdham valley; far north: Kalidham valley; east and south: the forest road, the dead city, the old metro
   const B = new Builder(P, 60);
   const W = {
     B, P, signs: new SignAtlas(2048), rng: makeRng(20240611),

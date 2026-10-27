@@ -10,7 +10,7 @@ import { clamp, lerp, angleDiff, rgb } from './util.js';
 import { Physics } from './physics.js';
 import { BOMB } from './explosives.js';
 
-const MAX = 130;
+const MAX = 170;
 export const TYPES = {
   walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl' },
   runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream' },
@@ -18,6 +18,9 @@ export const TYPES = {
   human:  { hp: 95, speed: 1.6, chase: 3.6, dmg: 0, reach: 0, wind: 0, sight: 34, scale: 1, growl: null },
   // chor: a masked knife thief. Fast, melee, grabs food from the bag and bolts.
   thief:  { hp: 60, speed: 1.55, chase: 5.0, dmg: 9, reach: 1.5, wind: 0.4, sight: 30, scale: 0.98, growl: null },
+  // the uploaded models (creatures.js gives them bodies): a tough rotting ghoul and a fast zombie hound
+  ghoul:  { hp: 190, speed: 1.0, chase: 2.5, dmg: 20, reach: 1.65, wind: 0.6, sight: 22, scale: 1, growl: 'growlBig', model: 'ghoul' },
+  hound:  { hp: 55, speed: 1.9, chase: 6.4, dmg: 9, reach: 1.55, wind: 0.32, sight: 28, scale: 1, growl: 'growl', model: 'hound' },
 };
 const THIEF_GUN = { dmg: 0, rate: 1, burst: 0, sound: 'pistol', drop: 'katta' };
 const HUMAN_GUNS = {
@@ -265,6 +268,26 @@ export class Enemies {
     return e;
   }
 
+  // A ghoul roars when it first sees you; a hound howls and the rest of its pack comes running.
+  roar(e) {
+    const g = this.game, P = g.player;
+    e.roared = true;
+    const hound = e.type === 'hound';
+    e.roarT = hound ? 1.5 : 1.6;
+    if (hound) {
+      g.audio.play('bark', { pos: [e.pos.x, e.pos.y + 0.8, e.pos.z], vol: 1.1, rate: 0.75, max: 160 });
+      g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 0.8, e.pos.z], vol: 0.55, rate: 1.6, delay: 0.25, max: 160 });
+      for (const o of this.list) {
+        if (o === e || o.dead || o.type !== 'hound' || o.state === 'CHASE' || o.state === 'ATTACK') continue;
+        if (Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) > 45) continue;
+        o.state = 'CHASE'; o.lastSeen = { x: P.pos.x, z: P.pos.z }; o.lostT = 0; o.hold = false; o.roared = true;
+      }
+    } else {
+      g.audio.play('growlBig', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 1.1, rate: 0.85, max: 140 });
+      g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.7, rate: 0.6, delay: 0.35, max: 140 });
+    }
+  }
+
   // ---------- hit test: ray vs body spheres ----------
   hitTest(o, d, maxT, ignore) {
     let best = null;
@@ -432,6 +455,7 @@ export class Enemies {
     }
     // remove old corpses
     for (let i = this.list.length - 1; i >= 0; i--) if (this.list[i].dead && this.list[i].deathT > 40) this.list.splice(i, 1);
+    if (this.creatures) this.creatures.sweep(this.list);
     this.draw(cam);
   }
 
@@ -441,7 +465,8 @@ export class Enemies {
     // growls
     e.nextGrowl -= dt;
     if (e.nextGrowl <= 0 && d < 45) {
-      g.audio.play(e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' ? 0.8 : 1, ref: 2.5 });
+      const dog = e.type === 'hound';
+      g.audio.play(dog ? (e.state === 'CHASE' ? 'bark' : 'growl') : e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl, { pos: [e.pos.x, e.pos.y + (dog ? 0.8 : 1.6), e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' || e.type === 'ghoul' ? 0.8 : dog ? 0.85 + Math.random() * 0.3 : 1, ref: 2.5 });
       e.nextGrowl = (e.state === 'CHASE' ? 2.5 : 6) + Math.random() * 6;
     }
     // perception (throttled line of sight)
@@ -454,7 +479,7 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.model && !e.roared) this.roar(e); } }
     }
     // no player in sight: a living person close by is food too (thieves and looters get torn into)
     if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {
@@ -485,6 +510,8 @@ export class Enemies {
       }
       case 'CHASE': {
         if (P.dead) { e.state = 'IDLE'; break; }
+        // the ghoul's roar / the hound's howl: it stands its ground for a moment, facing you
+        if (e.roarT > 0) { e.roarT -= dt; this.move(e, 0, 0, 0, dt); e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 5); break; }
         if (!e.sees) { e.lostT = (e.lostT || 0) + dt; if (e.lostT > 8) { e.state = 'ALERT'; e.investigate = e.lastSeen; e.stateT = 0; } }
         const dy = Math.abs(P.pos.y - e.pos.y);
         if (d < T.reach && dy < 1.3) { e.state = 'ATTACK'; e.attackT = T.wind; break; }
@@ -492,7 +519,7 @@ export class Enemies {
         let tx = e.lastSeen ? e.lastSeen.x : px, tz = e.lastSeen ? e.lastSeen.z : pz;
         let flow = e.sees || d < 25;
         if (dy > 1.6 && d < 14) { const s = g.stairFor(e, P); if (s) { tx = s[0]; tz = s[1]; flow = false; } }
-        this.goTo(e, tx, tz, T.chase * speedK, dt, flow && P.pos.y < 1.2 && !e.tunnel);
+        this.goTo(e, tx, tz, T.chase * speedK, dt, flow && (P.pos.y < 1.2 || !!g.outlands?.zone) && !e.tunnel);
         break;
       }
       case 'ATTACK': {
@@ -866,9 +893,11 @@ export class Enemies {
     const cx = cam.position.x, cz = cam.position.z;
     let ns = 0;
     const sh = this.shadow, m = this._m, q = this._q, sv = this._s3, v = this._v;
+    const models = this._models || (this._models = []); models.length = 0;
     for (const e of this.list) {
       const far = Math.hypot(e.pos.x - cx, e.pos.z - cz);
       if (far > 105) { e.hs.length = 0; continue; }
+      if (e.T.model) { models.push(e); continue; }          // the ghouls and hounds have bodies of their own
       this.pose(e);
       R.root.updateMatrixWorld(true);
       const col = e.colors;
@@ -902,6 +931,17 @@ export class Enemies {
         add(R.th[0], 0.12, 'leg'); add(R.th[1], 0.12, 'leg'); add(R.sn[0], 0.11, 'leg'); add(R.sn[1], 0.11, 'leg');
         add(R.ua[0], 0.09, 'arm'); add(R.ua[1], 0.09, 'arm');
         v.setFromMatrixPosition(R.head.matrixWorld); e.headPos = [v.x, v.y, v.z];
+      }
+    }
+    if (this.creatures) {
+      this.creatures.draw(models, cam, this.game.dt || 0.016);
+      for (const e of models) {
+        if (!e._inst) { e.hs.length = 0; continue; }
+        if (Math.hypot(e.pos.x - cx, e.pos.z - cz) > 60 || ns >= MAX) continue;
+        const dog = e.type === 'hound';
+        v.set(e.pos.x, e.pos.y + 0.03, e.pos.z);
+        sv.set((dog ? (e.dead ? 1.1 : 0.7) : (e.dead ? 1.5 : 0.95)) * e.scale, 1, (dog ? 1.5 : e.dead ? 1.9 : 0.75) * e.scale);
+        q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, e.yaw); m.compose(v, q, sv); sh.setMatrixAt(ns++, m);
       }
     }
     for (const k in im) {
