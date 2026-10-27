@@ -23,6 +23,7 @@ import { Explosives, BOMB } from './explosives.js';
 import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { Joker, buildArena } from './joker.js';
+import { Outlands } from './outlands.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -98,13 +99,15 @@ export class Game {
     this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
     Boss.buildLair(W);
     buildArena(W);                                    // the Joker's Playground, far from town (its model loads later)
+    this.outlands = new Outlands(this);
+    this.outlands.buildStatic(W, scene, mats);        // the highway sign and the metro entrance (the places beyond load later)
     W.B.build(scene, mats);
     this.buildWell();
     this.buildSky();
     for (const fn of W.deferred) fn(scene, mats);
     progress(0.55, 'रास्ते… navigation');
     await tick();
-    this.nav = new Nav(this.physics);
+    this.nav = this.townNav = new Nav(this.physics);  // swapped for a place's own grid while you are out of town
     this.townMap = new TownMap(W);
     progress(0.62, 'तस्वीरें और बैनर… your images');
     this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.25, 'तस्वीरें और बैनर… your images'));
@@ -165,6 +168,7 @@ export class Game {
     this.state = 'menu';
     this.renderMenuBackdrop();
     requestAnimationFrame((t) => this.frame(t));
+    this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
   }
 
   makeMaterials(tex, signTex) {
@@ -381,6 +385,7 @@ export class Game {
   // ================= footstep surfaces =================
   surface(x, z) {
     if (this.inside) return 'tile';
+    const os = this.outlands && this.outlands.surface(); if (os) return os;
     for (const r of this._roads || (this._roads = Object.values(ROADS).map((r) => ({ r, i: roadInfo(r) })))) {
       const dx = x - r.r.a[0], dz = z - r.r.a[1];
       const along = dx * r.i.ux + dz * r.i.uz, across = Math.abs(dx * r.i.nx + dz * r.i.nz);
@@ -389,11 +394,11 @@ export class Game {
     if (z < -160 && z > -192) return 'dirt';
     return 'dirt';
   }
-  indoorFloor() { return this.inside ? 'tile' : 'asphalt'; }
+  indoorFloor() { return this.inside ? 'tile' : (this.outlands && this.outlands.surface()) || 'asphalt'; }
   // footsteps are silent while a hidden tunnel's music plays (Shivdham, Kalidham)
   stepsMuted() { return !!(this.secret && this.secret.musicOn) || !!(this.kaali && this.kaali.musicOn); }
   // in one of the open-sky valleys (Shivdham or Kalidham)
-  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode) || !!(this.joker && this.joker.arena); }
+  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode) || !!(this.joker && this.joker.arena) || !!(this.outlands && this.outlands.zone); }
 
   // ================= stairs lookup for zombies =================
   collectStairs() { return this.W.stairsList || []; }
@@ -468,6 +473,7 @@ export class Game {
     this.secret.reset();
     this.kaali.reset();
     this.state = 'play';
+    this.outlands.reset();
     this.input.resetState();
     this.input.enabled = true;
     document.body.classList.add('playing');
@@ -800,7 +806,7 @@ export class Game {
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
       if (reason) { this.gameOver(reason); return; }
-      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : 'ज़ॉम्बी ने मार डाला');
+      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -890,6 +896,7 @@ export class Game {
     this.secret.consider(consider);
     this.kaali.consider(consider);
     this.vehicles.consider(consider);
+    this.outlands.consider(consider);
     this.boss.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
@@ -934,8 +941,9 @@ export class Game {
       case 'board': return ['BOARD', 'ट्रेन में चढ़ें'];
       case 'secret': return this.secret.prompt(t);
       case 'kaali': return this.kaali.prompt(t);
-      case 'vehicle': return ['DRIVE', 'जीप · enter the jeep'];
+      case 'vehicle': return ['DRIVE', `${t.car.S.name} · get in the ${t.car.S.en.toLowerCase()}`];
       case 'boss': return ['WAKE', 'सोता हुआ दानव · wake the sleeping giant'];
+      case 'outland': return this.outlands.prompt(t);
     }
     return null;
   }
@@ -994,8 +1002,9 @@ export class Game {
       case 'board': return this.win();
       case 'secret': return this.secret.use(t);
       case 'kaali': return this.kaali.use(t);
-      case 'vehicle': return this.vehicles.enter();
+      case 'vehicle': return this.vehicles.enter(t.car);
       case 'boss': return this.boss.wake('player');
+      case 'outland': return this.outlands.use(t);
     }
   }
 
@@ -1091,9 +1100,9 @@ export class Game {
     const V = this.vehicles, drv = V.driving;
     const ammo = drv ? `${Math.round(Math.abs(V.car.speed) * 3.6)}<small> km/h</small>` : w.melee ? '—' : `${A.mag[A.cur]}<small> / ${A.reserve[w.ammo]}</small>`;
     if (force || ammo !== this._ammo) { this._ammo = ammo; $('ammoNum').innerHTML = ammo; }
-    const near = !drv && V.near();
+    const near = !drv && !!V.near();
     if (near !== this._canDrive) { this._canDrive = near; document.body.classList.toggle('canDrive', near); }
-    const wn = drv ? 'जीप · JEEP' : w.name + (A.reloadT > 0 ? ' · रीलोड' : '');
+    const wn = drv ? `${V.car.S.name} · ${V.car.S.en}` : w.name + (A.reloadT > 0 ? ' · रीलोड' : '');
     if (force || wn !== this._wn) { this._wn = wn; $('wName').textContent = wn; }
     const fc = this.food.length;
     if (force || fc !== this._fc) { this._fc = fc; $('foodCount').textContent = fc; $('btnEat').classList.toggle('dim', fc === 0); }
@@ -1128,6 +1137,7 @@ export class Game {
     if (this.secret && this.secret.mode) this.secret.setMode(false);
     if (this.kaali && this.kaali.mode) this.kaali.setMode(false);
     if (this.joker && this.joker.arena) this.joker.leave();
+    if (this.outlands && this.outlands.zone) { this.outlands.setZone(null); this.outlands.fade(false, true); }
     this.time += dt;
     const t = this.time * 0.05;
     const T = KAMAKHYA.temple;
@@ -1211,6 +1221,7 @@ export class Game {
   // everything that runs the same on foot and in the jeep
   afterMove(dt) {
     const P = this.player;
+    this.outlands.update(dt);                         // which place you are in, the roads and stairs between them
     // footsteps & movement noise reach enemies
     if (P.noise > 0) { this._nT = (this._nT || 0) - dt; if (this._nT <= 0) { this._nT = 0.5; this.noise(P.pos, P.noise, 'step'); } }
     // flow field toward the player
@@ -1271,7 +1282,7 @@ export class Game {
       if (!this.inValley()) this.townMap.discover(P.pos.x, P.pos.z);
       this.vis = lit ? 0.8 : inside ? 0.22 : 0.38;
     }
-    this.audio.setListener(this.camera, !!this.inside || this.secret.underground || this.kaali.underground);
+    this.audio.setListener(this.camera, !!this.inside || this.secret.underground || this.kaali.underground || this.outlands.indoor);
     this.updateChaseAudio(dt);
     // start-house broadcast
     if (this.obj.phase === 'radio') {
@@ -1424,7 +1435,7 @@ export class Game {
   updateAmbience(dt) {
     const st = this.state;
     if (st !== 'play' && st !== 'menu' && st !== 'dead' && st !== 'win') return; // paused: hold
-    this.hemiK += ((st === 'play' && this.inside ? 1 : 0) - this.hemiK) * Math.min(1, dt * 3);
+    this.hemiK += ((st === 'play' && (this.inside || this.outlands.indoor) ? 1 : 0) - this.hemiK) * Math.min(1, dt * 3);
     const k = this.hemiK;
     this.hemi.intensity = HEMI_OUT - 0.42 * k;
     this.hemi.color.copy(this.hemiSky.out).lerp(this.hemiSky.in, k);

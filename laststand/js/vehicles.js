@@ -1,5 +1,5 @@
 // Cars of the night: abandoned wrecks along the roads, a few still burning,
-// and one old army-green jeep that actually drives.
+// an old army-green jeep and a zombie pickup that actually drive.
 //
 // Wrecks and burning shells are merged into two static meshes (two draw
 // calls for all of them) with ordinary box colliders, placed before the
@@ -131,12 +131,23 @@ function driverGeo() {
   ]);
 }
 
+// Two cars drive: the old army jeep (built from boxes, below) and the zombie pickup
+// (models/truck.glb, loaded in the background: it shows up on the Amethi road once its file is in).
+// Each has its own size, pace and punch; everything else (enter, exit, steering, ramming) is shared.
+export const CARS = {
+  jeep: { name: 'जीप', en: 'JEEP', max: 17, rev: 6, acc: [9, 5.5], hx: 0.88, hy: 0.75, hz: 1.92, cy: 0.8, probe: [-1.22, 0, 1.22], r: 0.9, wb: 2.3, wheelR: 0.38, cam: [7.4, 3.0], ram: 9, push: 1.25, reach: [1.2, 2.3], side: 1.75, back: 3.0, front: 3.1, engine: 0.75 },
+  // heavier and faster: a bull bar and armour plates. Shrugs off a brute where the jeep bounces.
+  truck: { name: 'पिकअप', en: 'PICKUP', max: 20, rev: 6.5, acc: [8, 5.2], hx: 1.1, hy: 0.85, hz: 2.45, cy: 0.9, probe: [-1.6, 0, 1.6], r: 1.08, wb: 2.98, wheelR: 0.433, cam: [8.6, 3.6], ram: 12, push: 1.45, reach: [1.4, 2.8], side: 2.05, back: 3.6, front: 3.7, engine: 0.62, tough: true },
+};
+const TRUCK_AT = { road: 'SE', t: 126, off: -2.4, dyaw: 0 };   // on the Amethi road, nose toward the highway out of town
+
 export class Vehicles {
   constructor(game) {
     this.g = game;
     this.burning = []; this.wrecks = [];
+    this.cars = [];
     this.driving = false;
-    this.car = null;
+    this.car = null;              // the car being driven (or the last one)
   }
 
   // a road placement -> world {x, z, yaw}, nudged along the road until the spot is clear
@@ -153,9 +164,16 @@ export class Vehicles {
     return null;
   }
 
+  _car(kind, at) {
+    const c = { kind, S: CARS[kind], home: at, x: at.x, y: 0, z: at.z, yaw: at.yaw, speed: 0, steer: 0, spin: 0, lean: 0, pitch: 0, crashT: 0, mesh: null, wheels: [], lamps: [], driver: null, box: null, ready: false };
+    this.cars.push(c);
+    return c;
+  }
+
   // ================= static part: built with the town, before navigation =================
   buildStatic(W, scene, mats) {
     const P = W.P, R = makeRng(4242), wreckParts = [], hotParts = [];   // own RNG: the town itself stays exactly as before
+    this.scene = scene;
     const put = (geo, x, y, z, yaw, rx = 0, rz = 0) => {
       geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, yaw, rz, 'YXZ')), new THREE.Vector3(1, 1, 1)));
       wreckParts.push(geo);
@@ -208,74 +226,124 @@ export class Vehicles {
       m.position.set(b.x, 0.07, b.z); m.renderOrder = 2; scene.add(m);
     }
     // the jeep (its collider is added per run, after the navigation grid exists)
-    this.jeepAt = this._place(JEEP_AT, P, 2.3) || { x: 3.3, z: -16, yaw: Math.PI };
-    W.reserve(this.jeepAt.x, this.jeepAt.z, 1.1, 2.2, this.jeepAt.yaw);
-    this.buildJeep(scene, mats);
+    const ja = this._place(JEEP_AT, P, 2.3) || { x: 3.3, z: -16, yaw: Math.PI };
+    W.reserve(ja.x, ja.z, 1.1, 2.2, ja.yaw);
+    this.jeep = this._car('jeep', ja);
+    this.buildJeep(scene, mats, this.jeep);
+    // the pickup: its spot is kept clear now, the model drops in when it has loaded
+    const ta = this._place(TRUCK_AT, P, 2.8) || { x: 118, z: 152, yaw: Math.atan2(160, 86) };
+    W.reserve(ta.x, ta.z, 1.4, 2.8, ta.yaw);
+    this.truck = this._car('truck', ta);
+    const tg = this.truck.mesh = new THREE.Group(); tg.rotation.order = 'YXZ'; tg.visible = false; scene.add(tg);
   }
 
-  buildJeep(scene, mats) {
+  buildJeep(scene, mats, c) {
     const g = new THREE.Group();
     g.rotation.order = 'YXZ';
     const bodyM = new THREE.Mesh(jeepBody(), mats.vcol); g.add(bodyM);
     const wg = wheelGeo();
-    this.wheels = [];
     for (const [x, z] of [[0.82, 1.15], [-0.82, 1.15], [0.82, -1.15], [-0.82, -1.15]]) {
       const pivot = new THREE.Group(); pivot.position.set(x, 0.38, z);
       const w = new THREE.Mesh(wg, mats.vcol); pivot.add(w); g.add(pivot);
-      this.wheels.push({ pivot, w, front: z > 0 });
+      c.wheels.push({ pivot, w, front: z > 0 });
     }
-    this.driver = new THREE.Mesh(driverGeo(), mats.vcol); this.driver.position.x = -0.38; this.driver.visible = false; g.add(this.driver);
-    const lamp = (x, y, z, col, s) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.g.tex.glow, color: col, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); sp.position.set(x, y, z); sp.scale.setScalar(s); sp.visible = false; g.add(sp); return sp; };
-    this.lamps = [lamp(0.6, 0.98, 2.1, 0xfff2c8, 1.3), lamp(-0.6, 0.98, 2.1, 0xfff2c8, 1.3), lamp(0.7, 0.8, -1.98, 0xff2010, 0.55), lamp(-0.7, 0.8, -1.98, 0xff2010, 0.55)];
+    c.driver = new THREE.Mesh(driverGeo(), mats.vcol); c.driver.position.x = -0.38; c.driver.visible = false; g.add(c.driver);
+    c.lamps = [this._lamp(g, 0.6, 0.98, 2.1, 0xfff2c8, 1.3), this._lamp(g, -0.6, 0.98, 2.1, 0xfff2c8, 1.3), this._lamp(g, 0.7, 0.8, -1.98, 0xff2010, 0.55), this._lamp(g, -0.7, 0.8, -1.98, 0xff2010, 0.55)];
     scene.add(g);
-    this.mesh = g;
+    c.mesh = g; c.ready = true;
+  }
+  _lamp(g, x, y, z, col, s) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.g.tex.glow, color: col, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); sp.position.set(x, y, z); sp.scale.setScalar(s); sp.visible = false; g.add(sp); return sp; }
+
+  // The pickup's model has arrived (models.js -> outlands.js): wheels spin and steer on their axles.
+  setTruck(m) {
+    const c = this.truck;
+    if (!c || c.ready) return;
+    c.mesh.add(m.root);
+    for (const k of ['LF', 'RF', 'LB', 'RB']) {
+      const n = m.wheels[k]; if (!n) continue;
+      n.rotation.order = 'YXZ';
+      c.wheels.push({ pivot: n, w: n, front: k[1] === 'F' });
+    }
+    const g = c.mesh;
+    c.lamps = [this._lamp(g, 0.62, 0.95, 2.52, 0xfff2c8, 1.4), this._lamp(g, -0.62, 0.95, 2.52, 0xfff2c8, 1.4),
+      this._lamp(g, 0.72, 1.02, -2.5, 0xff2010, 0.55), this._lamp(g, -0.72, 1.02, -2.5, 0xff2010, 0.55),
+      this._lamp(g, -0.26, 2.2, 0.62, 0xfff0c0, 0.75), this._lamp(g, 0, 2.2, 0.62, 0xfff0c0, 0.75), this._lamp(g, 0.26, 2.2, 0.62, 0xfff0c0, 0.75)];
+    c.ready = true;
+    if (this.g.state === 'play' || this.g.state === 'pause') this._resetCar(c);
   }
 
   // ================= per run =================
   reset() {
-    const g = this.g, A = this.jeepAt;
+    const g = this.g;
     if (this.driving) this.exit(true);
-    this.car = { x: A.x, y: 0, z: A.z, yaw: A.yaw, speed: 0, steer: 0, spin: 0, lean: 0, pitch: 0, crashT: 0 };
-    if (!this.box) this.box = g.physics.add(A.x, 0.8, A.z, 0.88, 0.75, 1.92, A.yaw, 'vehicle');
-    this._syncMesh(); this._syncBox();
+    for (const c of this.cars) this._resetCar(c);
+    this.car = null;
     this.camYaw = 0; this.camPitch = 0; this.lookIdle = 0;
     // fire sounds: one crackling loop per burning car (stopped with every other loop on game over)
     const a = g.audio;
     if (a.ctx) this.burning.forEach((b, i) => { a.loops['fire' + i] = a.loop('fire', 0.95, a.amb, Object.assign([b.x, 1.2, b.z], { ref: 3.5 })); });
   }
 
-  _syncMesh() {
-    const c = this.car, m = this.mesh;
-    m.position.set(c.x, c.y, c.z); m.rotation.set(c.pitch, c.yaw, c.lean);
+  _resetCar(c) {
+    const A = c.home;
+    Object.assign(c, { x: A.x, y: 0, z: A.z, yaw: A.yaw, speed: 0, steer: 0, spin: 0, lean: 0, pitch: 0, crashT: 0 });
+    if (!c.ready) return;
+    c.mesh.visible = true;
+    if (!c.box) c.box = this.g.physics.add(A.x, c.S.cy, A.z, c.S.hx, c.S.hy, c.S.hz, A.yaw, 'vehicle');
+    this._syncMesh(c); this._syncBox(c);
   }
-  _syncBox() { const c = this.car; this.g.physics.update(this.box, c.x, c.y + 0.8, c.z, c.yaw); }
 
-  near(r = 3.6) { const c = this.car, P = this.g.player.pos; return c && Math.hypot(c.x - P.x, c.z - P.z) < r && Math.abs(P.y - c.y) < 1.5; }
+  _syncMesh(c) { c.mesh.position.set(c.x, c.y, c.z); c.mesh.rotation.set(c.pitch, c.yaw, c.lean); }
+  _syncBox(c) { if (c.box) this.g.physics.update(c.box, c.x, c.y + c.S.cy, c.z, c.yaw); }
 
-  consider(fn) { if (!this.driving && this.car) fn([this.car.x, this.car.y + 1.0, this.car.z], 3.3, { type: 'vehicle' }); }
+  // the nearest car you could get into from here (or null)
+  near(r = 3.6) {
+    const P = this.g.player.pos;
+    let best = null, bd = 1e9;
+    for (const c of this.cars) {
+      if (!c.ready || (this.driving && c === this.car)) continue;
+      const d = Math.hypot(c.x - P.x, c.z - P.z) - (c.S.hz - 1.9) * 0.6;
+      if (d < r && d < bd && Math.abs(P.y - c.y) < 1.5) { bd = d; best = c; }
+    }
+    return best;
+  }
+
+  consider(fn) { if (this.driving) return; for (const c of this.cars) if (c.ready) fn([c.x, c.y + 1.0, c.z], c.kind === 'truck' ? 3.8 : 3.3, { type: 'vehicle', car: c }); }
+
+  // Carry the car being driven somewhere else (the road out of town and back): same speed, new heading.
+  teleport(x, y, z, yaw) {
+    const c = this.car; if (!c || !this.driving) return;
+    c.x = x; c.y = y; c.z = z; c.yaw = yaw; c.pitch = 0; c.lean = 0;
+    this._syncMesh(c); this._syncBox(c);
+    const cam = this.g.camera, a = yaw + Math.PI;
+    cam.position.set(x + Math.sin(a) * c.S.cam[0], y + c.S.cam[1], z + Math.cos(a) * c.S.cam[0]);
+    this.camYaw = 0; this.camPitch = 0;
+  }
 
   // ================= enter / exit =================
-  enter() {
+  enter(car) {
     const g = this.g, P = g.player;
-    if (this.driving || P.dead) return;
+    const c = car || this.near();
+    if (this.driving || P.dead || !c || !c.ready) return;
+    this.car = c;
     this.driving = true;
     g.input.crouch = false; g.input.aim = false; g.input.fire = false;
     g.arsenal.holder.visible = false; g.arsenal.flash.visible = false; g.arsenal.adsT = 0;
-    this.driver.visible = true;
-    for (const l of this.lamps) l.visible = true;
+    if (c.driver) c.driver.visible = true;
+    for (const l of c.lamps) l.visible = true;
     this.camYaw = 0; this.camPitch = 0;
-    g.audio.play('slam', { vol: 0.5, rate: 1.2 }); g.audio.play('clank', { vol: 0.3, delay: 0.25 });
+    g.audio.play('slam', { vol: 0.5, rate: c.kind === 'truck' ? 1.0 : 1.2 }); g.audio.play('clank', { vol: 0.3, delay: 0.25 });
     if (g.audio.ctx) { this.engine = g.audio.loop('engine', 0.0, g.audio.sfx); this.engine.gain.gain.setTargetAtTime(0.32, g.audio.ctx.currentTime, 0.3); }
     document.body.classList.add('driving');
-    g.toast('जीप चालू', g.input.touch ? 'Drive with the stick or ◀ ▶ GAS BRAKE · EXIT to get out' : 'W/S throttle · A/D steer · Space handbrake · G or E to get out');
+    g.toast(c.S.name + ' चालू', g.input.touch ? 'Drive with the stick or ◀ ▶ GAS BRAKE · EXIT to get out' : 'W/S throttle · A/D steer · Space handbrake · G or E to get out');
   }
 
-  // Find a free spot beside the jeep: driver side, other side, behind, in front, then a wider ring.
+  // Find a free spot beside the car: driver side, other side, behind, in front, then a wider ring.
   exitSpot() {
-    const g = this.g, c = this.car, P = g.physics;
+    const g = this.g, c = this.car, P = g.physics, S = c.S;
     const f = [Math.sin(c.yaw), Math.cos(c.yaw)], r = [Math.cos(c.yaw), -Math.sin(c.yaw)];
-    const cand = [[-1.75, 0.2], [1.75, 0.2], [0, -3.0], [0, 3.1], [-1.9, -1.6], [1.9, -1.6], [-1.9, 1.8], [1.9, 1.8]];
-    for (let a = 0; a < 16; a++) cand.push([Math.cos(a * 0.3927) * 3.6, Math.sin(a * 0.3927) * 3.6]);
+    const cand = [[-S.side, 0.2], [S.side, 0.2], [0, -S.back], [0, S.front], [-S.side - 0.15, -1.6], [S.side + 0.15, -1.6], [-S.side - 0.15, 1.8], [S.side + 0.15, 1.8]];
+    for (let a = 0; a < 16; a++) cand.push([Math.cos(a * 0.3927) * (S.hz + 1.7), Math.sin(a * 0.3927) * (S.hz + 1.7)]);
     const tmp = [];
     for (const [lx, lz] of cand) {
       const x = c.x + r[0] * lx + f[0] * lz, z = c.z + r[1] * lx + f[1] * lz;
@@ -287,10 +355,10 @@ export class Vehicles {
         if (Physics.circleOverlaps(b, x, z, 0.42)) { blocked = true; break; }
       }
       if (blocked) continue;
-      // and not through a wall: the path from the jeep's side to the spot must be open
+      // and not through a wall: the path from the car's side to the spot must be open
       const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz);
       const hit = P.raycast(c.x, gy + 1.0, c.z, dx / d, 0, dz / d, d, 'vehicle');
-      if (hit && hit.box !== this.box) continue;
+      if (hit && hit.box !== c.box) continue;
       return [x, gy, z];
     }
     return null;
@@ -301,8 +369,8 @@ export class Vehicles {
     if (!this.driving) return false;
     let spot = this.exitSpot();
     if (!spot) {
-      if (!force) { g.toast('बाहर निकलने की जगह नहीं', 'No room to get out here — move the jeep.'); g.audio.play('beepLow', { vol: 0.4 }); return false; }
-      spot = [c.x, c.y + 1.8, c.z];                                           // last resort (run reset): on the roll bar
+      if (!force) { g.toast('बाहर निकलने की जगह नहीं', 'No room to get out here — move the ' + c.S.en.toLowerCase() + '.'); g.audio.play('beepLow', { vol: 0.4 }); return false; }
+      spot = [c.x, c.y + c.S.hy * 2 + 0.3, c.z];                             // last resort (run reset): on the roof
     }
     this.driving = false;
     c.speed = 0;
@@ -310,8 +378,8 @@ export class Vehicles {
     P.smoothY = spot[1]; P.state.vy = 0; P.state.peak = spot[1]; P.state.fall = 0;
     P.yaw = c.yaw + Math.PI; P.pitch = -0.05; P.vel.set(0, 0);
     g.arsenal.holder.visible = true;
-    this.driver.visible = false;
-    for (const l of this.lamps) l.visible = false;
+    if (c.driver) c.driver.visible = false;
+    for (const l of c.lamps) l.visible = false;
     if (this.engine) { try { this.engine.stop(); } catch (e) { /* stopped */ } this.engine = null; }
     g.audio.play('slam', { vol: 0.5, rate: 1.15 });
     document.body.classList.remove('driving');
@@ -321,18 +389,18 @@ export class Vehicles {
 
   // ================= driving =================
   drive(dt, I) {
-    const g = this.g, c = this.car, Ph = g.physics, P = g.player;
+    const g = this.g, c = this.car, S = c.S, Ph = g.physics, P = g.player;
     const H = I.hold || {};
     // inputs: keys / joystick (move), touch pedals and steering buttons
     let thr = I.move.y + (H.gas ? 1 : 0) - (H.brake ? 1 : 0);
-    // positive yaw turns the jeep left, so right input steers negative
+    // positive yaw turns the car left, so right input steers negative
     let st = -(I.move.x + (H.steerR ? 1 : 0) - (H.steerL ? 1 : 0));
     thr = clamp(thr, -1, 1); st = clamp(st, -1, 1);
     const hand = !!(I.keys.Space);
-    const MAX = 17, REV = 6;
+    const MAX = S.max, REV = S.rev;
     if (thr > 0.05) {
       if (c.speed < -0.3) c.speed = Math.min(0, c.speed + 16 * dt);           // braking out of reverse
-      else c.speed = Math.min(MAX, c.speed + (c.speed < 6 ? 9 : 5.5) * thr * dt);
+      else c.speed = Math.min(MAX, c.speed + (c.speed < 6 ? S.acc[0] : S.acc[1]) * thr * dt);
     } else if (thr < -0.05) {
       if (c.speed > 0.3) c.speed = Math.max(0, c.speed - 18 * dt);            // brake
       else c.speed = Math.max(-REV, c.speed - 5 * -thr * dt);                 // reverse
@@ -341,7 +409,7 @@ export class Vehicles {
     // steering: lighter at speed
     const steerT = st * 0.55 * (1 - 0.45 * Math.min(1, Math.abs(c.speed) / MAX));
     c.steer = lerp(c.steer, steerT, 1 - Math.exp(-dt * 7));
-    c.yaw += c.speed * Math.tan(c.steer) / 2.3 * dt * (hand ? 1.35 : 1);
+    c.yaw += c.speed * Math.tan(c.steer) / S.wb * dt * (hand ? 1.35 : 1);
     // move in small sub-steps with collision
     const ox = c.x, oz = c.z;
     const dist = c.speed * dt, n = Math.max(1, Math.ceil(Math.abs(dist) / 0.25));
@@ -352,10 +420,10 @@ export class Vehicles {
       c.x += fx * dist / n; c.z += fz * dist / n;
       for (let it = 0; it < 3; it++) {
         let moved = false;
-        for (const off of [-1.22, 0, 1.22]) {
-          const cx = c.x + fx * off, cz = c.z + fz * off, r = 0.9;
+        for (const off of S.probe) {
+          const cx = c.x + fx * off, cz = c.z + fz * off, r = S.r;
           for (const b of Ph.query(cx - r, cz - r, cx + r, cz + r, tmp)) {
-            if (b === this.box || b.maxY <= c.y + 0.5 || b.minY >= c.y + 1.8) continue;
+            if (b === c.box || b.maxY <= c.y + 0.5 || b.minY >= c.y + 1.8) continue;
             const p = Physics.circlePush(b, cx, cz, r);
             if (p) { c.x += p[0]; c.z += p[1]; nx += p[0]; nz += p[1]; moved = hit = true; }
           }
@@ -366,10 +434,10 @@ export class Vehicles {
     // the giant is an obstacle too (and does not like being run into)
     const B = g.boss;
     if (B && B.solid()) {
-      const dx = c.x - B.pos.x, dz = c.z - B.pos.z, d = Math.hypot(dx, dz);
-      if (d < 2.5 && d > 1e-3) {
-        c.x += dx / d * (2.5 - d); c.z += dz / d * (2.5 - d); nx += dx / d; nz += dz / d; hit = true;
-        if (Math.abs(c.speed) > 4 && g.time > (this._bossHitT || 0)) { this._bossHitT = g.time + 1; B.damage(Math.abs(c.speed) * 5, 'body', { x: fx, z: fz }, 'player'); }
+      const dx = c.x - B.pos.x, dz = c.z - B.pos.z, d = Math.hypot(dx, dz), rr = 2.5 + (S.hx - 0.88);
+      if (d < rr && d > 1e-3) {
+        c.x += dx / d * (rr - d); c.z += dz / d * (rr - d); nx += dx / d; nz += dz / d; hit = true;
+        if (Math.abs(c.speed) > 4 && g.time > (this._bossHitT || 0)) { this._bossHitT = g.time + 1; B.damage(Math.abs(c.speed) * S.ram * 0.55, 'body', { x: fx, z: fz }, 'player'); }
       }
     } else if (B && B.state === 'SLEEP' && Math.hypot(c.x - B.pos.x, c.z - B.pos.z) < 3) { B.wake('player'); c.speed *= -0.3; }
     if (hit) {
@@ -379,78 +447,85 @@ export class Vehicles {
         c.crashT = g.time + 0.5;
         g.audio.play('bang', { pos: [c.x, 1, c.z], vol: clamp(impact / 12, 0.4, 1.1), rate: 0.9 });
         g.audio.play('wall', { pos: [c.x, 1, c.z], vol: 0.7 });
-        g.fx.burst([c.x + fx * 1.9 * Math.sign(c.speed), 0.8, c.z + fz * 1.9 * Math.sign(c.speed)], [-fx, 0.5, -fz], 10, [0.6, 0.6, 0.55], 3);
+        g.fx.burst([c.x + fx * (S.hz + 0.1) * Math.sign(c.speed), c.y + 0.8, c.z + fz * (S.hz + 0.1) * Math.sign(c.speed)], [-fx, 0.5, -fz], 10, [0.6, 0.6, 0.55], 3);
         P.shake = Math.max(P.shake, clamp(impact / 14, 0.2, 0.8));
         g.noise({ x: c.x, z: c.z }, 25, 'crash');
         c.speed *= -0.25;
       } else c.speed *= 1 - 0.85 * clamp(into, 0, 1) * Math.min(1, dt * 12);
     }
     // stay on the ground; never drive into a hole (the temple stair shaft) or off a high ledge
-    const gy = Ph.groundAt(c.x, c.z, 0.9, c.y + 0.5);
+    const gy = Ph.groundAt(c.x, c.z, S.r, c.y + 0.5);
     if (gy < c.y - 1.0) { c.x = ox; c.z = oz; c.speed = 0; }
     else c.y = gy > c.y ? lerp(c.y, gy, 1 - Math.exp(-dt * 14)) : Math.max(gy, c.y - 9 * dt);
     // run zombies down (each one can be hit at most once every 0.8 s)
     this.ram(dt, fx, fz);
-    // body motion: lean into turns, pitch with acceleration, wheels spin and steer
+    // body motion: follow the slope (the forest road), lean into turns, pitch with acceleration
+    const hw = S.wb / 2, rx = fz, rz = -fx;
+    const hf = Ph.groundAt(c.x + fx * hw, c.z + fz * hw, 0.3, c.y + 0.9), hb = Ph.groundAt(c.x - fx * hw, c.z - fz * hw, 0.3, c.y + 0.9);
+    const hr = Ph.groundAt(c.x + rx * S.hx, c.z + rz * S.hx, 0.3, c.y + 0.9), hl = Ph.groundAt(c.x - rx * S.hx, c.z - rz * S.hx, 0.3, c.y + 0.9);
+    const slopeP = clamp(Math.atan2(hb - hf, S.wb), -0.45, 0.45), slopeR = clamp(Math.atan2(hl - hr, S.hx * 2), -0.3, 0.3);
     const acc = (c.speed - (this._lastSpeed ?? c.speed)) / Math.max(dt, 1e-3); this._lastSpeed = c.speed;
-    c.lean = lerp(c.lean, -c.steer * c.speed * 0.012, 1 - Math.exp(-dt * 5));
-    c.pitch = lerp(c.pitch, clamp(-acc * 0.006, -0.05, 0.05), 1 - Math.exp(-dt * 5));
-    c.spin += c.speed * dt / 0.38;
-    for (const w of this.wheels) { w.w.rotation.x = c.spin; if (w.front) w.pivot.rotation.y = c.steer; }
-    this._syncMesh(); this._syncBox();
-    // the player rides along: zombies, the minimap, trains and noises all follow the jeep
+    c.lean = lerp(c.lean, slopeR - c.steer * c.speed * 0.012, 1 - Math.exp(-dt * 6));
+    c.pitch = lerp(c.pitch, slopeP + clamp(-acc * 0.006, -0.05, 0.05), 1 - Math.exp(-dt * 6));
+    c.spin += c.speed * dt / S.wheelR;
+    for (const w of c.wheels) { w.w.rotation.x = c.spin; if (w.front) w.pivot.rotation.y = c.steer; }
+    this._syncMesh(c); this._syncBox(c);
+    // the player rides along: zombies, the minimap, trains and noises all follow the car
     P.pos.x = c.x; P.pos.y = c.y; P.pos.z = c.z; P.smoothY = c.y; P.state.peak = c.y; P.state.vy = 0;
     P.yaw = c.yaw + Math.PI; P.crouched = false; P.onGround = true;
     P.speedNow = Math.abs(c.speed); P.distance += Math.hypot(c.x - ox, c.z - oz);
     P.noise = 9 + Math.abs(c.speed) * 1.2;
     P.shake = Math.max(0, P.shake - dt * 2.5);
-    // engine note follows speed and throttle
-    if (this.engine) { this.engine.playbackRate.value = 0.75 + Math.abs(c.speed) / MAX * 1.25 + Math.max(0, thr) * 0.12; this.engine.gain.gain.value = 0.26 + Math.abs(thr) * 0.14; }
+    // engine note follows speed and throttle (the pickup growls lower)
+    if (this.engine) { this.engine.playbackRate.value = S.engine + Math.abs(c.speed) / MAX * 1.25 + Math.max(0, thr) * 0.12; this.engine.gain.gain.value = 0.26 + Math.abs(thr) * 0.14; }
     this.followCam(dt, I);
   }
 
   ram(dt, fx, fz) {
-    const g = this.g, c = this.car, sp = Math.abs(c.speed), now = g.time;
+    const g = this.g, c = this.car, S = c.S, sp = Math.abs(c.speed), now = g.time;
     const rx = fz, rz = -fx;                       // right vector
+    const [RX, RZ] = S.reach;
     for (const e of g.enemies.list) {
       if (e.dead) continue;
       const dx = e.pos.x - c.x, dz = e.pos.z - c.z;
-      if (Math.abs(dx) > 3 || Math.abs(dz) > 3 || Math.abs(e.pos.y - c.y) > 1.6) continue;
+      if (Math.abs(dx) > RZ + 0.7 || Math.abs(dz) > RZ + 0.7 || Math.abs(e.pos.y - c.y) > 1.6) continue;
       const lz = dx * fx + dz * fz, lx = dx * rx + dz * rz;
-      if (Math.abs(lx) > 1.2 || Math.abs(lz) > 2.3) continue;
+      if (Math.abs(lx) > RX || Math.abs(lz) > RZ) continue;
       if (sp > 3 && now > (e._carT || 0)) {
         e._carT = now + 0.8;
         const dir = { x: fx * Math.sign(c.speed), z: fz * Math.sign(c.speed) };
-        const killed = g.enemies.damage(e, sp * 9, 'body', dir, 'player');
+        const killed = g.enemies.damage(e, sp * S.ram, 'body', dir, 'player');
         e.stagger = Math.max(e.stagger, 0.9);
         const side = lx >= 0 ? 1 : -1, k = Math.min(2.2, sp * 0.12);
         g.physics.moveCharacter(e.pos, dir.x * k + rx * side * k, dir.z * k + rz * side * k, 0, 0.016, 0.3, 1.7, 0.45, e.st);
         g.audio.play('flesh', { pos: [e.pos.x, 1.2, e.pos.z], vol: 1 }); g.audio.play('bang', { pos: [e.pos.x, 1, e.pos.z], vol: 0.45, rate: 1.3 });
-        g.fx.burst([e.pos.x, 1.1, e.pos.z], [dir.x, 0.6, dir.z], 12, [0.45, 0.02, 0.02], 3.5, 0.7);
+        g.fx.burst([e.pos.x, e.pos.y + 1.1, e.pos.z], [dir.x, 0.6, dir.z], 12, [0.45, 0.02, 0.02], 3.5, 0.7);
         if (killed) g.fx.bloodPool(e.pos.x, e.pos.y, e.pos.z, 1.2);
         g.hitMarker(false, killed);
-        c.speed *= killed ? 0.92 : e.type === 'brute' ? 0.4 : 0.72;
+        const heavy = e.type === 'brute' || e.type === 'ghoul';
+        c.speed *= killed ? (S.tough ? 0.96 : 0.92) : heavy ? (S.tough ? 0.7 : 0.4) : (S.tough ? 0.85 : 0.72);
       } else {
-        // slow: just shove them out of the way, never let anyone stand inside the jeep
-        const side = lx >= 0 ? 1 : -1, push = 1.25 - Math.abs(lx);
+        // slow: just shove them out of the way, never let anyone stand inside the car
+        const side = lx >= 0 ? 1 : -1, push = S.push - Math.abs(lx);
         if (push > 0) g.physics.moveCharacter(e.pos, rx * side * push, rz * side * push, 0, 0.016, 0.3, 1.7, 0.45, e.st);
       }
     }
   }
 
   followCam(dt, I) {
-    const g = this.g, c = this.car, cam = g.camera;
-    // drag to look around the jeep; it swings back behind after a moment
+    const g = this.g, c = this.car, cam = g.camera, S = c.S;
+    // drag to look around the car; it swings back behind after a moment
     if (Math.abs(I.look.x) + Math.abs(I.look.y) > 1e-5) this.lookIdle = 0; else this.lookIdle += dt;
     this.camYaw -= I.look.x; this.camPitch = clamp(this.camPitch + I.look.y * 0.6, -0.35, 0.6);
     I.look.x = 0; I.look.y = 0;
     if (this.lookIdle > 1.6) { this.camYaw *= Math.exp(-dt * 2.5); this.camPitch *= Math.exp(-dt * 2.5); }
-    const a = c.yaw + Math.PI + this.camYaw, dist = 7.4 - this.camPitch * 2;
-    let tx = c.x + Math.sin(a) * dist, tz = c.z + Math.cos(a) * dist, ty = c.y + 3.0 + this.camPitch * 4;
-    // don't put the camera inside a wall
+    const a = c.yaw + Math.PI + this.camYaw, dist = S.cam[0] - this.camPitch * 2;
+    let tx = c.x + Math.sin(a) * dist, tz = c.z + Math.cos(a) * dist, ty = c.y + S.cam[1] + this.camPitch * 4;
+    // don't put the camera inside a wall (or under the hill behind)
     const hx = c.x, hy = c.y + 1.9, hz = c.z, dx = tx - hx, dy = ty - hy, dz = tz - hz, d = Math.hypot(dx, dy, dz);
     const hit = g.physics.raycast(hx, hy, hz, dx / d, dy / d, dz / d, d, 'vehicle');
     if (hit) { const k = Math.max(0.8, hit.t - 0.35) / d; tx = hx + dx * k; ty = hy + dy * k; tz = hz + dz * k; }
+    ty = Math.max(ty, g.physics.groundAt(tx, tz, 0.2, ty + 0.5) + 1.2);
     const k = 1 - Math.exp(-dt * 7);
     cam.position.x += (tx - cam.position.x) * k; cam.position.y += (ty - cam.position.y) * k; cam.position.z += (tz - cam.position.z) * k;
     const sh = g.player.shake * g.player.shake * 0.08;
@@ -459,7 +534,7 @@ export class Vehicles {
     cam.lookAt(c.x + fx * 3, c.y + 1.3, c.z + fz * 3);
     if (cam.fov !== 70) { cam.fov = 70; cam.updateProjectionMatrix(); }
     // the camera torch doubles as the headlights
-    g.torch.intensity = 38; g.torch.distance = 48; g.torch.angle = 0.5;
+    g.torch.intensity = 38; g.torch.distance = c.kind === 'truck' ? 54 : 48; g.torch.angle = 0.5;
   }
 
   // ================= fire =================

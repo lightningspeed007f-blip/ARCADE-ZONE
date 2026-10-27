@@ -53,6 +53,10 @@ export const ZONES = [
   { name: 'वहाबगंज', en: 'WAHABGANJ', x0: -200, x1: 6, z0: -80, z1: 36 },
   { name: 'स्टेशन रोड', en: 'STATION ROAD', x0: 0, x1: 112, z0: -140, z1: -116 },
   { name: 'जोकर का मैदान', en: "THE JOKER'S PLAYGROUND", x0: -460, x1: -380, z0: -460, z1: -380 },
+  // beyond Jais (outlands.js): the forest road, the dead city, the old metro
+  { name: 'जंगल का रास्ता', en: 'THE FOREST ROAD', x0: 555, x1: 685, z0: -60, z1: 72 },
+  { name: 'मुर्दा शहर', en: 'THE DEAD CITY', x0: 570, x1: 665, z0: 385, z1: 512 },
+  { name: 'पुरानी मेट्रो', en: 'THE OLD METRO', x0: 265, x1: 335, z0: 660, z1: 740 },
   { name: 'जायस', en: 'JAIS', x0: -1e4, x1: 1e4, z0: -1e4, z1: 1e4 },
 ];
 
