@@ -1,4 +1,4 @@
-// लोहासुर · LOHASUR — the one and only boss: a giant railway-gang zombie who
+// MUTANT · MUTANT — the one and only boss: a giant railway-gang zombie who
 // sleeps in the gravel beside the main line west of Guru Gorakhnath Dham.
 //
 // He wakes only when the station signal is set (the final objective), when
@@ -8,7 +8,7 @@
 // charging and, when he cannot reach you, throwing chunks of concrete.
 // He never dies by your hand: when he is nearly finished the Joker (joker.js) steps out and
 // shoots him, and the game goes on with the Joker. If the Joker's models cannot be loaded at
-// all, killing Lohasur completes the game as before.
+// all, killing Mutant completes the game as before.
 //
 // The body is built from merged coloured boxes, one mesh per bone (about 20
 // draw calls), animated procedurally like the ordinary zombies.
@@ -17,7 +17,7 @@ import { part, merge, Bx, Cy } from './props.js';
 import { clamp, lerp, angleDiff, smooth } from './util.js';
 
 export const BOSS = {
-  name: 'लोहासुर', en: 'LOHASUR · THE RAILYARD BEHEMOTH',
+  name: 'MUTANT', en: 'MUTANT · THE RAILYARD BEHEMOTH',
   hp: 2600,
   // lying on his back in the gravel north of the main line, feet to the west, head toward the station
   x: 73.6, z: -182.6, yaw: -Math.PI / 2,
@@ -159,7 +159,7 @@ export class Boss {
     if (g.joker) g.joker.preload();                // the real villain's models start downloading now
     g.audio.play('growlBig', { pos: this.chestPos(), vol: 1.1, rate: 0.45, max: 300 });
     if (reason === 'final') g.toast('पटरी पर कुछ जाग गया है…', 'Something huge has woken on the tracks west of the station…');
-    else g.toast('लोहासुर जाग गया!', 'You woke LOHASUR. Run — or fight.');
+    else g.toast('MUTANT जाग गया!', 'You woke MUTANT. Run — or fight.');
     this.ui(true);
   }
 
@@ -233,7 +233,7 @@ export class Boss {
     if (!this.enraged && this.hp < this.maxHp * 0.4 && this.hp > 0) {
       this.enraged = true;
       this.g.audio.play('roar', { pos: this.chestPos(), vol: 1.6, rate: 1.1, max: 400 });
-      this.g.toast('लोहासुर भड़क उठा!', 'LOHASUR is enraged — faster and angrier!');
+      this.g.toast('MUTANT भड़क उठा!', 'MUTANT is enraged — faster and angrier!');
     }
     if (this.hp <= 0) { this.hp = 0; this.die(); return true; }
     return false;
@@ -348,7 +348,7 @@ export class Boss {
     }
     if (t > 3.0 && !this.announced) {
       this.announced = true;
-      if (!this.byJoker) g.banner('BOSS DEFEATED', 'लोहासुर मारा गया · MISSION COMPLETE', 'win');
+      if (!this.byJoker) g.banner('BOSS DEFEATED', 'MUTANT मारा गया · MISSION COMPLETE', 'win');
       document.getElementById('bossHud').classList.add('gone');
     }
     if (t > 7.5 && this.victoryT < 0 && !this.byJoker) { this.victoryT = t; g.bossVictory(); }

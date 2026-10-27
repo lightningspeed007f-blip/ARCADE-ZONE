@@ -154,7 +154,7 @@ export class Game {
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
     this.explosives = new Explosives(this);
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
-    this.joker = new Joker(this);                        // the real villain: steps in when Lohasur is nearly dead
+    this.joker = new Joker(this);                        // the real villain: steps in when Mutant is nearly dead
     this.crew = new Companions(this);                    // four fighters waiting in houses (their models load later)
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
@@ -783,7 +783,7 @@ export class Game {
     }
   }
 
-  // the nearest of the big ones on a ray: Lohasur, the Joker or his cat
+  // the nearest of the big ones on a ray: Mutant, the Joker or his cat
   bigHit(o, d, maxT) {
     const a = this.boss.hitTest(o, d, maxT);
     const b = this.joker.hitTest(o, d, a ? a.t : maxT);
@@ -809,7 +809,7 @@ export class Game {
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
       if (reason) { this.gameOver(reason); return; }
-      this.gameOver(from === this.boss ? 'लोहासुर ने कुचल डाला · crushed by LOHASUR' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
+      this.gameOver(from === this.boss ? 'MUTANT ने कुचल डाला · crushed by MUTANT' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -1609,10 +1609,10 @@ export class Game {
       $('overSub').textContent = 'जोकर मारा गया — the Joker is dead, his Playground is silent, and the night is yours. Who is laughing now?';
     } else if (kind === 'boss') {
       $('overTitle').textContent = 'MISSION COMPLETE';
-      $('overSub').textContent = 'लोहासुर मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
+      $('overSub').textContent = 'MUTANT मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
     } else {
       $('overTitle').textContent = 'YOU MADE IT OUT';
-      $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.' + (this.stats.boss ? ' लोहासुर भी मारा गया।' : '');
+      $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.' + (this.stats.boss ? ' MUTANT भी मारा गया।' : '');
     }
     this.fillStats();
     $('over').classList.remove('hidden');
