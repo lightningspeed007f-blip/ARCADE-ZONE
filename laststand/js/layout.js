@@ -57,6 +57,7 @@ export const ZONES = [
   { name: 'जंगल का रास्ता', en: 'THE FOREST ROAD', x0: 555, x1: 685, z0: -60, z1: 72 },
   { name: 'मुर्दा शहर', en: 'THE DEAD CITY', x0: 570, x1: 665, z0: 385, z1: 512 },
   { name: 'पुरानी मेट्रो', en: 'THE OLD METRO', x0: 265, x1: 335, z0: 660, z1: 740 },
+  { name: 'कीड़ों का रेगिस्तान', en: 'THE WORM DESERT', x0: -480, x1: -360, z0: 500, z1: 620 },
   { name: 'जायस', en: 'JAIS', x0: -1e4, x1: 1e4, z0: -1e4, z1: 1e4 },
 ];
 

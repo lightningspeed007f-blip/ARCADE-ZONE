@@ -26,7 +26,7 @@ export class Input {
   consume(a) { const h = this.pressed.has(a); this.pressed.delete(a); return h; }
 
   _bindKeys() {
-    const map = { KeyR: 'reload', KeyE: 'use', KeyF: 'torch', KeyQ: 'swap', KeyH: 'eat', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Digit1: 'w1', Digit2: 'w2', Digit3: 'w3', Digit4: 'w4', Digit5: 'w5', Digit6: 'w6', Digit7: 'w7', KeyV: 'melee', KeyG: 'drive', KeyB: 'bomb' };
+    const map = { KeyR: 'reload', KeyE: 'use', KeyF: 'torch', KeyQ: 'swap', KeyH: 'eat', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Digit1: 'w1', Digit2: 'w2', Digit3: 'w3', Digit4: 'w4', Digit5: 'w5', Digit6: 'w6', Digit7: 'w7', Digit8: 'w8', KeyV: 'melee', KeyG: 'drive', KeyB: 'bomb' };
     addEventListener('keydown', (e) => {
       if (!this.enabled) return;
       this.keys[e.code] = true;

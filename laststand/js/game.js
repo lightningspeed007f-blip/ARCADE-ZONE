@@ -23,6 +23,7 @@ import { Explosives, BOMB } from './explosives.js';
 import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { Joker, buildArena } from './joker.js';
+import { Giants, buildDesert } from './giants.js';
 import { Outlands } from './outlands.js';
 import { Companions } from './companions.js';
 
@@ -100,6 +101,7 @@ export class Game {
     this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
     Boss.buildLair(W);
     buildArena(W);                                    // the Joker's Playground, far from town (its model loads later)
+    buildDesert(W);                                   // the Worm Desert, the last stop (its giants load during the Joker fight)
     this.outlands = new Outlands(this);
     this.outlands.buildStatic(W, scene, mats);        // the highway sign and the metro entrance (the places beyond load later)
     W.B.build(scene, mats);
@@ -155,6 +157,7 @@ export class Game {
     this.explosives = new Explosives(this);
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
     this.joker = new Joker(this);                        // the real villain: steps in when Mutant is nearly dead
+    this.giants = new Giants(this);                      // after the Joker: the last bus, the warrior and the worm
     this.crew = new Companions(this);                    // four fighters waiting in houses (their models load later)
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
@@ -400,7 +403,7 @@ export class Game {
   // footsteps are silent while a hidden tunnel's music plays (Shivdham, Kalidham)
   stepsMuted() { return !!(this.secret && this.secret.musicOn) || !!(this.kaali && this.kaali.musicOn); }
   // in one of the open-sky valleys (Shivdham or Kalidham)
-  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode) || !!(this.joker && this.joker.arena) || !!(this.outlands && this.outlands.zone); }
+  inValley() { return !!(this.secret && this.secret.mode) || !!(this.kaali && this.kaali.mode) || !!(this.joker && this.joker.arena) || !!(this.giants && this.giants.mode) || !!(this.outlands && this.outlands.zone); }
 
   // ================= stairs lookup for zombies =================
   collectStairs() { return this.W.stairsList || []; }
@@ -461,6 +464,7 @@ export class Game {
     this.vehicles.reset();
     this.boss.reset();
     this.joker.reset();
+    this.giants.reset();
     document.body.classList.remove('driving', 'canDrive');
     $('banner').classList.remove('show');
     // trains
@@ -735,6 +739,7 @@ export class Game {
       this.fx.burst(pt, [-dir.x * 0.4, 0.2, -dir.z * 0.4], bh.part === 'head' ? 16 : 9, [0.38, 0.05, 0.03], 2.4, 0.7);
       this.audio.play('flesh', { pos: pt, vol: 0.55 });
       if (src === 'player') this.hitMarker(bh.part === 'head', killed);
+      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, bh.e);
       return;
     }
     if (hit) {
@@ -745,6 +750,7 @@ export class Game {
       this.audio.play('flesh', { pos: pt, vol: 0.5 });
       if (src === 'player') this.hitMarker(hit.part === 'head', killed);
       if (Math.random() < 0.4) this.fx.bloodPool(e.pos.x + dir.x * 0.6, e.pos.y, e.pos.z + dir.z * 0.6, 0.5);
+      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, e);
       return;
     }
     if (wall) {
@@ -756,6 +762,30 @@ export class Game {
       this.audio.play(Math.random() < 0.15 ? 'ricochet' : 'wall', { pos: pt, vol: 0.5 });
       // doors take bullet damage too
       if (wall.box.tag === 'door') { const d = this.doors.find((x) => x.box === wall.box); if (d) { d.hp -= dmg; if (d.hp <= 0 && !d.metal) this.breakDoor(d); } }
+      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, null);
+    } else if (w && w.acid) this.acidSplash(origin, [origin.x + dir.x * 40, origin.y + dir.y * 40, origin.z + dir.z * 40], w, 0, src, null);
+  }
+
+  // The acid gun's glob: a green streak to where it lands, a hiss of green smoke, and a splash that burns
+  // everything else within w.splash metres for part of the damage (zombies, Mutant, the Joker, the giants).
+  acidSplash(origin, pt, w, dmg, src, skip) {
+    const n = 7;
+    for (let k = 1; k <= n; k++) { const u = k / (n + 1); this.fx.burst([origin.x + (pt[0] - origin.x) * u, origin.y - 0.15 + (pt[1] - origin.y + 0.15) * u, origin.z + (pt[2] - origin.z) * u], [0, 0, 0], 2, [0.3, 1, 0.2], 0.4, 0.25, 0); }
+    if (!dmg) return;
+    this.fx.burst(pt, [0, 0.6, 0], 22, [0.35, 1, 0.25], 2.6, 0.8);
+    const S = this.explosives.smoke;
+    for (let i = 0; i < 6; i++) S.emit(pt[0], pt[1], pt[2], (Math.random() - 0.5) * 1.2, 0.6 + Math.random(), (Math.random() - 0.5) * 1.2, 1.2 + Math.random(), 0.4, 1.4, [0.35, 0.9, 0.3], [0.2, 0.45, 0.2], 0.6, 0.2, 0.8);
+    this.audio.play('sizzle', { pos: pt, vol: 0.7 });
+    const R = w.splash || 2, part = dmg * 0.4;
+    for (const e of this.enemies.list) {
+      if (e.dead || e === skip) continue;
+      const d = Math.hypot(e.pos.x - pt[0], e.pos.y + 1 - pt[1], e.pos.z - pt[2]);
+      if (d < R) this.enemies.damage(e, part * (1 - d / R * 0.5), 'body', { x: e.pos.x - pt[0], z: e.pos.z - pt[2] }, src);
+    }
+    for (const B of [this.boss, this.joker, this.joker.cat, ...(this.giants ? this.giants.foes() : [])]) {
+      if (!B || B === skip || !B.solid || !B.solid() || B.dead) continue;
+      const c = B.pos, d = Math.max(0, Math.hypot(c.x - pt[0], c.z - pt[2]) - (B.bodyR || 0.6));
+      if (d < R) B.damage(part * (1 - d / R * 0.5), 'body', null, src);
     }
   }
 
@@ -783,17 +813,17 @@ export class Game {
     }
   }
 
-  // the nearest of the big ones on a ray: Mutant, the Joker or his cat
+  // the nearest of the big ones on a ray: Mutant, the Joker or his cat, the desert giants
   bigHit(o, d, maxT) {
     const a = this.boss.hitTest(o, d, maxT);
-    const b = this.joker.hitTest(o, d, a ? a.t : maxT);
-    return b || a;
+    const b = this.joker.hitTest(o, d, a ? a.t : maxT) || a;
+    return this.giants.hitTest(o, d, b ? b.t : maxT) || b;
   }
 
   hurtPlayer(dmg, from, reason) {
     const P = this.player;
     if (P.dead || this.state !== 'play') return;
-    if (this.joker.shielded()) return;                    // knocked out by the gas / waking up in the Playground
+    if (this.joker.shielded() || this.giants.busy()) return; // knocked out by the gas / waking up in the Playground / on the bus
     if (this.vehicles.driving) dmg *= 0.5;                 // the jeep's body takes some of it
     P.damage(dmg, from);
     P.shake = Math.max(P.shake, 0.45);
@@ -809,7 +839,7 @@ export class Game {
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
       if (reason) { this.gameOver(reason); return; }
-      this.gameOver(from === this.boss ? 'MUTANT ने कुचल डाला · crushed by MUTANT' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
+      this.gameOver(from === this.boss ? 'MUTANT ने कुचल डाला · crushed by MUTANT' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from === this.giants.warrior ? 'दैत्य ने कुचल डाला · crushed by the Giant Warrior' : from === this.giants.worm ? 'रेत के कीड़े ने निगल लिया · swallowed by the Giant Worm' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -902,6 +932,8 @@ export class Game {
     this.outlands.consider(consider);
     this.boss.consider(consider);
     this.crew.consider(consider);
+    this.joker.consider(consider);
+    this.giants.consider(consider);
     for (const r of this.radios) consider(r.pos, 2.0, { type: 'radio', r });
     if (this.train && this.train.kind === 'rescue' && this.train.stopped) {
       const x = clamp(P.pos.x, this.train.x + 2, this.train.x + this.rescue.userData.len - 2);
@@ -949,6 +981,8 @@ export class Game {
       case 'boss': return ['WAKE', 'सोता हुआ दानव · wake the sleeping giant'];
       case 'outland': return this.outlands.prompt(t);
       case 'crew': return this.crew.prompt(t);
+      case 'jokerCrate': return this.joker.prompt(t);
+      case 'giantBus': return this.giants.prompt(t);
     }
     return null;
   }
@@ -1011,6 +1045,8 @@ export class Game {
       case 'boss': return this.boss.wake('player');
       case 'outland': return this.outlands.use(t);
       case 'crew': return this.crew.use(t);
+      case 'jokerCrate': return this.joker.openCrate();
+      case 'giantBus': return this.giants.use();
     }
   }
 
@@ -1054,7 +1090,9 @@ export class Game {
 
   // ================= objectives / HUD =================
   objectiveText() {
-    const o = this.obj;
+    const o = this.obj, G = this.giants;
+    if (G && G.stage === 'bus') return ['बस अड्डे से आख़िरी बस पकड़ें', 'Take the last bus from the Jais BUS ADDA'];
+    if (G && (G.stage === 'fight' || G.stage === 'won')) return ['रेगिस्तान के दोनों दानवों को मारें', 'Kill the Giant Warrior and the Giant Worm'];
     if (o.phase === 'radio') return ['रेडियो सुनें', 'Listen to the radio'];
     if (o.signal && this.train && this.train.stopped) return ['प्लेटफ़ॉर्म 1 पर ट्रेन में चढ़ें', 'Board the train on platform 1'];
     if (o.signal && o.trainT <= 0) return ['ट्रेन प्लेटफ़ॉर्म पर आ रही है — तैयार रहें', 'The train is pulling in — get ready to board at platform 1'];
@@ -1071,6 +1109,7 @@ export class Game {
     $('objHi').textContent = hi; $('objEn').textContent = en;
     const el = $('objective'); el.classList.add('show');
     clearTimeout(this._objT); this._objT = setTimeout(() => el.classList.remove('show'), 7000);
+    if (this.giants.stage !== 'off') { this.hint('', ''); return; }
     this.hint(this.obj.key ? '' : 'चाबी: जायस सिटी स्टेशन / बस अड्डा / नौगजी चौकी', this.obj.fuse ? '' : 'फ्यूज़: वहाबगंज बिजली घर / आलिया मार्केट / तीन मंज़िला मकान');
   }
 
@@ -1143,6 +1182,7 @@ export class Game {
     if (this.secret && this.secret.mode) this.secret.setMode(false);
     if (this.kaali && this.kaali.mode) this.kaali.setMode(false);
     if (this.joker && this.joker.arena) this.joker.leave();
+    if (this.giants && this.giants.mode) this.giants.leave();
     if (this.outlands && this.outlands.zone) { this.outlands.setZone(null); this.outlands.fade(false, true); }
     this.time += dt;
     const t = this.time * 0.05;
@@ -1166,7 +1206,7 @@ export class Game {
     if (I.consume('eat')) this.eat();
     if (V.driving) {
       // ---- in the jeep: no shooting or looting, USE / G / EXIT gets out ----
-      for (const k of ['reload', 'swap', 'melee', 'torch', 'bomb', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7']) I.consume(k);
+      for (const k of ['reload', 'swap', 'melee', 'torch', 'bomb', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8']) I.consume(k);
       I.fire = false;
       if (I.consume('use') || I.consume('drive')) V.exit();
       if (V.driving) V.drive(dt, I);
@@ -1180,7 +1220,7 @@ export class Game {
     if (I.consume('reload')) A.startReload();
     if (I.consume('swap')) A.cycle();
     if (I.consume('melee')) A.equip('lathi');
-    for (let k = 1; k <= 7; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
+    for (let k = 1; k <= 8; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
     if (I.consume('torch')) { this.torchOn = !this.torchOn; this.audio.play('click', { vol: 0.4 }); }
     // G: get in the jeep when standing next to it, otherwise throw a bomb
     if (I.consume('drive')) { if (V.near()) { V.enter(); return; } I.tap('bomb'); }
@@ -1238,6 +1278,7 @@ export class Game {
     if (this.bossWakeAt && this.time >= this.bossWakeAt) { this.bossWakeAt = 0; this.boss.wake('final'); }
     this.boss.update(dt);
     this.joker.update(dt);
+    this.giants.update(dt);
     this.explosives.update(dt);
     this.vehicles.update(dt);
     this.loot.update(this.time);
@@ -1604,7 +1645,10 @@ export class Game {
     document.body.classList.remove('playing');
     this.audio.stopAll();
     $('bossHud').classList.remove('show');
-    if (kind === 'joker') {
+    if (kind === 'giants') {
+      $('overTitle').textContent = 'MISSION COMPLETE';
+      $('overSub').textContent = 'रेगिस्तान शांत है — the Giant Warrior and the Worm are dead, the sand is still, and the last bus can finally take you home.';
+    } else if (kind === 'joker') {
       $('overTitle').textContent = 'MISSION COMPLETE';
       $('overSub').textContent = 'जोकर मारा गया — the Joker is dead, his Playground is silent, and the night is yours. Who is laughing now?';
     } else if (kind === 'boss') {

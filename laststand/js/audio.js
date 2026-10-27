@@ -225,6 +225,55 @@ const R = {
     const sp = buf(len); for (let k = 0; k < 70; k++) { const s = env(sine(0.15, 2500 + Math.random() * 3500), 0.002, 0.04); sp.set(s, Math.floor(Math.random() * (len - 0.2) * SR)); }
     return norm(mix(...parts, scale(sp, 0.35)), 0.8);
   },
+  // ---- the Joker's five silly sounds (assets/music/joker*.mp3 replace them, see MANIFEST.userAudio) ----
+  // a rubber clown horn: two squeezes of a reedy, nasal square wave
+  honk() {
+    const a = buf(0.75);
+    for (const [t0, f] of [[0, 330], [0.34, 300]]) {
+      const n = Math.floor(0.3 * SR), at = Math.floor(t0 * SR); let ph = 0;
+      for (let i = 0; i < n; i++) { const t = i / SR, ff = f * (1 + 0.04 * Math.sin(t * 40)); ph += ff / SR; a[at + i] += ((ph % 1) < 0.35 ? 1 : -1) * Math.min(1, t / 0.02) * Math.min(1, (0.3 - t) / 0.05); }
+    }
+    return norm(mix(bp(a, 900, 2.5), scale(bp(a, 2200, 3), 0.5)), 0.8);
+  },
+  // a kazoo tootling a little "ta-da-da-dum" tune: buzzy saw through a narrow vocal band
+  kazoo() {
+    const notes = [[67, 0.16], [72, 0.16], [76, 0.16], [74, 0.12], [72, 0.12], [79, 0.5]];
+    const len = notes.reduce((s, n) => s + n[1] + 0.03, 0.1), a = buf(len);
+    let t0 = 0.02;
+    for (const [m, d] of notes) {
+      const f = 440 * Math.pow(2, (m - 69) / 12), s = mix(saw(d, f * 0.99, f * 1.01, 0.02), scale(noise(d), 0.15));
+      env(s, 0.015, d * 0.9); a.set(s.subarray(0, Math.min(s.length, a.length - Math.floor(t0 * SR))), Math.floor(t0 * SR)); t0 += d + 0.03;
+    }
+    return norm(mix(bp(a, 1100, 3), scale(bp(a, 2600, 4), 0.6)), 0.75);
+  },
+  // a slide whistle swooping up and back down
+  whistle() {
+    const len = 1.1, a = buf(len); let ph = 0;
+    for (let i = 0; i < a.length; i++) { const t = i / SR, u = t / len, f = 700 + 1500 * Math.sin(u * Math.PI) ** 1.4; ph += f / SR; a[i] = Math.sin(2 * Math.PI * ph) * Math.min(1, t / 0.04) * Math.min(1, (len - t) / 0.1) * (1 + 0.15 * Math.sin(t * 38)); }
+    return norm(mix(a, scale(bp(noise(len), 2000, 2), 0.06)), 0.6);
+  },
+  // a cartoon spring: a wobbling tone that boings down
+  boing() {
+    const len = 0.8, a = buf(len); let ph = 0;
+    for (let i = 0; i < a.length; i++) { const t = i / SR, f = 160 + 260 * Math.exp(-t * 3) * (1 + 0.5 * Math.sin(t * 60)); ph += f / SR; a[i] = Math.sin(2 * Math.PI * ph) * Math.exp(-t * 3.2) * Math.min(1, t / 0.005); }
+    return norm(a, 0.8);
+  },
+  // a sing-song "nyah-nyah-na-nyah-nyah" taunt in the Joker's nasal voice
+  taunt() {
+    const notes = [[72, 0.2], [69, 0.2], [74, 0.14], [72, 0.2], [69, 0.36]];
+    const len = notes.reduce((s, n) => s + n[1] + 0.05, 0.1), a = buf(len);
+    let t0 = 0.02;
+    for (const [m, d] of notes) {
+      const f = 440 * Math.pow(2, (m - 69) / 12), s = saw(d, f * 1.03, f * 0.97, 0.03);
+      const v = mix(bp(s, 650, 4), scale(bp(s, 1700, 5), 0.8), scale(bp(s, 2900, 6), 0.3));
+      env(v, 0.02, d * 0.7); a.set(v.subarray(0, Math.min(v.length, a.length - Math.floor(t0 * SR))), Math.floor(t0 * SR)); t0 += d + 0.05;
+    }
+    return norm(a, 0.85);
+  },
+  // the acid gun: a wet pressurised spit with a falling gurgle
+  acid() { return norm(mix(env(bp(noise(0.5), 1400, 0.9), 0.003, 0.09), scale(env(sine(0.5, 520, 90), 0.002, 0.12), 0.7), scale(env(lp(noise(0.5), 300), 0.002, 0.15), 0.6)), 0.9); },
+  // acid eating into flesh or stone
+  sizzle() { const n = hp(noise(1.2), 2500); for (let i = 0; i < n.length; i++) { const t = i / SR; n[i] *= Math.min(1, t / 0.02) * Math.exp(-t / 0.45) * (0.6 + 0.4 * Math.random()); } return norm(n, 0.55); },
 };
 
 export class Audio {
@@ -268,6 +317,8 @@ export class Audio {
     set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
     set('rocket', R.rocket); set('fuse', R.fuse); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
     set('laugh', () => R.laugh(0.88 + Math.random() * 0.25), 3); set('musicbox', R.musicbox); set('gas', R.gas);
+    set('jkHonk', R.honk); set('jkKazoo', R.kazoo); set('jkWhistle', R.whistle); set('jkBoing', R.boing); set('jkTaunt', R.taunt);
+    set('acid', R.acid, 2); set('sizzle', R.sizzle);
     this._loadGunSounds();
     this._loadUserAudio();
   }

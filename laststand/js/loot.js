@@ -16,7 +16,7 @@ export const FOOD = {
   laddoo:  { name: 'प्रसाद के लड्डू', en: 'Prasad laddoo', heal: 18, model: 'sweet', color: 0xf0a020 },
 };
 export const AMMO_PICK = { '9mm': [8, 15], '.32': [6, 12], '12G': [3, 6], '7.62': [10, 22] };
-const AMMO_COL = { '9mm': 0x5a6a3a, '.32': 0x6a4a2a, '12G': 0xa02020, '7.62': 0x3a4a2a, rocket: 0x4a5236 };
+const AMMO_COL = { '9mm': 0x5a6a3a, '.32': 0x6a4a2a, '12G': 0xa02020, '7.62': 0x3a4a2a, rocket: 0x4a5236, acid: 0x50ff40 };
 
 function models() {
   return {
@@ -34,6 +34,7 @@ function models() {
     dunali: merge([part(Bx(0.07, 0.04, 0.7), 0x2a2a2c, 0, 0.04, -0.3), part(Bx(0.06, 0.07, 0.45), 0x6a4024, 0, 0.04, 0.25)]),
     rifle: merge([part(Bx(0.05, 0.07, 0.6), 0x252527, 0, 0.04, -0.1), part(Bx(0.04, 0.04, 0.35), 0x252527, 0, 0.05, -0.55), part(Bx(0.05, 0.08, 0.25), 0x5a3a20, 0, 0.04, 0.3), part(Bx(0.035, 0.14, 0.06), 0x252527, 0, 0.0, -0.05, 0.35, 0, 0)]),
     rpg: merge([part(Cy(0.05, 0.05, 0.9, 8), 0x4a5236, 0, 0.06, 0, Math.PI / 2, 0, 0), part(Cy(0.07, 0.05, 0.2, 8), 0x3a4228, 0, 0.06, -0.52, Math.PI / 2, 0, 0), part(Bx(0.03, 0.1, 0.05), 0x222222, 0, 0.0, 0.05)]),
+    acid: merge([part(Cy(0.03, 0.03, 0.5, 8), 0x2a2a2c, 0, 0.05, 0, Math.PI / 2, 0, 0), part(Cy(0.045, 0.045, 0.32, 8), 0x50e040, 0, 0.12, 0.03, Math.PI / 2, 0, 0), part(Bx(0.035, 0.11, 0.05), 0x2a2a2c, 0, 0.0, 0.16)]),
     key: merge([part(Cy(0.03, 0.03, 0.01, 10), 0xd4aa30, 0, 0.005, 0), part(Bx(0.012, 0.01, 0.12), 0xd4aa30, 0, 0.005, 0.07), part(Bx(0.02, 0.01, 0.012), 0xd4aa30, 0.012, 0.005, 0.12)]),
     bomb: merge([part(new THREE.SphereGeometry(0.068, 10, 8), 0x9a7a4a, 0, 0.068, 0), part(new THREE.TorusGeometry(0.069, 0.007, 4, 14), 0x6a5232, 0, 0.068, 0, Math.PI / 2), part(new THREE.TorusGeometry(0.069, 0.007, 4, 14), 0x6a5232, 0, 0.068, 0), part(Cy(0.008, 0.01, 0.07, 5), 0x2a2420, 0, 0.16, 0)]),
     fuse: merge([part(Cy(0.03, 0.03, 0.1, 10), 0xf0f0e8, 0, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, 0.055, 0.03, 0, 0, 0, Math.PI / 2), part(Cy(0.032, 0.032, 0.02, 10), 0xb0b0b8, -0.055, 0.03, 0, 0, 0, Math.PI / 2)]),

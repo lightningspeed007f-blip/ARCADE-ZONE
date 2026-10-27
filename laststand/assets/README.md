@@ -110,8 +110,21 @@ Mutant is no longer the last fight. When he is nearly dead, **the Joker** (the j
 purple smoke beside him, shoots him dead, laughs and throws a laughing-gas canister at you. You wake up in
 **the Joker's Playground** — an abandoned city street far from Jais — and fight him there. He skips around
 the square, shoots three-round bursts (watch for the red laser: that's your cue to take cover), lobs bombs,
-slashes if you get close and vanishes in a puff of smoke when hurt. At 60% health he lets out his pet,
-**CatNap**, who hunts you and breathes red smoke. At 30% he goes wild. Kill the Joker to win.
+slashes if you get close and vanishes in a puff of smoke when hurt. Hit him and he runs off honking; between
+attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cartwheel). At 60% health he lets
+out his pet, **CatNap**, who hunts you and breathes red smoke. At 30% he goes wild.
+
+At the far end of the square sits his glowing **jack-in-the-box crate**: open it (USE) for the **acid gun**
+(150 damage a shot, the most of any gun, and the acid splashes whatever stands next to the target; key 8 or
+swap). Killing the Joker sends you back to Jais: take the **last bus** from the bus adda (USE beside it, a
+glow marks it) to **the Worm Desert**, where the Giant Warrior and the Giant Worm wait. Kill both to win.
+
+| File | What it is |
+|------|------------|
+| `models/acidgun.glb` | The acid gun (“Acid Gun (Omnidroid v20.22)”), compressed to 0.3 MB. |
+| `models/warrior.glb` | The Giant Warrior (“Lowpoly Giant Warrior (rigged)”), with its Walking clip. Its specular texture was cut off in the upload and is left out (the game doesn't use it). |
+| `models/worm.glb` | The Giant Worm (“Giant Worm”), 28.6 MB uploaded, 3.7 MB compressed. Its one 102 s clip is used in sections: idle, roar, strikes and lunges. |
+| `music/joker1` … `music/joker5` (optional) | The Joker's five silly sounds: 1 clown honk (running off), 2 kazoo (dance), 3 slide whistle (pirouette, cartwheel), 4 spring boing (cartwheel landing, the crate), 5 "nyah-nyah" taunt. Without them the game makes its own. |
 
 | File | What it is |
 |------|------------|

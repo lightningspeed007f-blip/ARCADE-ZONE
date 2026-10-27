@@ -5,7 +5,11 @@
 // at the player and everything goes white. The player wakes up in the Joker's Playground — the
 // abandoned city street (models/street.glb), far from the town — and has to fight him there.
 // At 60% health he lets his pet out: CatNap (models/catnap.glb), who stalks the player and
-// breathes its red gas. Killing the Joker completes the game.
+// breathes its red gas. He never stands still for long: hit him and he runs off honking, and
+// between attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cartwheel).
+// At the far end of the square sits his jack-in-the-box crate with his own toy inside: the acid gun.
+// Killing the Joker sends you back to town, where the last bus out of the Jais bus adda takes you
+// to the Worm Desert and its two giants (giants.js). If their models cannot load, it ends the game.
 //
 // The jester (models/joker.glb) has a rig but no animations, so every move is posed in code on
 // top of his rest pose (see models.js: poseBone). CatNap plays the animations from its file.
@@ -26,6 +30,8 @@ const SQ = { x0: -7.55, x1: 8.25, z0: -7.5, z1: 8.3 };
 const W = (mx, mz) => [STREET.x + mx * STREET.S, STREET.z + mz * STREET.S];
 const PLAYER_IN = W(-3.4, 6.6), JOKER_IN = W(-3.6, 1.4);     // the far end of the west lane, ~21 m apart
 const CAT_SPOTS = [[-3.6, -5.6], [4.3, -5.4], [-3.4, 6.4], [4.6, 3.0], [-4.2, 0.4], [4.5, 7.4], [-1.2, -5.8], [2.6, 1.6]];
+const CRATE_AT = W(4.3, -5.4);            // the jack-in-the-box with the acid gun: the far corner from where you wake
+const SILLY = ['DANCE', 'SPIN', 'TAUNT', 'WHEEL'];
 
 const ease = (t) => smooth(clamp(t, 0, 1));
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _e = new THREE.Euler(), _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
@@ -142,6 +148,8 @@ export class Joker {
     // his own light (made with the town so adding it never recompiles the scene's shaders)
     this.light = new THREE.PointLight(0xb070ff, 0, 11, 1.5);
     game.scene.add(this.light);
+    this.crateLight = new THREE.PointLight(0x60ff50, 0, 9, 1.6);
+    game.scene.add(this.crateLight);
   }
 
   // ---------- loading ----------
@@ -192,6 +200,7 @@ export class Joker {
     sp('head', 0.26, 'head', 0.05); sp('Bone003', 0.27, 'body'); sp('Bone007', 0.22, 'body'); sp('Bone001', 0.24, 'body');
     for (const s of ['L', 'R']) { sp('leg' + s + '001', 0.15, 'leg'); sp('leg' + s + '002', 0.13, 'leg'); sp('leg' + s + '003', 0.12, 'leg'); sp('arm' + s + '001', 0.12, 'arm'); }
     this.cat = new CatNap(g, m.cat);
+    this.buildCrate();
     this.nav = new ArenaNav(g.physics);
     this.pf = new Uint16Array(this.nav.w * this.nav.h); this.mf = new Uint16Array(this.nav.w * this.nav.h);
     this.load = 'ready';
@@ -202,7 +211,9 @@ export class Joker {
     this.leave();
     this.used = false; this.state = 'OFF'; this.stateT = 0; this.dead = false; this.won = false;
     this.hp = this.maxHp = JOKER.hp; this.shownHp = this.hp; this.enraged = false; this.summoned = false;
-    this.cool = { act: 1, shoot: 2, bomb: 6, vanish: 4, laugh: 9 };
+    this.cool = { act: 1, shoot: 2, bomb: 6, vanish: 4, laugh: 9, flee: 2, silly: 5, quip: 0 };
+    this.wantFlee = false; this.handedOff = false;
+    if (this.crate) this.closeCrate();
     this.recent = 0; this.flinch = 0; this.vis = 1; this.lines = {}; this.moveSpeed = 0; this.aimAt = null;
     this.vel.x = this.vel.z = 0; this.st.vy = 0;
     if (this.root) this.root.visible = false;
@@ -241,6 +252,7 @@ export class Joker {
   ambush(boss) {
     const g = this.g, P = g.player;
     this.used = true; this.boss = boss;
+    this.ambushFrom = [P.pos.x, P.pos.z];          // where you come back to after the Playground
     const bc = boss.chestPos();
     // stand where the player can see both of them: beside the giant, 7-12 m off
     const bx = boss.pos.x, bz = boss.pos.z, ax = bx - P.pos.x, az = bz - P.pos.z, al = Math.hypot(ax, az) || 1;
@@ -336,7 +348,9 @@ export class Joker {
     const g = this.g, P = g.player;
     if (g.vehicles.driving) g.vehicles.exit(true);
     this.arena = true;
+    if (g.giants) g.giants.preload();               // the desert giants download while you fight him
     this.street.visible = true;
+    this.crate.root.visible = true;
     P.spawn(PLAYER_IN[0], 0, PLAYER_IN[1], Math.atan2(PLAYER_IN[0] - JOKER_IN[0], PLAYER_IN[1] - JOKER_IN[1]));
     P.health = Math.max(P.health, 75);
     this.pos.x = JOKER_IN[0]; this.pos.z = JOKER_IN[1]; this.pos.y = 0;
@@ -358,6 +372,8 @@ export class Joker {
       const fog = g.scene.fog; fog.color.setHex(0x0d1520); fog.density = 0.0165;
     }
     if (this.street) this.street.visible = false;
+    if (this.crate) this.crate.root.visible = false;
+    this.crateLight.intensity = 0;
     if (this.music) { try { this.music.stop(); } catch (e) { /* stopped */ } this.music = null; }
     if (g.audio && g.audio.hasTrack && g.audio.hasTrack('jokerMusic')) g.audio.fade('jokerMusic', 0, 1);
     clearTimeout(this._subT);
@@ -376,7 +392,10 @@ export class Joker {
       g.banner(JOKER.name, JOKER.en, 'joker');
       this.ui(true);
     }
-    if (T > 4.4) { this.fx(''); this.to('FIGHT'); this.act = 'MOVE'; this.actT = 0; this.cool.act = 0.5; this.pickSpot(); }
+    if (T > 4.4) {
+      this.fx(''); this.to('FIGHT'); this.act = 'MOVE'; this.actT = 0; this.cool.act = 0.5; this.pickSpot();
+      setTimeout(() => { if (this.state === 'FIGHT' && !this.crate.open) g.toast('हरी चमक वाला बक्सा…', "Somewhere in the Playground a crate glows green — the Joker's toy box."); }, 6000);
+    }
   }
 
   // ---------- HUD ----------
@@ -417,6 +436,8 @@ export class Joker {
     if (src === 'joker' || !this.solid()) return false;
     const n = dmg * (part === 'head' ? 2 : part === 'leg' || part === 'arm' ? 0.7 : 1);
     this.hp -= n; this.recent += n; this.flinch = Math.min(1, this.flinch + n / 80);
+    // stung: he runs for it (see fight), honking and laughing
+    if (this.cool.flee <= 0 && (this.recent > 45 || Math.random() < 0.4)) this.wantFlee = true;
     if (Math.random() < 0.3) this.g.audio.play('laugh', { pos: [this.pos.x, 2, this.pos.z], vol: 0.5, rate: 1.4 + Math.random() * 0.3 });
     if (!this.summoned && this.hp < this.maxHp * 0.6 && this.hp > 0) this.summon();
     if (!this.enraged && this.hp < this.maxHp * 0.3 && this.hp > 0) {
@@ -461,8 +482,105 @@ export class Joker {
     this.cat.spawn(best[0], best[1]);
   }
 
+  // ---------- clowning about ----------
+  sfx(name, vol = 1) { this.g.audio.play(name, { pos: [this.pos.x, this.pos.y + 1.8, this.pos.z], vol, ref: 8, max: 300 }); }
+  // a line of his, at most every few seconds (say() only ever plays each line once)
+  quip(hi, en) {
+    if (this.cool.quip > 0) return; this.cool.quip = 5;
+    this.g.subtitle(hi, en);
+    clearTimeout(this._subT); this._subT = setTimeout(() => this.g.subtitle(''), 2600);
+  }
+  flee() {
+    const N = this.nav, f = this.pf, P = this.g.player;
+    let best = -1, bs = -1e9;
+    for (let k = 0; k < 60; k++) {
+      const i = (Math.random() * f.length) | 0;
+      if (!N.free(i) || f[i] === 65535) continue;
+      const [x, z] = N.centre(i), s = Math.min(f[i], 24) - Math.hypot(x - this.pos.x, z - this.pos.z) * 0.25 + Math.random() * 4;
+      if (f[i] > 10 && s > bs) { bs = s; best = i; }
+    }
+    this.spot = best >= 0 ? N.centre(best) : null;
+    if (this.spot) N.field(this.spot[0], this.spot[1], this.mf);
+    const ax = this.pos.x - P.pos.x, az = this.pos.z - P.pos.z, al = Math.hypot(ax, az) || 1;
+    this.fleeDir = [ax / al, az / al];
+    this.act = 'FLEE'; this.actT = 0; this.cool.flee = (this.enraged ? 3 : 4) + Math.random() * 2; this.recent *= 0.4;
+    this.laser.visible = false;
+    this.sfx('jkHonk', 1);
+    const L = [['उई! गुदगुदी होती है!', 'Ow! That tickles!'], ['पकड़ो तो जानें!', 'Catch me if you can!'], ['हा! निशाना कमज़ोर है!', 'Ha! You missed the funny bone!'], ['भागो… भागो!', 'Run away, run awaaay!']];
+    const q = L[(Math.random() * L.length) | 0]; this.quip(q[0], q[1]);
+  }
+  silly(kind) {
+    const P = this.g.player;
+    this.act = kind; this.actT = 0; this.cool.silly = (this.enraged ? 6 : 8) + Math.random() * 4; this.cool.act = 0.2;
+    if (kind === 'DANCE') { this.sfx('jkKazoo', 1); this.quip('नाचो मेरे साथ!', 'Dance with me!'); }
+    else if (kind === 'SPIN') { this.sfx('jkWhistle', 1); this.quip('वाह! क्या अदा है!', 'Ta-daaa!'); }
+    else if (kind === 'TAUNT') { this.sfx('jkTaunt', 1.1); this.quip('ना-ना-ना-ना-ना!', "Nyah-nyah! Can't catch me!"); }
+    else if (kind === 'WHEEL') {
+      const ax = P.pos.x - this.pos.x, az = P.pos.z - this.pos.z, al = Math.hypot(ax, az) || 1, s = Math.random() < 0.5 ? 1 : -1;
+      this.wheelDir = [-az / al * s, ax / al * s];
+      this.yaw = Math.atan2(ax, az);
+      this.wheelSide = s;
+      this.sfx('jkWhistle', 0.6); this.quip('कलाबाज़ी!', 'Hup!');
+    }
+  }
+
+  // ---------- his crate: a jack-in-the-box with the acid gun inside ----------
+  buildCrate() {
+    const g = this.g, c = document.createElement('canvas'); c.width = c.height = 256;
+    const x = c.getContext('2d');
+    x.fillStyle = '#4a1a6a'; x.fillRect(0, 0, 256, 256);
+    x.fillStyle = '#3aff50';
+    for (let i = 0; i < 4; i++) for (let k = 0; k < 4; k++) if ((i + k) % 2) { x.beginPath(); x.moveTo(i * 64 + 32, k * 64); x.lineTo(i * 64 + 64, k * 64 + 32); x.lineTo(i * 64 + 32, k * 64 + 64); x.lineTo(i * 64, k * 64 + 32); x.fill(); }
+    x.fillStyle = '#fff'; x.font = '900 120px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.strokeStyle = '#2a0a3a'; x.lineWidth = 10;
+    x.strokeText('?', 128, 136); x.fillText('?', 128, 136);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshLambertMaterial({ map: tex, emissive: 0x30ff40, emissiveMap: tex, emissiveIntensity: 0.25 });
+    const root = new THREE.Group(), S = 0.95;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(S, S * 0.85, S), mat); box.position.y = S * 0.425; root.add(box);
+    const hinge = new THREE.Group(); hinge.position.set(0, S * 0.85, -S / 2); root.add(hinge);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(S * 1.04, 0.07, S * 1.04), new THREE.MeshLambertMaterial({ color: 0x3aa02a, emissive: 0x1a6a10 })); lid.position.set(0, 0.035, S / 2); hinge.add(lid);
+    // the jack: a spring and a grinning head, folded away until the lid flies open
+    const jack = new THREE.Group(); jack.position.y = S * 0.6; root.add(jack);
+    const spring = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 8, 6, true), new THREE.MeshLambertMaterial({ color: 0xd0d0d0, wireframe: true })); spring.position.y = 0.3; jack.add(spring);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), new THREE.MeshLambertMaterial({ color: 0xf4f0e8 })); head.position.y = 0.7; jack.add(head);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 })); nose.position.set(0, 0.7, 0.19); jack.add(nose);
+    const hair = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.25, 8), new THREE.MeshLambertMaterial({ color: 0x40e040 })); hair.position.y = 0.92; jack.add(hair);
+    jack.scale.setScalar(0.01); jack.visible = false;
+    // the gun lying on the lid's inner side once open: a small green glint
+    root.position.set(CRATE_AT[0], 0, CRATE_AT[1]); root.rotation.y = Math.atan2(PLAYER_IN[0] - CRATE_AT[0], PLAYER_IN[1] - CRATE_AT[1]);
+    root.visible = false; g.scene.add(root);
+    g.physics.add(CRATE_AT[0], S * 0.425, CRATE_AT[1], S / 2, S * 0.425, S / 2, root.rotation.y);
+    this.crate = { root, hinge, jack, open: false, t: 0, use: [CRATE_AT[0], 1.0, CRATE_AT[1]] };
+  }
+  closeCrate() { const C = this.crate; C.open = false; C.t = 0; C.hinge.rotation.x = 0; C.jack.visible = false; C.jack.scale.setScalar(0.01); }
+  consider(fn) { if (this.arena && this.crate && !this.crate.open) fn(this.crate.use, 2.4, { type: 'jokerCrate' }); }
+  prompt() { return ['OPEN', 'जोकर का बक्सा · the Joker\'s crate']; }
+  openCrate() {
+    const g = this.g, C = this.crate;
+    if (C.open) return;
+    C.open = true; C.t = 0; C.jack.visible = true;
+    g.audio.play('jkBoing', { pos: C.use, vol: 1.1 }); g.audio.play('clank', { pos: C.use, vol: 0.6 });
+    g.fx.burst([C.use[0], 1.2, C.use[2]], [0, 1, 0], 24, [0.4, 1, 0.3], 3, 0.8);
+    const A = g.arsenal, fresh = A.give('acid');
+    A.reserve.acid += fresh ? 40 : 50;
+    g.feed('+ ' + 'एसिड गन · ACID GUN');
+    g.toast('एसिड गन मिली!', 'ACID GUN — the Joker\'s own toy. 150 damage a shot, and the acid splashes everything near.');
+    if (this.state === 'FIGHT') this.quip('अरे! मेरा खिलौना मत छुओ!', "Hey! That's MY toy!");
+  }
+  updateCrate(dt) {
+    const C = this.crate;
+    this.crateLight.intensity = this.arena ? (C.open ? 2 : 6 + Math.sin(this.t * 4) * 2) : 0;
+    if (this.arena) this.crateLight.position.set(CRATE_AT[0], 1.8, CRATE_AT[1]);
+    if (!C.open || C.t > 2) return;
+    C.t += dt;
+    C.hinge.rotation.x = -Math.min(1, C.t / 0.15) * 1.9;
+    const k = C.t < 0.25 ? C.t / 0.25 : 1 + Math.sin((C.t - 0.25) * 14) * Math.exp(-(C.t - 0.25) * 3) * 0.25;
+    C.jack.scale.set(1, Math.max(0.01, k), 1);
+  }
+
   // ---------- per frame ----------
   update(dt) {
+    if (this.crate) this.updateCrate(dt);
     if (this.load !== 'ready' || this.state === 'OFF') return;
     const g = this.g;
     this.t += dt; this.stateT += dt;
@@ -595,11 +713,12 @@ export class Joker {
     }
     // too close or hurt badly in a moment: gone in a puff of smoke
     if ((this.recent > 170 || (d < 3.2 && Math.random() < dt * 1.5)) && this.cool.vanish <= 0 && this.act !== 'SLASH') { this.vanish(); return; }
+    if (this.wantFlee) { this.wantFlee = false; if (this.act !== 'SLASH' && this.act !== 'FLEE' && this.act !== 'WHEEL') this.flee(); }
     switch (this.act) {
       case 'MOVE': {
         this.spotT -= dt;
         if (!this.spot || this.spotT <= 0) this.pickSpot();
-        let mx = 0, mz = 0, sp = (d > 18 ? 5 : 3.8) * rage;
+        let mx = 0, mz = 0, sp = (d > 18 ? 6 : 4.6) * rage;
         if (this.spot) {
           const s = this.nav.step(this.mf, this.pos.x, this.pos.z);
           if (s && s[2] > 0) { mx = s[0]; mz = s[1]; } else if (Math.hypot(this.spot[0] - this.pos.x, this.spot[1] - this.pos.z) < 1.2) { this.spot = null; sp = 0; }
@@ -613,6 +732,34 @@ export class Joker {
         if (this.canSee && d < 34 && this.cool.shoot <= 0) { this.act = 'AIM'; this.actT = 0; this.shots = this.enraged ? 5 : 3; break; }
         if (d > 5 && d < 22 && this.cool.bomb <= 0 && (this.canSee || Math.random() < 0.3)) { this.act = 'THROW'; this.actT = 0; this.struck = false; break; }
         if (this.cool.laugh <= 0 && d > 9) { this.act = 'LAUGH'; this.actT = 0; this.laugh(1); this.cool.laugh = 10 + Math.random() * 8; break; }
+        if (this.cool.silly <= 0 && d > 7) { this.silly(SILLY[(Math.random() * SILLY.length) | 0]); break; }
+        break;
+      }
+      case 'FLEE': {
+        // running away flat out, arms flapping, looking back over his shoulder
+        let mx = this.fleeDir[0], mz = this.fleeDir[1];
+        const s = this.nav.step(this.mf, this.pos.x, this.pos.z);
+        if (s && s[2] > 0) { mx = s[0]; mz = s[1]; }
+        const far = this.spot ? Math.hypot(this.spot[0] - this.pos.x, this.spot[1] - this.pos.z) : 0;
+        this.move(mx, mz, 7.4 * rage, dt);
+        if (Math.hypot(this.vel.x, this.vel.z) > 0.5) this.yaw += angleDiff(this.yaw, Math.atan2(this.vel.x, this.vel.z)) * Math.min(1, dt * 9);
+        if (this.actT > 3.2 || far < 1.5 || (this.actT > 0.8 && this.moveSpeed < 0.6)) {
+          this.act = 'MOVE'; this.actT = 0; this.cool.act = 0.3; this.pickSpot();
+          if (Math.random() < 0.45 && this.cool.silly <= 0) this.silly('TAUNT');
+        }
+        break;
+      }
+      case 'DANCE': case 'SPIN': case 'TAUNT': {
+        this.move(0, 0, 0, dt);
+        if (this.act === 'SPIN') this.yaw += dt * (this.actT < 1.3 ? 13 : 0);
+        else this.face(P.pos.x, P.pos.z, dt, 4);
+        if (this.actT > (this.act === 'DANCE' ? 2.6 : this.act === 'SPIN' ? 1.5 : 1.8)) { this.act = 'MOVE'; this.actT = 0; this.cool.act = 0.3; }
+        break;
+      }
+      case 'WHEEL': {
+        // a cartwheel sideways across the square, landing with a boing
+        this.move(this.wheelDir[0], this.wheelDir[1], 4.2, dt);
+        if (this.actT > 1.1) { this.act = 'MOVE'; this.actT = 0; this.cool.act = 0.3; this.sfx('jkBoing', 0.9); }
         break;
       }
       case 'AIM': {
@@ -681,12 +828,13 @@ export class Joker {
     if (T > 1.4 && !this._thud) { this._thud = true; g.audio.play('slam', { pos: [this.pos.x, 0.3, this.pos.z], vol: 0.9, rate: 0.8 }); this.puff(this.pos.x, this.pos.z, 14, [0.3, 0.3, 0.32]); }
     if (T > 2.6 && !this.announced) {
       this.announced = true;
-      g.banner('THE JOKER IS DEAD', 'जोकर मारा गया · MISSION COMPLETE', 'win');
+      this.handedOff = !!(g.giants && g.giants.available());
+      g.banner('THE JOKER IS DEAD', this.handedOff ? 'जोकर मारा गया · but the night is not over…' : 'जोकर मारा गया · MISSION COMPLETE', 'win');
       document.getElementById('bossHud').classList.add('gone');
       if (this.music) this.music.gain.gain.linearRampToValueAtTime(0, g.audio.ctx.currentTime + 4);
       if (g.audio.hasTrack('jokerMusic')) g.audio.fade('jokerMusic', 0, 4);
     }
-    if (T > 7 && !this.won) { this.won = true; g.jokerVictory(); }
+    if (T > 7 && !this.won) { this.won = true; if (this.handedOff) g.giants.afterJoker(); else g.jokerVictory(); }
   }
 
   // ---------- procedural animation ----------
@@ -745,6 +893,35 @@ export class Joker {
       R.rotation.x = -u * 1.45; R.position.y = this.pos.y + Math.sin(u * Math.PI) * 0.3 + u * 0.2;
       poseBone(rig, 'legL', Q(-0.6 * u, 0, 0.1)); poseBone(rig, 'legR', Q(-0.3 * u, 0, -0.1));
     }
+    // the clowning: running away, a jig, a pirouette, hands-at-ears taunt, a cartwheel
+    if (st === 'FIGHT' && act === 'FLEE') {
+      const w = Math.sin(t * 16);
+      armL = [0.4 * w, 0, 1.0 + 0.3 * w]; armR = [-0.4 * w, 0, -1.0 + 0.3 * w]; foreL = -0.4; foreR = -0.4;
+      const back = clamp(angleDiff(this.yaw, Math.atan2(this.g.player.pos.x - this.pos.x, this.g.player.pos.z - this.pos.z)), -1.3, 1.3);
+      head = [0.1, back, Math.sin(t * 9) * 0.2]; spine = 0.25;
+    }
+    if (st === 'FIGHT' && act === 'DANCE') {
+      const u = this.actT * 7, k = Math.sin(u);
+      poseBone(rig, 'legL', Q(-Math.max(0, k) * 1.1, 0, 0.1)); poseBone(rig, 'legR', Q(-Math.max(0, -k) * 1.1, 0, -0.1));
+      poseBone(rig, 'legL002', Q(Math.max(0, k) * 1.3, 0, 0)); poseBone(rig, 'legR002', Q(Math.max(0, -k) * 1.3, 0, 0));
+      armL = [0, 0, 1.05 + 0.35 * Math.sin(u * 0.5)]; armR = [0, 0, -1.05 + 0.35 * Math.sin(u * 0.5 + 1)]; foreL = -0.5; foreR = -0.5;
+      hip = [0, Math.sin(u * 0.5) * 0.25]; head = [0, Math.sin(u * 0.5) * 0.4, Math.sin(u) * 0.25]; bob = Math.abs(k) * 0.14;
+    }
+    if (st === 'FIGHT' && act === 'SPIN') {
+      armL = [0, 0, 0.1]; armR = [0, 0, -0.1]; foreL = 0; foreR = 0; head = [-0.2, 0, 0.3];
+      poseBone(rig, 'legR', Q(-0.5, 0, -0.2)); poseBone(rig, 'legR002', Q(1.4, 0, 0)); bob = 0.08;
+    }
+    if (st === 'FIGHT' && act === 'TAUNT') {
+      const w = Math.sin(this.actT * 22) * 0.25;
+      armL = [0, 0, 0.15]; armR = [0, 0, -0.15]; foreL = -1.6 - w; foreR = -1.6 + w;
+      head = [0.15, 0, Math.sin(this.actT * 11) * 0.35]; spine = 0.3; bob = Math.abs(Math.sin(this.actT * 11)) * 0.06;
+    }
+    let wheel = 0;
+    if (st === 'FIGHT' && act === 'WHEEL') {
+      wheel = ease(this.actT / 1.1) * Math.PI * 2 * (this.wheelSide || 1);
+      armL = [0, 0, 1.3]; armR = [0, 0, -1.3]; foreL = 0; foreR = 0;
+      poseBone(rig, 'legL', Q(0, 0, 0.7)); poseBone(rig, 'legR', Q(0, 0, -0.7));
+    }
     // flinch from hits
     spine -= this.flinch * 0.3;
     poseBone(rig, 'Bone001', Q(hip[0], hip[1], 0));
@@ -765,6 +942,11 @@ export class Joker {
       poseBone(rig, 'armR001', Q(0, 0, foreR));
     }
     R.position.y += bob;
+    if (wheel) {
+      // turn round his hips (1.1 m up), not his feet
+      const h = 1.1, lx = h * Math.sin(wheel), ly = h * (1 - Math.cos(wheel));
+      R.rotation.z = wheel; R.position.x += Math.cos(this.yaw) * lx; R.position.z -= Math.sin(this.yaw) * lx; R.position.y += ly;
+    }
     R.updateMatrixWorld(true);
     // a sickly purple-green glow in front of him so he reads at night
     const Lt = this.light, on = R.visible && st !== 'OFF';

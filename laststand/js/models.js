@@ -1,4 +1,5 @@
-// The three uploaded 3D models (glTF), loaded on demand for the Joker finale:
+// The three uploaded 3D models (glTF), loaded on demand for the Joker finale (the acid gun and the desert
+// giants load separately: weapons.js, giants.js):
 //
 //   models/joker.glb   the jester ("the Joker") — rigged, no animations: posed in code
 //   models/catnap.glb  CatNap — rigged, with its own animations (stalk, pursue, gas attack…)
