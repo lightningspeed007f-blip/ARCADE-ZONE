@@ -332,7 +332,7 @@ export class Vehicles {
     if (c.driver) c.driver.visible = true;
     for (const l of c.lamps) l.visible = true;
     this.camYaw = 0; this.camPitch = 0;
-    g.audio.play('slam', { vol: 0.5, rate: c.kind === 'truck' ? 1.0 : 1.2 }); g.audio.play('clank', { vol: 0.3, delay: 0.25 });
+    if (g.audio.b.carDoor) g.audio.play('carDoor', { vol: 0.9, vary: 0.02 }); else { g.audio.play('slam', { vol: 0.5, rate: c.kind === 'truck' ? 1.0 : 1.2 }); g.audio.play('clank', { vol: 0.3, delay: 0.25 }); }
     if (g.audio.ctx) { this.engine = g.audio.loop('engine', 0.0, g.audio.sfx); this.engine.gain.gain.setTargetAtTime(0.32, g.audio.ctx.currentTime, 0.3); }
     document.body.classList.add('driving');
     g.toast(c.S.name + ' चालू', g.input.touch ? 'Drive with the stick or ◀ ▶ GAS BRAKE · EXIT to get out' : 'W/S throttle · A/D steer · Space handbrake · G or E to get out');
@@ -381,7 +381,7 @@ export class Vehicles {
     if (c.driver) c.driver.visible = false;
     for (const l of c.lamps) l.visible = false;
     if (this.engine) { try { this.engine.stop(); } catch (e) { /* stopped */ } this.engine = null; }
-    g.audio.play('slam', { vol: 0.5, rate: 1.15 });
+    g.audio.play(g.audio.b.carDoor ? 'carDoor' : 'slam', { vol: g.audio.b.carDoor ? 0.9 : 0.5, rate: g.audio.b.carDoor ? 1 : 1.15, vary: 0.02 });
     document.body.classList.remove('driving');
     g.torch.distance = 32; g.torch.angle = 0.42;
     return true;

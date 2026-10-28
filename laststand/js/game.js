@@ -281,7 +281,7 @@ export class Game {
     const ref = byPlayer ? P.pos : (this._doorOpener || P.pos);
     const nz = (ref.x - d.cx) * s + (ref.z - d.cz) * c;
     d.open = true; d.target = nz > 0 ? 1.55 : -1.55; d.box.enabled = false;
-    this.audio.play('creak', { pos: [d.cx, 1.2, d.cz], vol: 0.55 });
+    this.audio.play(this.audio.b.doorOpen ? 'doorOpen' : 'creak', { pos: [d.cx, 1.2, d.cz], vol: 0.8, vary: 0.02 });
     this.noise({ x: d.cx, z: d.cz }, 6, 'door');
   }
 
@@ -289,7 +289,7 @@ export class Game {
     // don't close onto the player
     if (Physics.circleOverlaps(d.box, this.player.pos.x, this.player.pos.z, 0.4)) return;
     d.open = false; d.target = 0; d.box.enabled = true;
-    this.audio.play('slam', { pos: [d.cx, 1.2, d.cz], vol: 0.35 });
+    this.audio.play(this.audio.b.doorClose ? 'doorClose' : 'slam', { pos: [d.cx, 1.2, d.cz], vol: this.audio.b.doorClose ? 0.8 : 0.35, vary: 0.02 });
   }
 
   breakDoor(d) {

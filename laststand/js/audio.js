@@ -460,6 +460,22 @@ export class Audio {
     return src;
   }
 
+  // Footstep recordings: call every frame while the player moves on foot. mode is 'walk' or 'run'.
+  // The loop fades itself out ~0.2 s after the last call, so pausing or driving silences it.
+  footLoop(mode, vol = 1) {
+    if (!this.ctx || !this.b[mode + 'Loop']) return false;
+    const key = 'foot_' + mode;
+    for (const m of ['walk', 'run']) {
+      const l = this.loops['foot_' + m]; if (!l || m === mode) continue;
+      const t = this.ctx.currentTime; l.gain.gain.cancelScheduledValues(t); l.gain.gain.setTargetAtTime(0, t, 0.04);
+    }
+    let l = this.loops[key];
+    if (!l) { l = this.loops[key] = this.loop(mode + 'Loop', 0, this.sfx); l.gain.gain.value = 0; }
+    const g = l.gain.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setTargetAtTime(vol, t, 0.05); g.setTargetAtTime(0, t + 0.2, 0.05);
+    return true;
+  }
+
   startAmbience(templePos) {
     if (!this.ctx || this.loops.wind) return;
     this.loops.wind = this.loop('wind', 0.25);
