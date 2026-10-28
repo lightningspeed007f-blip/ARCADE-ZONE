@@ -22,7 +22,7 @@ const flameTex = () => canvasTex(64, (x, S) => {
   x.fillStyle = g; x.fillRect(0, 0, S, S);
 });
 // a lumpy smoke puff: several soft blobs, so smoke never looks like clean discs
-const puffTex = () => canvasTex(128, (x, S) => {
+export const puffTex = () => canvasTex(128, (x, S) => {
   for (let i = 0; i < 14; i++) {
     const a = Math.random() * Math.PI * 2, r = Math.random() * S * 0.2;
     const cx = S / 2 + Math.cos(a) * r, cy = S / 2 + Math.sin(a) * r, rad = S * (0.18 + Math.random() * 0.2);
