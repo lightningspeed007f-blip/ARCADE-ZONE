@@ -571,6 +571,7 @@ export class Audio {
     el.addEventListener('error', () => { if (this.pa && this.pa.el === el) this.stopTemplePA(); });
     el.play().catch(() => {});
     this.pa = { el, src, amp, horns, sync };
+    if (this._duck != null && this._duck !== 1) amp.gain.value = 0.85 * this._duck;
   }
 
   stopTemplePA() {
@@ -581,7 +582,19 @@ export class Audio {
     try { src.disconnect(); amp.disconnect(); } catch (e) { /* already disconnected */ }
   }
 
+  // Turn all the music down (radios, tracks, the temple loudspeakers, boss music) to k of its
+  // level over sec seconds, or back up with k = 1. Sound effects are not touched.
+  duck(k, sec = 2) {
+    if (!this.ctx || this._duck === k) return;
+    this._duck = k;
+    const t = this.ctx.currentTime;
+    for (const [node, full] of [[this.music.gain, 1], ...(this.pa ? [[this.pa.amp.gain, 0.85]] : [])]) {
+      node.cancelScheduledValues(t); node.setValueAtTime(node.value, t); node.linearRampToValueAtTime(full * k, t + sec);
+    }
+  }
+
   stopAll() {
+    this.duck(1, 0);
     this.stopTemplePA();
     for (const k in this.tracks) this.fade(k, 0, 0);
     for (const r of this.radios) r.stop();

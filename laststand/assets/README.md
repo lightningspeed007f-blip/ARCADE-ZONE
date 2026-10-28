@@ -18,7 +18,7 @@ laststand/assets/
   music/shivjibackground.mp3                                 ← the Shivdham reveal music
   maakaali1.png  maakaali3.JPG  maakaali2.png  maakaali4.JPG  ← the hidden Kalidham (see below)
   music/maakaalisong.mp3                                     ← the Kalidham music
-  music/spider.mp3                                           ← the giant spider in the sky (optional)
+  music/spider.mp3                                           ← the giant spider's prowl (all music dips while it is in the sky)
 ```
 
 ## Shivji (`shivji.png`)
@@ -218,3 +218,10 @@ dead city and the old metro, each painted from its walkable ground once it has l
 between them and dashed lines to the highway sign and the Jais City metro entrance. While you are in one of them
 it is outlined and shows where you are. The corner minimap now works in those places too, and your crew shows on both.
 
+
+## Time of day
+The town has a day: a run starts at **night**, then comes **morning** (dawn light, mist), **day**
+(clear and bright, street lamps off), **evening** (orange low sun, lamps back on), and night again.
+One full day is 12 minutes (night 5, morning 2½, day 2, evening 2½; change `DAY` in `js/daytime.js`).
+The time shows under the minimap. The hidden valleys, the outlands, the Joker's Playground and the
+Worm Desert keep their own night look.

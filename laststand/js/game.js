@@ -30,6 +30,7 @@ import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
 import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
+import { DayCycle } from './daytime.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -168,6 +169,7 @@ export class Game {
     this.joker = new Joker(this);                        // the real villain: steps in when Mutant is nearly dead
     this.giants = new Giants(this);                      // after the Joker: the last bus, the warrior and the worm
     this.spider = new Spider(this);                      // a showcase: a giant spider drifts across the sky over town
+    this.day = new DayCycle(this);                       // night -> morning -> day -> evening over the town
     this.crew = new Companions(this);                    // four fighters waiting in houses (their models load later)
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
@@ -322,9 +324,10 @@ export class Game {
         top: { value: new THREE.Color(0x03060d) }, hor: { value: new THREE.Color(0x1a2230) }, glow: { value: new THREE.Color(0x3a2c22) },
         fogc: { value: fogCol.clone().convertLinearToSRGB() }, clouds: { value: this.tex.macro },
         time: { value: 0 }, cloudAmt: { value: this.quality === 'low' ? 0 : 1 },
+        cloudLo: { value: new THREE.Color(0.14, 0.115, 0.1) }, cloudHi: { value: new THREE.Color(0.075, 0.085, 0.11) },   // set by the day cycle
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 glow; uniform vec3 fogc; uniform sampler2D clouds; uniform float time; uniform float cloudAmt;
+      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 glow; uniform vec3 fogc; uniform sampler2D clouds; uniform float time; uniform float cloudAmt; uniform vec3 cloudLo; uniform vec3 cloudHi;
         varying vec3 vP;
         void main(){
           vec3 d = normalize(vP);
@@ -335,7 +338,7 @@ export class Game {
             vec2 uv = d.xz / (d.y + 0.2) * 0.16 + vec2(time * 0.0035, time * 0.0012);
             float n = texture2D(clouds, uv).r * 0.7 + texture2D(clouds, uv * 2.7 + 0.3).r * 0.3;
             float m = smoothstep(0.44, 0.62, n) * smoothstep(0.03, 0.3, h) * cloudAmt;
-            vec3 cc = mix(vec3(0.14, 0.115, 0.1), vec3(0.075, 0.085, 0.11), smoothstep(0.05, 0.6, h));
+            vec3 cc = mix(cloudLo, cloudHi, smoothstep(0.05, 0.6, h));
             c = mix(c, cc, m * 0.85);
           }
           c = mix(fogc, c, smoothstep(-0.03, 0.16, d.y));
@@ -496,6 +499,7 @@ export class Game {
     this.state = 'play';
     this.outlands.reset();
     this.spider.reset();
+    this.day.reset();
     this.input.resetState();
     this.input.enabled = true;
     document.body.classList.add('playing');
@@ -1138,6 +1142,8 @@ export class Game {
   updateHud(force) {
     const P = this.player, A = this.arsenal, w = A.w;
     const hp = Math.ceil(P.health);
+    const tod = this.day.label();
+    if (force || tod !== this._tod) { this._tod = tod; $('clock').textContent = tod; }
     if (force || hp !== this._hp) {
       this._hp = hp;
       $('hpFill').style.width = hp + '%'; $('hpNum').textContent = hp;
@@ -1485,9 +1491,12 @@ export class Game {
     if (st !== 'play' && st !== 'menu' && st !== 'dead' && st !== 'win') return; // paused: hold
     this.hemiK += ((st === 'play' && (this.inside || this.outlands.indoor) ? 1 : 0) - this.hemiK) * Math.min(1, dt * 3);
     const k = this.hemiK;
-    this.hemi.intensity = HEMI_OUT - 0.42 * k;
-    this.hemi.color.copy(this.hemiSky.out).lerp(this.hemiSky.in, k);
-    this.moonLight.intensity = 0.95 - 0.6 * k;
+    // outdoors the fill and the key light follow the time of day (daytime.js); indoors they dim and warm
+    const L = this.day.lights();
+    this.hemi.intensity = L.hemiI + (0.5 + (L.hemiI - HEMI_OUT) * 0.4 - L.hemiI) * k;
+    this.hemi.color.copy(L.hemi).lerp(this.hemiSky.in, k);
+    this.hemi.groundColor.copy(L.ground);
+    this.moonLight.intensity = L.sunI * (1 - 0.63 * k);
   }
 
   updateViewLights() {
@@ -1535,11 +1544,11 @@ export class Game {
   render(dt) {
     const R = this.renderer, cam = this.camera;
     if (this.state === 'play') this.lightPool.update(dt, cam, this.time);
+    this.day.update(dt); this.day.apply(cam);       // sky, fog, sun/moon, stars, lamps
     this.updateAmbience(dt);
     this.sky.position.copy(cam.position); this.stars.position.copy(cam.position);
     const su = this.sky.material.uniforms;
     su.time.value = this.time; su.fogc.value.copy(this.scene.fog.color).convertLinearToSRGB(); // valleys change the fog
-    this.moon.position.set(cam.position.x - 60, cam.position.y + 75, cam.position.z - 90);
     // on foot the picture comes from behind the body; a vehicle, the menus and the death screen keep their own camera
     const onFoot = (this.state === 'play' || this.state === 'pause') && !this.vehicles.driving;
     const view = onFoot ? this.tpCam : cam;

@@ -57,7 +57,7 @@ export class LightPool {
         k = f > 1.6 ? 0.15 : f < -2.2 ? 0.4 : 0.92 + Math.random() * 0.08;
         s.k = k;
       }
-      l.intensity = s.intensity * k * l.userData.fade * (s.on ? 1 : 0);
+      l.intensity = s.intensity * k * l.userData.fade * (s.on ? 1 : 0) * (s.street ? this.streetK ?? 1 : 1);   // street lamps go off by day (daytime.js)
     }
   }
 }

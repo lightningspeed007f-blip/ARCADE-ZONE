@@ -1,0 +1,49 @@
+name: Build Android APK
+
+# Builds the Last Stand APK. Run it from the Actions tab (Run workflow), or it runs on every push
+# to the branch. Download the APK from the run's "Artifacts" section.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/modest-allen-b1eeyi]
+    paths: ['laststand/**', 'laststand.html', 'capacitor.config.json', 'scripts/**', 'android/**', 'package*.json', '.github/workflows/android-apk.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Copy the game into the Android project
+        run: npm run sync
+
+      - name: Build the debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-stand-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
