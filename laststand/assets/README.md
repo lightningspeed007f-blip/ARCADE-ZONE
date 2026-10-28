@@ -239,3 +239,29 @@ These are the uploaded Sketchfab files, converted once: node transforms baked in
 (nose toward +z, wheels on y = 0), only the colour texture kept (1024 px JPEG, PNG where there is alpha).
 The burning cars are unchanged (`js/vehicles.js`). The uploaded `grass_06` file was cut off in transfer, so its blade
 texture was rebuilt from the part that survived; re-upload the file if you want the original texture.
+
+## The graves and the wrecks of Jais (`models/`, placed by `js/graves.js`)
+```
+models/tombstone_bonaventure.glb   forty headstones in one straight line along the north side of the railway, by Jais City station
+models/tombstone_koszeg.glb        six grey stones on the far side of the track, around MUTANT
+models/eclipso_car.glb             a post-apocalypse car, parked on the lane west of the Mandir road
+models/l200_pickup.glb             a red pickup, parked on the waste ground south-west of the main road
+models/aircraft_wreck.glb          a small aircraft down in the fields at the south-west edge of town
+models/destroyed_building.glb      a bombed-out house on the east side of the bazaar
+```
+Each model is scaled to metres, stood on the ground and centred on its spot when it loads (the numbers are in
+`js/graves.js`: move a spot or a scale there, nothing else). The stones and the wrecks have colliders. The
+spots are on the town map only; the outlands are not touched.
+
+Converted once from the uploads: the textures are webp (512 px for the stones, 1024 px for the cars), the
+geometry is meshopt-compressed. Three uploads were cut off in transfer and were repaired as far as possible:
+- `aircraft_wreck`: the ivy leaves were lost and are left out; the fuselage and the ivy branches are complete, with no textures.
+- `tombstone_koszeg`: its stone texture was cut short; the part that arrived is used.
+- `tombstone_bonaventure`: one of its four textures was cut short (the part that arrived is used).
+- `destroyed_building`: the upload held only the `.fbx` (its textures were not in the archive), so it is a plain grey
+  plaster ruin converted from the FBX. Add its textures to get the original look.
+
+## Night mist and lightning (`js/atmosphere.js`)
+At night a low mist drifts east over the stones by the station, the graves by MUTANT and the railway line; it is
+thin in the day. Now and then at night, out in the town, lightning flickers the fill light and its thunder
+(`thunder` in `js/audio.js`) rolls in a moment later. Nothing to upload: the thunder is generated.

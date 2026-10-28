@@ -29,6 +29,8 @@ import { Giants, buildDesert } from './giants.js';
 import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
 import { Swaps } from './swaps.js';
+import { Graves } from './graves.js';
+import { Atmosphere } from './atmosphere.js';
 import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
 import { DayCycle } from './daytime.js';
@@ -191,6 +193,9 @@ export class Game {
     this.swaps.start();                               // the uploaded cars and ambulances, and grass breaking through the roads
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
     this.corpses.start();                             // the dead of Jais, in the background
+    this.graves = new Graves(this);
+    this.graves.start();                              // the headstones by the station and MUTANT, and the wrecks
+    this.atmos = new Atmosphere(this);                // night mist over the graves and the rail, lightning and thunder
   }
 
   makeMaterials(tex, signTex) {
@@ -1549,6 +1554,7 @@ export class Game {
     if (this.state === 'play') this.lightPool.update(dt, cam, this.time);
     this.day.update(dt); this.day.apply(cam);       // sky, fog, sun/moon, stars, lamps
     this.updateAmbience(dt);
+    this.atmos.update(dt); this.atmos.light(dt);    // mist and lightning; the flash goes on after the fill light is set
     this.sky.position.copy(cam.position); this.stars.position.copy(cam.position);
     const su = this.sky.material.uniforms;
     su.time.value = this.time; su.fogc.value.copy(this.scene.fog.color).convertLinearToSRGB(); // valleys change the fog

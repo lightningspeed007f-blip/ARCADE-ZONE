@@ -131,6 +131,8 @@ const R = {
   hum() { const a = lp(lp(noise(6), 140), 200); return norm(a, 0.5); },
   drone() { const len = 8; return norm(mix(sine(len, 110), scale(sine(len, 110.4), 0.8), scale(sine(len, 165), 0.5), scale(sine(len, 220.6), 0.3)), 0.45); },
   rumble() { const a = lp(lp(noise(4), 90), 160); for (let i = 0; i < a.length; i++) a[i] *= 0.75 + 0.25 * Math.sin(i / SR * 2 * Math.PI * 3.1) ** 8; return norm(a, 0.8); },
+  // a distant thunder clap: a low rumble that breaks up and dies away over about four seconds
+  thunder() { const a = lp(lp(noise(4.2), 260), 120); for (let i = 0; i < a.length; i++) a[i] *= Math.exp(-i / SR * 0.9) * (0.6 + 0.4 * Math.sin(i / SR * 2 * Math.PI * 1.7)); return norm(a, 0.9); },
   alarm() { const a = buf(1.2); let ph = 0; for (let i = 0; i < a.length; i++) { const f = (i / SR) % 0.6 < 0.3 ? 880 : 660; ph += f / SR; a[i] = (ph % 1 < 0.5 ? 1 : -1) * 0.3; } return lp(a, 3000); },
   // rocket launcher: a hard pop, then the motor's hiss tearing away
   rocket() {
@@ -314,7 +316,7 @@ export class Audio {
     set('rustle', R.rustle); set('crunch', R.crunch); set('gulp', R.gulp); set('heart', R.heart); set('bark', R.bark, 3);
     set('horn', R.horn); set('bell', R.bell); set('beep', () => R.beep(1200)); set('beepLow', () => R.beep(500, 0.2)); set('splash', R.splash);
     set('static', () => R.staticNoise(2.5));
-    set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm);
+    set('wind', R.wind); set('crickets', R.crickets); set('hum', R.hum); set('drone', R.drone); set('rumble', R.rumble); set('alarm', R.alarm); set('thunder', R.thunder);
     set('rocket', R.rocket); set('fuse', R.fuse); set('explosion', R.explosion, 2); set('fire', R.fire); set('engine', R.engine); set('roar', R.roar); set('magic', R.magic);
     set('laugh', () => R.laugh(0.88 + Math.random() * 0.25), 3); set('musicbox', R.musicbox); set('gas', R.gas);
     set('jkHonk', R.honk); set('jkKazoo', R.kazoo); set('jkWhistle', R.whistle); set('jkBoing', R.boing); set('jkTaunt', R.taunt);
