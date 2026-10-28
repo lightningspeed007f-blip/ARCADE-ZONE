@@ -16,7 +16,7 @@ import { loadUserAssets } from './assets.js';
 import { buildDisplays, animateDisplays } from './displays.js';
 import { TownMap } from './minimap.js';
 import { buildSecret, prepareMaterials, Secret } from './secret.js';
-import { buildKaali, Kaali } from './kaali.js';
+import { buildKaali, Kaali, ACID_AT } from './kaali.js';
 import { ROADS, ZONES, RAIL, KAMAKHYA, roadInfo, BOUNDS } from './layout.js';
 import { makeRng, clamp, store } from './util.js';
 import { Physics } from './physics.js';
@@ -451,6 +451,7 @@ export class Game {
     this.loot.clear();
     this.containers = W.containers.map((c) => ({ ...c, searched: false }));
     this.spawnLoot(r);
+    this.loot.add({ kind: 'weapon', id: 'acid', p: [...ACID_AT] });   // the acid gun: only in the Kalidham tunnel
     this.loot.build();
     // enemies
     this.enemies.clear();
