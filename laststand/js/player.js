@@ -141,18 +141,22 @@ export class Player {
     const B = this.body; if (!B.acts) return;
     this.throwT = Math.max(0, (this.throwT || 0) - dt);
     const armed = weapon && !weapon.w.melee;
-    const k = this.throwT > 0 ? 'throw' : this.crouched ? 'crouch' : !moving ? (armed ? 'pistol' : 'idle') : my < -0.3 ? 'back' : sprinting ? 'run' : 'pistol';
+    const k = this.throwT > 0 ? 'throw' : this.crouched ? 'crouch' : !moving ? (armed ? 'aim' : 'idle') : my < -0.3 ? 'back' : sprinting ? 'run' : 'pistol';
     if (k !== B.want) { B.want = k; B.wantT = 0; } else B.wantT += dt;
     const a = B.acts[k];
     if (B.cur !== a && (k === 'throw' || B.wantT > 0.15)) {
       if (B.cur) B.cur.fadeOut(0.25);
       a.enabled = true; a.setEffectiveWeight(1); a.fadeIn(0.25).play();
-      if (k === 'throw') a.time = 0.9;
+      if (k === 'throw') a.time = 1.1;   // wind-up starts here; the hand is at the top (release) at 2.0 s
       B.cur = a;
     }
     const c = B.cur;
-    if (c) c.timeScale = moving || c === B.acts.throw || c === B.acts.idle ? 1 : 0;
+    if (c) c.timeScale = c === B.acts.throw ? 1.5 : moving || c === B.acts.idle || c === B.acts.aim ? 1 : 0;
     B.mixer.update(dt);
+    // the bomb sits in the right hand until it is let go
+    if (!B.nade) { B.nade = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), new THREE.MeshLambertMaterial({ color: 0x8a6a3a })); B.parent.add(B.nade); }
+    B.nade.visible = !!(B.hand && weapon && weapon.throwT > 0 && weapon.releaseT > 0);
+    if (B.nade.visible) B.hand.getWorldPosition(B.nade.position);
   }
 
   // Third person: the picture comes from a camera over the right shoulder, behind the eye. It looks
@@ -173,6 +177,7 @@ export class Player {
 
   // where the gun is held: the body's right hand, a little in front of the chest
   handAt(out) {
+    if (this.body && this.body.hand && this.body.visible) return this.body.hand.getWorldPosition(out);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     return out.set(this.pos.x + c * 0.22 - s * 0.2, this.smoothY + 1.3, this.pos.z - s * 0.22 - c * 0.2);
   }

@@ -138,7 +138,7 @@ export class Game {
     this.input = new Input(this.canvas, $('touch'));
     this.player = new Player(cam, this.physics, this.audio);
     // the player's own body, loaded in the background (the view is third person from the start)
-    loadGLB('models/player.glb').then((gltf) => { const b = prepVampire(gltf); b.mixer = new THREE.AnimationMixer(b); b.acts = {}; for (const c of gltf.animations) b.acts[c.name] = b.mixer.clipAction(c); this.player.body = b; scene.add(b); })
+    loadGLB('models/player.glb').then((gltf) => { const b = prepVampire(gltf); b.mixer = new THREE.AnimationMixer(b); b.hand = gltf.scene.getObjectByName('RightHand'); b.acts = {}; for (const c of gltf.animations) b.acts[c.name] = b.mixer.clipAction(c); this.player.body = b; scene.add(b); })
       .catch((e) => console.warn('could not load the player model', e));
     const gunMats = {
       gun: new THREE.MeshPhongMaterial({ color: 0x34363a, shininess: 70, specular: 0x5a5a5a }),
@@ -1098,7 +1098,7 @@ export class Game {
   throwBomb() {
     const r = this.arsenal.throwBomb();
     if (r === 'none') { this.audio.play('click', { vol: 0.5 }); this.toast('बम नहीं है', 'No bombs — look in houses, almirahs and on looters.'); }
-    if (r === 'ok') { this.updateHud(); this.player.throwT = 1.2; }
+    if (r === 'ok') { this.updateHud(); this.player.throwT = 0.95; }
   }
 
   eat() {

@@ -23,7 +23,7 @@ export const WEAPONS = {
 };
 
 const DEG = Math.PI / 180;
-const THROW = 0.62;     // seconds for the whole bomb throw animation
+const THROW = 0.95;     // seconds for the whole bomb throw (matches the body's throw clip, player.js)
 
 // ---------- view models ----------
 function vm(build) {
@@ -77,7 +77,7 @@ function buildModels(mats) {
   for (const m of [gun, wood, skin, sleeve, brass, mats.olive, mats.olive2]) if (m) addRim(m);
   const handMat = addRim(new THREE.MeshLambertMaterial({ vertexColors: true }));
   const handGeo = handGeometry(skin.color.getHex(), sleeve.color.getHex());
-  const hand = (g, x, y, z) => { const m = new THREE.Mesh(handGeo, handMat); m.position.set(x, y, z); m.visible = false; g.add(m); };   // third person: the body's own hand holds the gun
+  const hand = (g, x, y, z) => { const m = new THREE.Mesh(handGeo, handMat); m.position.set(x, y, z); m.visible = false; g.add(m); if (!g.userData.grip) g.userData.grip = m.position.clone(); };   // third person: the body's own hand holds the gun
   const B = (x, y, z) => new THREE.BoxGeometry(x, y, z);
   // trigger guard + trigger (+ any extra small parts), merged into ONE extra mesh per gun.
   // yb: bottom of the guard loop, zf: its front, zt: the trigger
@@ -345,7 +345,7 @@ export class Arsenal {
   throwBomb() {
     if (this.bombs <= 0) return 'none';
     if (this.throwT > 0 || this.switchT > 0 || this.reloadT > 0) return 'busy';
-    this.bombs--; this.throwT = THROW; this.releaseT = 0.2;
+    this.bombs--; this.throwT = THROW; this.releaseT = 0.6;   // leaves the hand at the top of the swing
     this.audio.play('click', { vol: 0.4, rate: 0.6 });
     return 'ok';
   }
@@ -355,7 +355,7 @@ export class Arsenal {
     const fwd = new THREE.Vector3(); cam.getWorldDirection(fwd);
     const right = new THREE.Vector3().crossVectors(fwd, cam.up).normalize();
     const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
-    const from = cam.position.clone().addScaledVector(fwd, 0.5).addScaledVector(right, -0.14).addScaledVector(up, -0.06);
+    const from = player.handAt(new THREE.Vector3());   // from the body's own hand
     // a firm overarm throw: about 20 m on flat ground when aimed level, further when aimed up
     const vel = fwd.clone().multiplyScalar(13.5); vel.y += 3.6;
     vel.x += player.vel.x * 0.6; vel.z += player.vel.y * 0.6;
@@ -464,7 +464,10 @@ export class Arsenal {
       rx += -0.9 * k; ry = 0.75 * k; rz = 0.35 * k; x -= 0.14 * k; y += 0.04 * k;
       this.swingT -= dt;
     }
-    m.position.set(x, y, z);
+    // third person: the grip sits in the body's right hand; only the bob, kick and reload dips stay
+    const gp = m.userData.grip || { x: 0, y: 0, z: 0 };
+    m.position.set(x - lerp(hip[0], adsP[0], a) - gp.x, y - lerp(hip[1], adsP[1], a) - gp.y, z - lerp(hip[2], adsP[2], a) - gp.z);
+    this.holder.visible = this.throwT <= 0 && !(ctx.game && ctx.game.vehicles.driving);   // put away while the right hand throws (and in a vehicle)
     m.rotation.set(rx, ry, rz);
     if (m.userData.warhead) m.userData.warhead.visible = this.mag[this.cur] > 0 || (this.reloadT > 0 && this.reloadT < w.reload * 0.45);
     player.handAt(this.holder.position);      // third person: held by the body's right hand
