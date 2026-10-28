@@ -12,6 +12,7 @@ export const MANIFEST = {
   banners: Array.from({ length: 5 }, (_, i) => 'banners/banner' + String(i + 1).padStart(2, '0')),
   gunSounds: { pistol: 'pistol', revolver: 'revolver', dunali: 'shotgun', rifle: 'rifle', rifle_reload_out: 'rifle_reload_out', rifle_reload_in: 'rifle_reload_in' }, // sounds/<file> -> sound key
   songs: Array.from({ length: 6 }, (_, i) => 'music/song' + String(i + 1).padStart(2, '0') + '.mp3'),
+  templeSong: 'music/templesong.mp3',                 // the Kamakhya Mandir's four loudspeakers
   // the user's zombie / Shivji audio: sound key -> folder + accepted file names (first match wins)
   userAudio: {
     zombieChase:  { dirs: ['music/', 'sounds/'], names: ['zombiechase', 'zombie chase', 'zombie_chase'], loop: true },                      // zombies on your heels

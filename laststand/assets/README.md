@@ -12,6 +12,7 @@ laststand/assets/
   photos/photo01.jpg … photo15.jpg
   banners/banner01.jpg … banner05.jpg
   music/song01.mp3 … song06.mp3
+  music/templesong.mp3                                       ← the mandir's four loudspeakers
   sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3   ← gun fire sounds
   music/zombiechase.mp3  zombiebye.mp3  zombiescream.mp3     ← zombie sounds
   music/shivjibackground.mp3                                 ← the Shivdham reveal music
@@ -70,6 +71,14 @@ walk in and fades out when you leave (they loop, and the songs are shuffled betw
 Gupta General Store, the courtyard haveli, the three-floor house, the east-lane house, the narrow house
 on Salon road and Baba Dhaba. A missing song plays radio static instead. Players can switch a radio off
 (it's loud).
+
+## Mandir loudspeakers — `music/templesong.mp3`
+Played through four PA horns: one on a bamboo pole at the turn from Wahabganj road into the lane toward the
+mandir, one on the Alia Market arch, one on the temple gate and one tied to the shikhara. All four carry the
+same signal, so they are always on the same moment of the song, and each horn's sound reaches you after the
+time sound takes to travel from it, so the far horns echo the near one. The song loops on the wall clock: it
+never starts from the top, you walk into it wherever it has got to. Heard muffled indoors, silent across town.
+Replace the file to change the song (keep the name).
 
 ## Gun fire sounds — `sounds/`
 Trimmed one-shot clips (`.mp3`, `.wav` or `.ogg`; the loader tries them in that order, so keep one format per name):

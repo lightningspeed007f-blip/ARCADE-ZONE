@@ -410,8 +410,8 @@ export class Audio {
   }
 
   // pause menu: <audio> elements keep running while the context is suspended, so hold them too
-  pauseTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.pause(); } }
-  resumeTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.play().catch(() => {}); } }
+  pauseTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.pause(); } if (this.pa) this.pa.el.pause(); }
+  resumeTracks() { for (const k in this.tracks) { const t = this.tracks[k]; if (t.on && t.el) t.el.play().catch(() => {}); } if (this.pa) { this.pa.sync(); this.pa.el.play().catch(() => {}); } }
 
   has(name) { return !!(this.b[name] && this.b[name].length); }
 
@@ -479,6 +479,13 @@ export class Audio {
       L.forwardX.setTargetAtTime(fw.x, t, 0.02); L.forwardY.setTargetAtTime(fw.y, t, 0.02); L.forwardZ.setTargetAtTime(fw.z, t, 0.02);
       L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0;
     } else { L.setPosition(p.x, p.y, p.z); L.setOrientation(fw.x, fw.y, fw.z, 0, 1, 0); }
+    // temple loudspeakers: each horn's sound arrives late by its distance (so the far ones echo the near
+    // one, as in a real lane) and fades out entirely across town
+    if (this.pa) for (const h of this.pa.horns) {
+      const d = Math.hypot(h.pos[0] - p.x, h.pos[1] - p.y, h.pos[2] - p.z);
+      h.d.delayTime.setTargetAtTime(Math.min(1.4, d / 343), t, 0.3);
+      h.g.gain.setTargetAtTime(Math.max(0, Math.min(1, (230 - d) / 90)), t, 0.5);
+    }
     if (inside !== this.muffled) {
       this.muffled = inside;
       this.ambLP.frequency.setTargetAtTime(inside ? 700 : 18000, t, 0.3);
@@ -524,7 +531,58 @@ export class Audio {
     return r;
   }
 
+  // ---------- the Kamakhya Mandir's loudspeakers ----------
+  // One <audio> through one "amplifier" feeds all four horns, so they always play the same moment of the
+  // song. The song runs on the wall clock, never from the top: arrive (or start a new run) and it is
+  // wherever it would be had the samiti switched it on long ago, looping all night.
+  startTemplePA(speakers) {
+    if (!this.ctx || this.pa || !speakers || !speakers.length) return;
+    const ctx = this.ctx;
+    const el = new window.Audio();
+    el.src = ASSET_ROOT + MANIFEST.templeSong;
+    el.loop = true; el.preload = 'auto'; el.crossOrigin = 'anonymous';
+    let src;
+    try { src = ctx.createMediaElementSource(el); } catch (e) { return; }
+    // the amplifier + horn colour: no bass, a honky presence bump, a touch of overdrive
+    const hpF = ctx.createBiquadFilter(); hpF.type = 'highpass'; hpF.frequency.value = 300;
+    const bump = ctx.createBiquadFilter(); bump.type = 'peaking'; bump.frequency.value = 2200; bump.Q.value = 0.9; bump.gain.value = 6;
+    const lpF = ctx.createBiquadFilter(); lpF.type = 'lowpass'; lpF.frequency.value = 5200;
+    const drive = ctx.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) { const x = (i / (curve.length - 1)) * 2 - 1; curve[i] = Math.tanh(2.2 * x) / Math.tanh(2.2); }
+    drive.curve = curve;
+    const amp = ctx.createGain(); amp.gain.value = 0.85;
+    src.connect(hpF); hpF.connect(bump); bump.connect(drive); drive.connect(lpF); lpF.connect(amp);
+    const horns = speakers.map((s) => {
+      const d = ctx.createDelay(1.5);
+      const g = ctx.createGain(); g.gain.value = 0;
+      const p = ctx.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse';
+      p.refDistance = 7; p.rolloffFactor = 1.1; p.maxDistance = 10000;
+      p.coneInnerAngle = 80; p.coneOuterAngle = 230; p.coneOuterGain = 0.35;    // horns throw forward
+      if (p.positionX) {
+        p.positionX.value = s.p[0]; p.positionY.value = s.p[1]; p.positionZ.value = s.p[2];
+        p.orientationX.value = s.dir[0]; p.orientationY.value = -0.2; p.orientationZ.value = s.dir[1];
+      } else { p.setPosition(...s.p); p.setOrientation(s.dir[0], -0.2, s.dir[1]); }
+      amp.connect(d); d.connect(g); g.connect(p); p.connect(this.amb);   // amb bus: muffled indoors like the rest of the street
+      return { pos: s.p, d, g };
+    });
+    const sync = () => { if (el.duration > 0 && isFinite(el.duration)) { try { el.currentTime = (Date.now() / 1000) % el.duration; } catch (e) { /* not seekable yet */ } } };
+    el.addEventListener('loadedmetadata', sync, { once: true });
+    el.addEventListener('error', () => { if (this.pa && this.pa.el === el) this.stopTemplePA(); });
+    el.play().catch(() => {});
+    this.pa = { el, src, amp, horns, sync };
+  }
+
+  stopTemplePA() {
+    if (!this.pa) return;
+    const { el, src, amp } = this.pa;
+    this.pa = null;
+    el.pause();
+    try { src.disconnect(); amp.disconnect(); } catch (e) { /* already disconnected */ }
+  }
+
   stopAll() {
+    this.stopTemplePA();
     for (const k in this.tracks) this.fade(k, 0, 0);
     for (const r of this.radios) r.stop();
     for (const k in this.loops) { try { this.loops[k].stop(); } catch (e) { /* already stopped */ } }
