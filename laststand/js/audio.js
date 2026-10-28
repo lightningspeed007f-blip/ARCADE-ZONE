@@ -460,6 +460,26 @@ export class Audio {
     return src;
   }
 
+  // The loudspeaker on the Kamakhya mandir gate (assets/music/mandirspeaker.mp3). A positional source:
+  // loud when you're close, fading with distance so it can still be heard from across town.
+  // With no file it stays silent.
+  startMandirSpeaker(pos) {
+    if (!this.ctx || !pos || this.loops.mandir) return;
+    const ctx = this.ctx;
+    const el = new window.Audio();
+    el.src = ASSET_ROOT + MANIFEST.mandirSpeaker;
+    el.loop = true; el.preload = 'auto'; el.crossOrigin = 'anonymous';
+    el.addEventListener('error', () => { /* no file: silent */ });
+    const src = ctx.createMediaElementSource(el);
+    const g = ctx.createGain(); g.gain.value = 1.2;
+    const p = ctx.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse';
+    p.refDistance = 4; p.rolloffFactor = 0.9; p.maxDistance = 1000;
+    p.positionX.value = pos[0]; p.positionY.value = pos[1]; p.positionZ.value = pos[2];
+    src.connect(g); g.connect(p); p.connect(this.amb);
+    el.play().catch(() => {});
+    this.loops.mandir = { stop: () => el.pause() };
+  }
+
   startAmbience(templePos) {
     if (!this.ctx || this.loops.wind) return;
     this.loops.wind = this.loop('wind', 0.25);

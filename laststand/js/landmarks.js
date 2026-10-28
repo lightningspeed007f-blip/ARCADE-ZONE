@@ -45,6 +45,10 @@ function temple(W) {
     F.cyl('plain', sx, 4.5, 0.12, 0.18, 0.45, rgb(0xd4a020), 8);
   }
   F.box('plaster', 0, 4.0, 0.12, 4.5, 0.25, 0.5, rgb(0xf6d6a0), { collide: false });
+  // loudspeaker on the right gate pillar: the mandir's music comes from here (see audio.startMandirSpeaker)
+  F.box('plain', 1.95, 4.95, 0.12, 0.34, 0.3, 0.26, rgb(0x2a2a2a), { collide: false });
+  F.cyl('plain', 1.95, 4.95, -0.02, 0.14, 0.08, rgb(0x9a9a9a), 10);
+  W.mandirSpeaker = F.world(1.95, 4.95, -0.05);
   const gateSign = W.signs.board('जय माँ कामाख्या दुर्गा पूजा समिति', 'JAY MAA KAMAKHYA DURGA POOJA SAMITI', '#b3261e', '#ffe9a8', 768, 160);
   F.wallQuad('sign', 0, 3.45, -0.15, 3.9, 0.82, Math.PI, gateSign);
   F.wallQuad('sign', 0, 3.45, 0.39, 3.9, 0.82, 0, gateSign);
