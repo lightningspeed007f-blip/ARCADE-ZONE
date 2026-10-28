@@ -9,7 +9,7 @@ export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62':
 
 // rpm = rounds per minute, spread/recoil in degrees
 export const WEAPONS = {
-  lathi:    { name: 'लाठी', en: 'LATHI', melee: true, dmg: 34, rpm: 95, range: 2.3, sound: 'whoosh' },
+  lathi:    { name: 'मुक्का', en: 'FISTS', melee: true, dmg: 34, rpm: 95, range: 2.3, sound: 'whoosh' },
   katta:    { name: 'देसी कट्टा', en: 'KATTA', ammo: '12G', mag: 1, dmg: 95, pellets: 1, rpm: 70, reload: 2.3, spread: 2.0, adsSpread: 0.9, recoil: 5.5, noise: 95, sound: 'katta', fov: 62 },
   pistol:   { name: '9mm पिस्टल', en: 'PISTOL', ammo: '9mm', mag: 12, dmg: 30, pellets: 1, rpm: 330, reload: 1.5, spread: 1.1, adsSpread: 0.35, recoil: 1.7, noise: 70, sound: 'pistol', fov: 60 },
   revolver: { name: '.32 रिवॉल्वर', en: 'REVOLVER', ammo: '.32', mag: 6, dmg: 48, pellets: 1, rpm: 150, reload: 2.9, spread: 0.8, adsSpread: 0.25, recoil: 2.8, noise: 75, sound: 'revolver', fov: 58 },
@@ -77,7 +77,7 @@ function buildModels(mats) {
   for (const m of [gun, wood, skin, sleeve, brass, mats.olive, mats.olive2]) if (m) addRim(m);
   const handMat = addRim(new THREE.MeshLambertMaterial({ vertexColors: true }));
   const handGeo = handGeometry(skin.color.getHex(), sleeve.color.getHex());
-  const hand = (g, x, y, z) => { const m = new THREE.Mesh(handGeo, handMat); m.position.set(x, y, z); g.add(m); };
+  const hand = (g, x, y, z) => { const m = new THREE.Mesh(handGeo, handMat); m.position.set(x, y, z); m.visible = false; g.add(m); };   // third person: the body's own hand holds the gun
   const B = (x, y, z) => new THREE.BoxGeometry(x, y, z);
   // trigger guard + trigger (+ any extra small parts), merged into ONE extra mesh per gun.
   // yb: bottom of the guard loop, zf: its front, zt: the trigger
@@ -91,23 +91,8 @@ function buildModels(mats) {
     g.add(m);
   };
   const M = {};
-  // lathi: a bamboo stick gripped in the right fist, forearm running down to the screen edge
+  // bare fists (no stick): nothing drawn, the body is the fighter
   M.lathi = vm((g) => {
-    const up = new THREE.Vector3(0, 1, 0);
-    const along = (mesh, dir, centre) => { mesh.quaternion.setFromUnitVectors(up, dir.clone().normalize()); mesh.position.copy(centre); g.add(mesh); return mesh; };
-    const d = new THREE.Vector3(-0.2, 0.6, -0.77).normalize();            // stick: up and away
-    along(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.0, 10), wood), d, d.clone().multiplyScalar(0.38));
-    along(new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.05, 10), brass), d, d.clone().multiplyScalar(0.86)); // metal ferrule at the tip
-    along(new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.13, 10), mats.tape || sleeve), d, d.clone().multiplyScalar(-0.03)); // cloth grip
-    // fist wrapped around the stick
-    const fist = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.1, 0.095), skin);
-    fist.quaternion.setFromUnitVectors(up, d); fist.position.set(0.012, 0, 0.006); g.add(fist);
-    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.03), skin);
-    thumb.position.set(-0.035, 0.035, -0.02); g.add(thumb);
-    // wrist + forearm in a sleeve, going down and back toward the bottom-right corner
-    const e = new THREE.Vector3(0.28, -0.55, 0.79).normalize();
-    along(new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.037, 0.12, 10), skin), e, e.clone().multiplyScalar(0.07));
-    along(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.056, 0.3, 12), sleeve), e, e.clone().multiplyScalar(0.26));
     g.userData.melee = true;
   });
   M.pistol = vm((g) => {
@@ -471,7 +456,7 @@ export class Arsenal {
       else bh.position.set(-0.2 + 0.1 * u, -0.1 - 0.4 * u * u, -0.44 - 0.16 * u), bh.rotation.set(0.5 - 1.5 * u, 0, 0.25);
       bh.userData.ball.visible = bh.userData.fz.visible = bh.userData.spark.visible = held;
       bh.userData.spark.scale.setScalar(0.06 + Math.random() * 0.06);
-      bh.visible = true;
+      bh.visible = false;   // the body's throw animation shows it now
     } else bh.visible = false;
     if (w.melee && this.swingT > 0) {
       const t = 1 - this.swingT / 0.35;
