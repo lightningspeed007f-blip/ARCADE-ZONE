@@ -1,7 +1,14 @@
-// First-person controller: walking, sprinting, crouching, stairs, falls,
+// Player controller: walking, sprinting, crouching, stairs, falls,
 // gentle head-bob and footsteps that change with the surface underfoot.
+// The eye (this.cam) is where the game looks from; the picture is drawn from a third-person
+// camera behind the body (placeThirdPerson), and the body itself is this.body.
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
+
+// third-person camera: distance behind the eye, shoulder offset to the right, and how far ahead
+// the view converges on (the crosshair aims at that point, so shots still land where it points)
+const TP_DIST = 2.6, TP_SHOULDER = 0.42, TP_RISE = 0.2, TP_AIM = 14;
+const _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _up = new THREE.Vector3(), _aim = new THREE.Vector3();
 
 export class Player {
   constructor(camera, physics, audio) {
@@ -25,6 +32,7 @@ export class Player {
     this.dead = false;
     this.hurtT = 0;
     this.smoothY = 0;
+    this.body = null;    // the player's own model, set once it has loaded
   }
 
   spawn(x, y, z, yaw) {
@@ -122,8 +130,31 @@ export class Player {
     this.cam.position.set(this.pos.x + bx * c + (Math.random() - 0.5) * sh, this.smoothY + this.eye + by + (Math.random() - 0.5) * sh, this.pos.z - bx * s);
     this.cam.rotation.order = 'YXZ';
     this.cam.rotation.set(this.pitch, this.yaw, Math.sin(this.bobT) * 0.004 * this.bobAmt * bob);
+    if (this.body) { this.body.position.set(this.pos.x, this.smoothY, this.pos.z); this.body.rotation.y = this.yaw + Math.PI; }
     this.hurtT = Math.max(0, this.hurtT - dt);
     return { sprinting, moving };
+  }
+
+  // Third person: the picture comes from a camera over the right shoulder, behind the eye. It looks
+  // at a point ahead along the aim, so the crosshair still marks where the shots go. Walls pull it in.
+  placeThirdPerson(tp) {
+    const cam = this.cam, e = cam.position;
+    cam.getWorldDirection(_fwd);
+    _right.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    _up.set(0, 1, 0).applyQuaternion(cam.quaternion);
+    let d = TP_DIST;
+    const hit = this.P.raycast(e.x, e.y, e.z, -_fwd.x, -_fwd.y, -_fwd.z, d + 0.25);
+    if (hit) d = Math.max(0.6, hit.t - 0.25);
+    tp.position.copy(e).addScaledVector(_fwd, -d).addScaledVector(_right, TP_SHOULDER).addScaledVector(_up, TP_RISE);
+    tp.updateMatrixWorld();
+    tp.lookAt(_aim.copy(e).addScaledVector(_fwd, TP_AIM));
+    if (tp.fov !== cam.fov || tp.far !== cam.far) { tp.fov = cam.fov; tp.far = cam.far; tp.updateProjectionMatrix(); }
+  }
+
+  // where the gun is held: the body's right hand, a little in front of the chest
+  handAt(out) {
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    return out.set(this.pos.x + c * 0.22 - s * 0.2, this.smoothY + 1.3, this.pos.z - s * 0.22 - c * 0.2);
   }
 
   damage(n, from, kind) {

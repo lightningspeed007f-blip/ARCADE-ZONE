@@ -6,6 +6,7 @@ import { createWorldContext, buildWorld } from './world.js';
 import { buildProps, part, merge, Bx, Cy, WHEEL } from './props.js';
 import { Nav } from './nav.js';
 import { Player } from './player.js';
+import { loadGLB, prepVampire } from './models.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
 import { Enemies } from './enemies.js';
@@ -77,6 +78,7 @@ export class Game {
     this.wscene = new THREE.Scene(); // view-model scene
     const cam = this.camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 170);
     scene.add(cam);
+    this.tpCam = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 170);   // the third-person picture (player.js)
     addEventListener('resize', () => this.resize());
     progress(0.05, 'बनावट तैयार हो रही है… textures');
     await (document.fonts?.ready || Promise.resolve());
@@ -135,6 +137,9 @@ export class Game {
     this.audio = new Audio();
     this.input = new Input(this.canvas, $('touch'));
     this.player = new Player(cam, this.physics, this.audio);
+    // the player's own body, loaded in the background (the view is third person from the start)
+    loadGLB('models/vampire.glb').then((gltf) => { this.player.body = prepVampire(gltf); scene.add(this.player.body); })
+      .catch((e) => console.warn('could not load the player model', e));
     const gunMats = {
       gun: new THREE.MeshPhongMaterial({ color: 0x34363a, shininess: 70, specular: 0x5a5a5a }),
       wood: new THREE.MeshPhongMaterial({ map: tex.wood, color: 0xa87a54, shininess: 18, specular: 0x2a2018 }),
@@ -220,6 +225,7 @@ export class Game {
   resize() {
     this.renderer.setSize(innerWidth, innerHeight);
     this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix();
+    this.tpCam.aspect = this.camera.aspect; this.tpCam.updateProjectionMatrix();
   }
 
   // ================= doors =================
@@ -1560,9 +1566,14 @@ export class Game {
     const su = this.sky.material.uniforms;
     su.time.value = this.time; su.fogc.value.copy(this.scene.fog.color).convertLinearToSRGB(); // valleys change the fog
     this.moon.position.set(cam.position.x - 60, cam.position.y + 75, cam.position.z - 90);
+    // on foot the picture comes from behind the body; a vehicle, the menus and the death screen keep their own camera
+    const onFoot = (this.state === 'play' || this.state === 'pause') && !this.vehicles.driving;
+    const view = onFoot ? this.tpCam : cam;
+    if (onFoot) this.player.placeThirdPerson(this.tpCam);
+    if (this.player.body) this.player.body.visible = onFoot;
     R.info.reset(); R.clear();
-    R.render(this.scene, cam);
-    if (this.state === 'play') { this.updateViewLights(); R.clearDepth(); R.render(this.wscene, cam); }
+    R.render(this.scene, view);
+    if (this.state === 'play') { this.updateViewLights(); R.clearDepth(); R.render(this.wscene, view); }
     this.adaptResolution(dt);
   }
 
