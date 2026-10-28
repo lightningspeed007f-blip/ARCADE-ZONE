@@ -209,7 +209,7 @@ function contactShadows(scene, pr) {
   const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, color: 0xffffff, opacity: 0.8 });
   const list = [];
   const add = (arr, w, l) => { for (const it of arr) list.push({ p: it.p, yaw: it.yaw || 0, w, l }); };
-  add(pr.cars, 2.3, 4.6); add(pr.autos, 1.8, 3.1); add(pr.buses, 3.2, 11.5); add(pr.carts, 1.6, 2.7); add(pr.bikes, 0.8, 2.1); add(pr.cows, 1.1, 2.0);
+  add(pr.cars, 2.3, 4.7); add(pr.autos, 2.3, 5.0); add(pr.buses, 3.2, 11.5); add(pr.carts, 1.6, 2.7); add(pr.bikes, 0.8, 2.1); add(pr.cows, 1.1, 2.0);
   // y 0.085: just above the highest road strip
   return instanced(scene, new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, list, (s) => ({ x: s.p[0], y: 0.085, z: s.p[2], yaw: s.yaw, sv: [s.w, 1, s.l] }));
 }
@@ -256,8 +256,10 @@ export function buildProps(W, scene, mats, tex) {
   const BIKE_C = [0x1a1a1a, 0xb01010, 0x1040a0, 0x202020, 0xe0e0e0, 0x404040];
   const CAR_C = [0xf0f0f0, 0xb8bcc0, 0x8a1010, 0x2a2a2e, 0x1a4a8a, 0xd8d0b8];
   instanced(scene, GEO.bike(), vc, pr.bikes, (b, i) => { P.add(b.p[0], 0.5, b.p[2], 0.25, 0.5, 0.95, b.yaw); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.12, color: BIKE_C[i % BIKE_C.length] }; });
-  instanced(scene, GEO.car(), vc, pr.cars, (c, i) => { P.add(c.p[0], 0.75, c.p[2], 0.82, 0.75, 1.88, c.yaw); return { x: c.p[0], y: 0, z: c.p[2], yaw: c.yaw, rz: c.wreck ? 0.08 : 0, color: c.wreck ? 0x4a3a30 : CAR_C[i % CAR_C.length] }; });
-  instanced(scene, GEO.auto(), vc, pr.autos, (a) => { P.add(a.p[0], 1, a.p[2], 0.68, 1, 1.3, a.yaw); return { x: a.p[0], y: 0, z: a.p[2], yaw: a.yaw, color: 0xffffff }; });
+  // the box cars and autos are the fallback: swaps.js hides them once the uploaded models (rusty car, burnt police car, ambulance) have loaded
+  out.cars = pr.cars; out.autos = pr.autos;
+  out.carMesh = instanced(scene, GEO.car(), vc, pr.cars, (c, i) => { P.add(c.p[0], 0.75, c.p[2], 0.84, 0.75, 2.1, c.yaw); return { x: c.p[0], y: 0, z: c.p[2], yaw: c.yaw, rz: c.wreck ? 0.08 : 0, color: c.wreck ? 0x4a3a30 : CAR_C[i % CAR_C.length] }; });
+  out.autoMesh = instanced(scene, GEO.auto(), vc, pr.autos, (a) => { P.add(a.p[0], 1.1, a.p[2], 1.0, 1.1, 2.4, a.yaw); return { x: a.p[0], y: 0, z: a.p[2], yaw: a.yaw, color: 0xffffff }; });
   instanced(scene, GEO.bus(), vc, pr.buses, (b) => { P.add(b.p[0], 1.6, b.p[2], 1.27, 1.6, 5.05, b.yaw); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, color: b.color }; });
   instanced(scene, GEO.cart(), vc, pr.carts, (c) => { P.add(c.p[0], 0.5, c.p[2], 0.6, 0.5, 1.05, c.yaw); return { x: c.p[0], y: 0, z: c.p[2], yaw: c.yaw, color: 0xffffff }; });
   instanced(scene, GEO.cow(), vc, pr.cows, (c, i) => { P.add(c.p[0], 0.5, c.p[2], 0.35, 0.5, 0.75, c.yaw); return { x: c.p[0], y: 0, z: c.p[2], yaw: c.yaw, color: i % 2 ? 0xf2efe8 : 0xb89878 }; });

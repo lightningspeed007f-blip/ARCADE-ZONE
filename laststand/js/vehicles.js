@@ -172,29 +172,25 @@ export class Vehicles {
 
   // ================= static part: built with the town, before navigation =================
   buildStatic(W, scene, mats) {
-    const P = W.P, R = makeRng(4242), wreckParts = [], hotParts = [];   // own RNG: the town itself stays exactly as before
+    const P = W.P, R = makeRng(4242), wreckParts = [], hotParts = [], shellParts = [];   // own RNG: the town itself stays exactly as before
     this.scene = scene;
-    const put = (geo, x, y, z, yaw, rx = 0, rz = 0) => {
+    const put = (geo, x, y, z, yaw, rx = 0, rz = 0, into = wreckParts) => {
       geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, yaw, rz, 'YXZ')), new THREE.Vector3(1, 1, 1)));
-      wreckParts.push(geo);
+      into.push(geo);
     };
     for (const w of WRECKS) {
       const at = this._place(w, P);
       if (!at) continue;
       w.doorAng = 0.75 + R() * 0.5;
       const geo = carShell(w, R);
-      if (w.flip) put(geo, at.x, 1.5, at.z, at.yaw, 0, Math.PI + 0.06);         // on its roof
-      else if (w.wheel !== undefined) put(geo, at.x, -0.08, at.z, at.yaw, (w.wheel < 2 ? 1 : -1) * 0.05, (w.wheel % 2 ? -1 : 1) * 0.07); // sagging on the missing wheel
-      else put(geo, at.x, 0, at.z, at.yaw, 0, (R() - 0.5) * 0.04);
+      // the box shells go in their own mesh: swaps.js hides it once the burnt-police / rusty car models have loaded
+      if (w.flip) put(geo, at.x, 1.5, at.z, at.yaw, 0, Math.PI + 0.06, shellParts);         // on its roof
+      else if (w.wheel !== undefined) put(geo, at.x, -0.08, at.z, at.yaw, (w.wheel < 2 ? 1 : -1) * 0.05, (w.wheel % 2 ? -1 : 1) * 0.07, shellParts); // sagging on the missing wheel
+      else put(geo, at.x, 0, at.z, at.yaw, 0, (R() - 0.5) * 0.04, shellParts);
       wreckParts.push(...debris(at.x, at.z, R, 9));
-      P.add(at.x, 0.75, at.z, 0.84, 0.75, 1.92, at.yaw);
-      if (w.door && !w.flip) {
-        const sd = w.door === 'L' ? 1 : -1, c = Math.cos(at.yaw), sn = Math.sin(at.yaw);
-        const lx = sd * (0.82 + Math.sin(w.doorAng) * 0.52), lz = 0.72 - Math.cos(w.doorAng) * 0.52;
-        P.add(at.x + lx * c + lz * sn, 0.9, at.z - lx * sn + lz * c, 0.05, 0.4, 0.52, at.yaw - sd * w.doorAng);
-      }
-      W.reserve(at.x, at.z, 1.2, 2.3, at.yaw);
-      this.wrecks.push(at);
+      P.add(at.x, 0.75, at.z, 0.95, 0.75, 2.3, at.yaw);
+      W.reserve(at.x, at.z, 1.2, 2.4, at.yaw);
+      this.wrecks.push({ ...at, spec: w });
     }
     for (const b of BURNING) {
       const at = this._place(b, P, 2.4);
@@ -214,6 +210,7 @@ export class Vehicles {
       W.lights.push(light);
       this.burning.push({ ...at, emit, light, acc: [0, 0, 0], sparkT: 1 + R() * 2, phase: R() * 10 });
     }
+    if (shellParts.length) { const m = this.wreckShell = new THREE.Mesh(merge(shellParts), mats.vcol); m.matrixAutoUpdate = false; scene.add(m); }
     if (wreckParts.length) { const m = new THREE.Mesh(merge(wreckParts), mats.vcol); m.matrixAutoUpdate = false; scene.add(m); }
     if (hotParts.length) {
       this.hotMat = new THREE.MeshBasicMaterial({ vertexColors: true, color: 0xff6a18, toneMapped: false });

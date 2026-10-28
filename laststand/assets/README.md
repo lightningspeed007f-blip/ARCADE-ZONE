@@ -225,3 +225,17 @@ The town has a day: a run starts at **night**, then comes **morning** (dawn ligh
 One full day is 12 minutes (night 5, morning 2½, day 2, evening 2½; change `DAY` in `js/daytime.js`).
 The time shows under the minimap. The hidden valleys, the outlands, the Joker's Playground and the
 Worm Desert keep their own night look.
+
+## Cars, ambulances and road grass (`models/*.glb`, loaded by `js/swaps.js`)
+```
+models/rusty_car.glb     parked cars (most) and some wrecks
+models/police_car.glb    burnt police car: crashed cars across the roads, some wrecks and parked cars
+models/police_car2.glb   the same wreck upside down (the overturned wreck)
+models/ambulance.glb     M725 army ambulance: the tempus
+models/dry_grass.glb     seven dry tufts   } scattered along the kerbs, in cracks and in
+models/grass06.glb       green blades      } patches on every road
+```
+These are the uploaded Sketchfab files, converted once: node transforms baked in, rotated to y-up, scaled to metres
+(nose toward +z, wheels on y = 0), only the colour texture kept (1024 px JPEG, PNG where there is alpha).
+The burning cars are unchanged (`js/vehicles.js`). The uploaded `grass_06` file was cut off in transfer, so its blade
+texture was rebuilt from the part that survived; re-upload the file if you want the original texture.

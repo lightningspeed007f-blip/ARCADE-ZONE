@@ -28,6 +28,7 @@ import { Joker, buildArena } from './joker.js';
 import { Giants, buildDesert } from './giants.js';
 import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
+import { Swaps } from './swaps.js';
 import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
 import { DayCycle } from './daytime.js';
@@ -186,6 +187,8 @@ export class Game {
     this.state = 'menu';
     this.renderMenuBackdrop();
     requestAnimationFrame((t) => this.frame(t));
+    this.swaps = new Swaps(this);
+    this.swaps.start();                               // the uploaded cars and ambulances, and grass breaking through the roads
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
     this.corpses.start();                             // the dead of Jais, in the background
   }
