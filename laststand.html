@@ -193,6 +193,7 @@ body.driving #touch [data-act=drive] .o { display: inline; }
 /* phones: the minimap sits top-left, beside the EAT / TORCH / RUN column, so it never covers USE, SWAP or DRIVE on the right */
 body.touch #minimap { right: auto; left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; }
 body.nomini #minimap { display: none; }
+#fsBtn { position: absolute; right: calc(18px + env(safe-area-inset-right)); top: 62px; width: 42px; height: 42px; border-radius: 50%; background: rgba(12,14,20,0.42); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 18px; font-weight: 700; }
 #touch [data-act=map] { left: calc(84px + env(safe-area-inset-left)); top: 80px; width: 84px; height: 84px; background: transparent; border-color: transparent; }
 body.nomini #touch [data-act=map] { left: auto; width: 42px; height: 42px; right: calc(70px + env(safe-area-inset-right)); top: 76px; background: rgba(12,14,20,0.42); border-color: rgba(255,255,255,0.2); }
 body.nomini #touch [data-act=map]::after { content: 'MAP'; }
@@ -319,6 +320,7 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
   <button class="tb big drv" data-act="steerR">▶</button>
   <button class="tb" data-act="map" id="mapBtn" aria-label="Map"></button>
   <button id="pauseBtn">II</button>
+  <button id="fsBtn" aria-label="Fullscreen" hidden>⛶</button>
 </div>
 <div id="editBar" class="hidden">Drag buttons to move them <button id="editDone">DONE</button></div>
 
@@ -434,6 +436,22 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
 
 <script>
   if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+  // Fullscreen: browsers only allow it from a tap, so the button calls it directly.
+  (function () {
+    const root = document.documentElement;
+    const btn = document.getElementById('fsBtn');
+    if (!(root.requestFullscreen || root.webkitRequestFullscreen)) return;
+    btn.hidden = false;
+    btn.addEventListener('click', () => {
+      try {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        } else {
+          (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+        }
+      } catch (e) { /* fullscreen refused by the browser; the game keeps running */ }
+    });
+  })();
 </script>
 <script type="importmap">{ "imports": { "three": "./laststand/lib/three.module.min.js" } }</script>
 <script type="module" src="laststand/js/main.js"></script>
