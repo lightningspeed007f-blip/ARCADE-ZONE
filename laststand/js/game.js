@@ -24,6 +24,7 @@ import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { Joker, buildArena } from './joker.js';
 import { Giants, buildDesert } from './giants.js';
+import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
 import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
@@ -160,6 +161,7 @@ export class Game {
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
     this.joker = new Joker(this);                        // the real villain: steps in when Mutant is nearly dead
     this.giants = new Giants(this);                      // after the Joker: the last bus, the warrior and the worm
+    this.spider = new Spider(this);                      // a showcase: a giant spider drifts across the sky over town
     this.crew = new Companions(this);                    // four fighters waiting in houses (their models load later)
     this.loot = new Loot(scene, mats.vcol);
     this.buildTrains();
@@ -485,6 +487,7 @@ export class Game {
     this.kaali.reset();
     this.state = 'play';
     this.outlands.reset();
+    this.spider.reset();
     this.input.resetState();
     this.input.enabled = true;
     document.body.classList.add('playing');
@@ -1294,6 +1297,7 @@ export class Game {
     this.boss.update(dt);
     this.joker.update(dt);
     this.giants.update(dt);
+    this.spider.update(dt);
     this.explosives.update(dt);
     this.vehicles.update(dt);
     this.loot.update(this.time);

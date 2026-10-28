@@ -17,6 +17,7 @@ laststand/assets/
   music/shivjibackground.mp3                                 ← the Shivdham reveal music
   maakaali1.png  maakaali3.JPG  maakaali2.png  maakaali4.JPG  ← the hidden Kalidham (see below)
   music/maakaalisong.mp3                                     ← the Kalidham music
+  music/spider.mp3                                           ← the giant spider in the sky (optional)
 ```
 
 ## Shivji (`shivji.png`)
