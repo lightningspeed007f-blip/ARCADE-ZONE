@@ -15,7 +15,7 @@
 //     like Shivji: first the great one in the middle, then the left and right ones, last the sky.
 //   * music/maakaalisong swells in once you are round the blind corner; footsteps are silent
 //     while it plays;
-//   * the acid gun lies on the tunnel floor just inside the mouth (ACID_AT, placed by game.js).
+//   * the acid gun falls out of the sky over the valley the first time you step into it.
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
 import { ASSET_ROOT } from './assets.js';
@@ -35,7 +35,6 @@ const C3Z0_A = 10.1, C3Z0_B = 2.7;                                // dead end (A
 const TRIG_A = -112.9, TRIG_B = -113.9;                           // hysteresis on x inside C2
 export const KX0 = (C3.x0 + C3.x1) / 2 + O.x;                     // valley centre line (-109.3)
 const ZM = C3Z0_B + O.z;                                          // the tunnel mouth (-1097.3)
-export const ACID_AT = [KX0, 0.05, ZM + 3];                       // the acid gun lies here, inside the tunnel: the only place it is found
 const Z = (v) => ZM + 0.6 + v;                                    // Shivdham valley numbers -> here
 const LAKE = { z0: Z(-108), z1: Z(-152), y: -0.65 };
 const BRICK = [0.62, 0.5, 0.44], STONE = [0.55, 0.52, 0.5], ROCK = [0.46, 0.42, 0.44];
@@ -470,8 +469,34 @@ export class Kaali {
     for (const key in this.figs) { const f = this.figs[key]; f.k = 0; f.revU.value = 0; f.pillar.visible = false; f.burst.visible = false; }
     this.g.audio.fade('kaaliMusic', 0, 0);
     this.lid.rotation.z = 0; this.leak.visible = true; this.lidBox.enabled = true;
+    this.gunSent = false; this.gunFall = null; this.gunIt = null;
     this.setMode(false);
     this.applySky();
+  }
+
+  // The acid gun falls out of the sky over the valley, once per run, the first time you step into it.
+  dropGun(p) {
+    const g = this.g, it = { kind: 'weapon', id: 'acid', p: [KX0 + (Math.random() - 0.5) * 2, 60, clamp(p.z - 6, ZM - 40, ZM - 3)] };
+    this.gunSent = true;
+    this.gunIt = it;
+    this.gunFall = { t: 0 };
+    g.loot.drop(it);
+  }
+
+  gunFallUpdate(dt) {
+    const f = this.gunFall, it = this.gunIt, L = this.g.loot;
+    f.t += dt;
+    const k = clamp(f.t / 1.5, 0, 1);
+    it.p[1] = 60 * (1 - k * k) + 0.05;
+    L._set(it); it.im.instanceMatrix.needsUpdate = true;
+    if (it.bi !== undefined && L.beacon) { L.beacon.geometry.attributes.position.setXYZ(it.bi, it.p[0], it.p[1] + 0.32, it.p[2]); L.beacon.geometry.attributes.position.needsUpdate = true; }
+    if (k < 1) return;
+    this.gunFall = null;
+    const X = this.g.explosives, [x, , z] = it.p;
+    this.g.audio.play('bang', { pos: [x, 0.5, z], vol: 0.8, rate: 0.8 });
+    this.g.player.shake = Math.max(this.g.player.shake, 0.4);
+    for (let i = 0; i < 16; i++) { const a = i / 16 * 6.28; X.smoke.emit(x, 0.3, z, Math.cos(a) * 3, 0.5, Math.sin(a) * 3, 1.4, 0.5, 2, [0.5, 0.47, 0.42], [0.4, 0.38, 0.35], 0.45, 0.2, 2); }
+    this.g.toast('तेज़ाब की बंदूक़ गिरी', this.g.input.touch ?'An acid gun fell from the sky — walk up and press USE.' : 'An acid gun fell from the sky — walk up and press E.');
   }
 
   // ---- interaction with the trapdoor ----
@@ -515,6 +540,8 @@ export class Kaali {
     const inB = p.z < -600;
     this.underground = (p.y < -1 && p.x > -122 && p.x < -104 && p.z > 8 && p.z < TOPZ + 1) || (inB && p.z > ZM - 0.5 && p.z < C1.z1 + O.z + 1);
     this.setMode(inB);
+    if (inB && !this.gunSent) this.dropGun(p);
+    if (this.gunFall) this.gunFallUpdate(dt);
     if (this.mode) {
       // keep the colossi turned toward the visitor (they never show their edge)
       for (const key in this.figs) {
