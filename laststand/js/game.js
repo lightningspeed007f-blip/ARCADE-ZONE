@@ -34,6 +34,7 @@ import { Atmosphere } from './atmosphere.js';
 import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
 import { DayCycle } from './daytime.js';
+import { ModelHouses } from './houses.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -115,6 +116,9 @@ export class Game {
     this.outlands.buildStatic(W, scene, mats);        // the highway sign and the metro entrance (the places beyond load later)
     placeCorpses(W);                                  // the dead: after the cars, buses and carts have their colliders
     W.B.build(scene, mats);
+    this.houses = new ModelHouses(scene, W.modelHouses);    // the walk-in houses (their colliders are already in)
+    let housesK = 0;
+    const housesP = this.houses.load((p) => { housesK = p; });
     this.buildWell();
     this.buildSky();
     for (const fn of W.deferred) fn(scene, mats);
@@ -123,7 +127,9 @@ export class Game {
     this.nav = this.townNav = new Nav(this.physics);  // swapped for a place's own grid while you are out of town
     this.townMap = new TownMap(W);
     progress(0.62, 'तस्वीरें और बैनर… your images');
-    this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.25, 'तस्वीरें और बैनर… your images'));
+    this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.2, 'तस्वीरें और बैनर… your images'));
+    const housesTick = setInterval(() => progress(0.82 + housesK * 0.1, 'घर… houses'), 200);
+    await housesP; clearInterval(housesTick);
     this.displays = buildDisplays(W, scene, this.assets, tex);
     // lights
     // Fill light: dimmer and less saturated than a flat blue wash, so the moon, the street
@@ -572,6 +578,7 @@ export class Game {
         return Math.abs(lx) < b.w / 2 - 0.3 && lz > 0.3 && lz < b.d - 0.3 && s.p[1] < 1.4;
       });
       if (!mine.length) continue;
+      if (b.tpl === 'model' && r.chance(0.6)) continue;          // lots of walk-in houses: most hold nothing
       let roll = r();
       if (b.locked || (b.name || '').startsWith('abandoned')) roll *= 0.7;   // hard-to-enter houses pay better
       const tier = roll < 0.22 ? 'armed' : roll < 0.3 ? 'arsenal' : roll < 0.5 ? 'ammo' : roll < 0.7 ? 'supplies' : 'empty';
@@ -625,6 +632,12 @@ export class Game {
     for (const b of W.enterables || []) {
       if (b.name === 'start' || this.crew.houses.has(b.name)) continue;
       const aband = (b.name || '').startsWith('abandoned');
+      if (b.tpl === 'model') {
+        if (!b.spots.length || !r.chance(b.kind === 'abandoned' ? 0.12 : 0.05)) continue;
+        const p = r.pick(b.spots);
+        if (Math.hypot(p[0] - sp.x, p[2] - sp.z) >= 20) E.spawn('thief', p[0], p[1], p[2], { wait: true, inside: true, frozen: true, yaw: b.F.yaw + Math.PI });
+        continue;
+      }
       if (!r.chance(aband ? 0.8 : 0.3)) continue;
       for (let k = 0; k < 8; k++) {
         const [x, , z] = b.F.world(r.range(-b.w / 2 + 1, b.w / 2 - 1), 0, r.range(b.d * 0.3, b.d * 0.8));
@@ -1563,6 +1576,8 @@ export class Game {
     const view = onFoot ? this.tpCam : cam;
     if (onFoot) this.player.placeThirdPerson(this.tpCam);
     if (this.player.body) this.player.body.visible = onFoot;
+    view.updateMatrixWorld();
+    if (this.houses) this.houses.update(view);
     R.info.reset(); R.clear();
     R.render(this.scene, view);
     if (this.state === 'play') { this.updateViewLights(); R.clearDepth(); R.render(this.wscene, view); }

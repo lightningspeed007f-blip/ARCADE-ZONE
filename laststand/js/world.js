@@ -6,6 +6,7 @@ import { makeRng, rgb } from './util.js';
 import { ROADS, BOUNDS, roadInfo, frameOnRoad, KAMAKHYA } from './layout.js';
 import { Frame, Templates, FH } from './interiors.js';
 import { buildLandmarks } from './landmarks.js';
+import { houseSize, pickKinds, placeHouse } from './houses.js';
 
 const OUTER = [0xf1e3c6, 0xe8d0c0, 0xd8dccb, 0xf3eedd, 0xe6c79a, 0xc9d3dc, 0xe2b8a8, 0xd8c8e0, 0xc8e0d0, 0xf0c8c8, 0xe0e0e0, 0xb8c8e8].map(rgb);
 
@@ -289,6 +290,41 @@ function placeEnterables(W) {
   front(list.find((b) => b.name === 'eastHouse'), 3.0, -0.07, 3.0, 1.0, 3);
 }
 
+// ---------- walk-in model houses (houses.js) ----------
+let houseN = 0;
+const insideTown = (x, z, rad) => x - rad > BOUNDS.minX + 25 && x + rad < BOUNDS.maxX - 25 && z - rad > BOUNDS.minZ + 30 && z + rad < BOUNDS.maxZ - 20;
+// On a street row at t metres along the road: the first kind (in a random order) that fits. Returns its width.
+function tryHouse(W, road, t, side, setback, r) {
+  for (const kind of pickKinds(W, r)) {
+    const { w, d } = houseSize(kind);
+    if (w > 16 || d > 16) continue;                       // the very big ones only go in the back blocks
+    const F0 = frameOnRoad(road, t + w / 2, side, setback);
+    const F = new Frame(W, F0.x, F0.z, F0.yaw);
+    const [cx, cz] = F.p(0, d / 2);
+    const rect = { x: cx, z: cz, hx: w / 2 + 0.15, hz: d / 2 + 0.1, yaw: F.yaw };
+    if (!insideTown(cx, cz, Math.max(w, d) / 2) || !W.free(rect)) continue;
+    W.rects.push(rect);
+    placeHouse(W, F0, kind, 'mh' + (houseN++));
+    return w;
+  }
+  return 0;
+}
+// In the blocks behind the streets: a house centred on (x, z), front toward one of the four sides.
+function backHouse(W, x, z, r, only) {
+  const yaw = r.int(0, 3) * Math.PI / 2 + r.range(-0.08, 0.08);
+  const kinds = only ? pickKinds(W, r).filter((k) => only.includes(k)) : pickKinds(W, r);
+  for (const big of ['horror', 'american']) { const i = kinds.indexOf(big); if (i > 0) { kinds.splice(i, 1); kinds.unshift(big); } }   // the big ones first, while they still find room
+  for (const kind of kinds) {
+    const { w, d } = houseSize(kind);
+    const rect = { x, z, hx: w / 2 + 0.6, hz: d / 2 + 0.6, yaw };
+    if (!insideTown(x, z, Math.max(w, d) / 2) || !W.free(rect)) continue;
+    W.rects.push(rect);
+    placeHouse(W, { x: x - Math.sin(yaw) * d / 2, z: z - Math.cos(yaw) * d / 2, yaw }, kind, 'mh' + (houseN++));
+    return true;
+  }
+  return false;
+}
+
 // ---------- fill streets with facade buildings ----------
 function fillLots(W) {
   const r = W.rng;
@@ -303,6 +339,12 @@ function fillLots(W) {
         const d = r.range(8, 13);
         const floors = r.chance(0.28) ? 1 : r.chance(0.65) ? 2 : 3;
         const setback = (lane ? 0.3 : 0.95) + r() * (lane ? 0.5 : 0.9);
+        const shops = bazaar && r.chance(0.8) || (lane && r.chance(0.15));
+        // homes: one of the walk-in model houses, if one fits here
+        if (!shops && r.chance(0.3)) {
+          const placed = tryHouse(W, road, t, side, setback, r);
+          if (placed) { t += placed + r.range(0.4, 1.6); continue; }
+        }
         const F0 = frameOnRoad(road, t + w / 2, side, setback);
         const F = new Frame(W, F0.x, F0.z, F0.yaw);
         const [cx, cz] = F.p(0, d / 2);
@@ -310,7 +352,7 @@ function fillLots(W) {
         const inside = cx - w > BOUNDS.minX + 25 && cx + w < BOUNDS.maxX - 25 && cz - w > BOUNDS.minZ + 30 && cz + w < BOUNDS.maxZ - 20;
         if (inside && W.free(rect)) {
           W.rects.push(rect);
-          facadeBuilding(W, F, w, d, floors, { shops: bazaar && r.chance(0.8) || (lane && r.chance(0.15)) });
+          facadeBuilding(W, F, w, d, floors, { shops });
           t += w + (r.chance(0.12) ? r.range(1.6, 3.5) : r.range(0, 0.25));
         } else t += 1.2;
       }
@@ -321,13 +363,17 @@ function fillLots(W) {
 // Dense blocks behind the street rows so the town reads as solid from roofs.
 function backfill(W) {
   const r = W.rng;
+  // the big house with the wraparound porch first, while the blocks are still empty
+  for (let k = 0; k < 40 && ((W.houseCount || {}).horror || 0) < 2; k++) backHouse(W, r.range(-170, 170), r.range(-140, 150), r, ['horror']);
   for (let x = -185; x < 190; x += 10.5) for (let z = -150; z < 168; z += 10.5) {
     const w = r.range(7, 10), d = r.range(7, 10);
     const px = x + r.range(-1.5, 1.5), pz = z + r.range(-1.5, 1.5);
     const yaw = r.chance(0.7) ? 0 : r.range(-0.15, 0.15);
     const rect = { x: px, z: pz, hx: w / 2 + 0.4, hz: d / 2 + 0.4, yaw };
-    if (!W.free(rect)) continue;
     if (Math.hypot(px - KAMAKHYA.well.x, pz - KAMAKHYA.well.z) < 9) continue;
+    // mostly walk-in model houses, turned any way round (their door faces wherever the alley is)
+    if (r.chance(0.2) && backHouse(W, px, pz, r)) continue;
+    if (!W.free(rect)) continue;
     W.rects.push(rect);
     const F = new Frame(W, px - Math.sin(yaw) * d / 2, pz - Math.cos(yaw) * d / 2, yaw);
     facadeBuilding(W, F, w, d, r.chance(0.3) ? 1 : r.chance(0.6) ? 2 : 3, { lit: 0.08 });
@@ -362,6 +408,7 @@ function groundAndBounds(W) {
 }
 
 export function buildWorld(W) {
+  houseN = 0;
   makeShopBoards(W);
   groundAndBounds(W);
   buildRoads(W);

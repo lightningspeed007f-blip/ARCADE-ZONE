@@ -140,7 +140,9 @@ function instanced(scene, geo, mat, list, setup) {
 // ---------- generate pole lines along every road ----------
 function poleLines(W) {
   const r = W.rng, P = W.P;
-  const blocked = (x, z) => P.groundAt(x, z, 0.3, 50) > 0.3;
+  // not on steps or a raised floor, and never in front of a door (the walk-in houses' steps start right at the kerb)
+  const doorAt = W.doors.map((d) => [d.hinge[0] + Math.cos(d.closedYaw) * d.w / 2, d.hinge[2] - Math.sin(d.closedYaw) * d.w / 2]);
+  const blocked = (x, z) => P.groundAt(x, z, 0.3, 50) > 0.3 || doorAt.some(([dx, dz]) => Math.abs(dx - x) < 2.5 && Math.abs(dz - z) < 2.5);
   for (const [name, road] of Object.entries(ROADS)) {
     const i = roadInfo(road);
     const lane = road.s === 'lane';
