@@ -45,7 +45,7 @@ export class Swaps {
 
   // the meshes of a loaded file, Lambert-lit like the rest of the town (the files have no node transforms)
   _meshes(gltf, name) {
-    const root = lambertize(gltf.scene, false, name === 'dry' || name === 'blades' ? 0.1 : 0.06);
+    const root = lambertize(gltf.scene, false, name === 'dry' || name === 'blades' ? 0.3 : 0.06);
     const out = [];
     root.updateMatrixWorld(true);
     root.traverse((o) => {
@@ -127,8 +127,8 @@ export class Swaps {
     const clear = (x, z) => P.groundAt(x, z, 0.35, 50) < 0.15;
     const add = (x, z, big) => {
       if (!clear(x, z)) return;
-      const blades = R() < 0.22;
-      const s = big ? R.range(0.7, 1.3) : R.range(0.4, 0.95);
+      const blades = R() < 0.3;
+      const s = big ? R.range(1.2, 2.0) : R.range(0.8, 1.5);
       list.push({
         kind: blades ? 'blades' : 'dry', v: Math.floor(R() * 7),
         x, y: 0.005, z, yaw: R() * 6.283, rx: R.range(-0.1, 0.1), rz: R.range(-0.1, 0.1),
@@ -141,7 +141,7 @@ export class Swaps {
       const at = (t, off) => [road.a[0] + i.ux * t + i.nx * off, road.a[1] + i.uz * t + i.nz * off];
       // along the kerbs, in clumps with gaps between
       for (const side of [-1, 1]) {
-        for (let t = 2; t < i.len - 2; t += R.range(1.1, 2.6) * thin) {
+        for (let t = 2; t < i.len - 2; t += R.range(0.6, 1.5) * thin) {
           const run = R() < 0.18 ? 3 : 1;                               // now and then a few tufts together
           for (let k = 0; k < run; k++) {
             const [x, z] = at(t + k * R.range(0.3, 0.7), side * (half - R.range(0.05, 0.9)));
@@ -150,7 +150,7 @@ export class Swaps {
         }
       }
       // cracks and potholes: small patches anywhere across the road
-      const patches = Math.round(i.len / 22 / thin);
+      const patches = Math.round(i.len / 9 / thin);
       for (let p = 0; p < patches; p++) {
         const t = R.range(3, i.len - 3), off = R.range(-half + 0.8, half - 0.8);
         const n = 2 + Math.floor(R() * 4);
