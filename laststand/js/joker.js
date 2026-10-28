@@ -7,7 +7,8 @@
 // At 60% health he lets his pet out: CatNap (models/catnap.glb), who stalks the player and
 // breathes its red gas. He never stands still for long: hit him and he runs off honking, and
 // between attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cartwheel).
-// At the far end of the square sits his jack-in-the-box crate with his own toy inside: the acid gun.
+// At the far end of the square sits his jack-in-the-box crate: opening it pops the jack out, but it holds no gun
+// (the acid gun is found only in the hidden Kalidham, kaali.js).
 // Killing the Joker sends you back to town, where the last bus out of the Jais bus adda takes you
 // to the Worm Desert and its two giants (giants.js). If their models cannot load, it ends the game.
 //
@@ -35,7 +36,7 @@ const RAMP_BOXES = [];                    // [cx, cy, cz, hx, hy, hz] of every r
 const W = (mx, mz) => [STREET.x + mx * STREET.S, STREET.z + mz * STREET.S];
 const PLAYER_IN = W(-3.4, 6.6), JOKER_IN = W(-3.6, 1.4);     // the far end of the west lane, ~21 m apart
 const CAT_SPOTS = [[-3.6, -5.6], [4.3, -5.4], [-3.4, 6.4], [4.6, 3.0], [-4.2, 0.4], [4.5, 7.4], [-1.2, -5.8], [2.6, 1.6]];
-const CRATE_AT = W(4.3, -5.4);            // the jack-in-the-box with the acid gun: the far corner from where you wake
+const CRATE_AT = W(4.3, -5.4);            // the jack-in-the-box (empty): the far corner from where you wake
 const SILLY = ['DANCE', 'SPIN', 'TAUNT', 'WHEEL'];
 
 const ease = (t) => smooth(clamp(t, 0, 1));
@@ -549,7 +550,7 @@ export class Joker {
     }
   }
 
-  // ---------- his crate: a jack-in-the-box with the acid gun inside ----------
+  // ---------- his crate: a jack-in-the-box that pops out, with nothing inside ----------
   buildCrate() {
     const g = this.g, c = document.createElement('canvas'); c.width = c.height = 256;
     const x = c.getContext('2d');
@@ -586,10 +587,6 @@ export class Joker {
     C.open = true; C.t = 0; C.jack.visible = true;
     g.audio.play('jkBoing', { pos: C.use, vol: 1.1 }); g.audio.play('clank', { pos: C.use, vol: 0.6 });
     g.fx.burst([C.use[0], 1.2, C.use[2]], [0, 1, 0], 24, [0.4, 1, 0.3], 3, 0.8);
-    const A = g.arsenal, fresh = A.give('acid');
-    A.reserve.acid += fresh ? 40 : 50;
-    g.feed('+ ' + 'एसिड गन · ACID GUN');
-    g.toast('एसिड गन मिली!', 'ACID GUN — the Joker\'s own toy. 150 damage a shot, and the acid splashes everything near.');
     if (this.state === 'FIGHT') this.quip('अरे! मेरा खिलौना मत छुओ!', "Hey! That's MY toy!");
   }
   updateCrate(dt) {

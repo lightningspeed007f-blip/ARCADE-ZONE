@@ -124,9 +124,11 @@ slashes if you get close and vanishes in a puff of smoke when hurt. Hit him and 
 attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cartwheel). At 60% health he lets
 out his pet, **CatNap**, who hunts you and breathes red smoke. At 30% he goes wild.
 
-At the far end of the square sits his glowing **jack-in-the-box crate**: open it (USE) for the **acid gun**
-(150 damage a shot, the most of any gun, and the acid splashes whatever stands next to the target; key 8 or
-swap). Killing the Joker sends you back to Jais: take the **last bus** from the bus adda (USE beside it, a
+At the far end of the square sits his glowing **jack-in-the-box crate**: open it (USE) and the jack pops out, but
+there is no gun inside. The **acid gun** (150 damage a shot, the most of any gun, and the acid splashes whatever
+stands next to the target; key 8 or swap) is found only in the hidden **Kalidham**: the second trapdoor in the
+Mandir courtyard, beside the Shivdham trapdoor. It lies on the tunnel floor just inside the mouth, in the valley.
+Killing the Joker sends you back to Jais: take the **last bus** from the bus adda (USE beside it, a
 glow marks it) to **the Worm Desert**, where the Giant Warrior and the Giant Worm wait. Kill both to win.
 
 | File | What it is |

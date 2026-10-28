@@ -14,7 +14,8 @@
 //   * the valley is empty when you walk out; a few steps onto the path they appear out of thin air,
 //     like Shivji: first the great one in the middle, then the left and right ones, last the sky.
 //   * music/maakaalisong swells in once you are round the blind corner; footsteps are silent
-//     while it plays.
+//     while it plays;
+//   * the acid gun lies on the tunnel floor just inside the mouth (ACID_AT, placed by game.js).
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
 import { ASSET_ROOT } from './assets.js';
@@ -34,6 +35,7 @@ const C3Z0_A = 10.1, C3Z0_B = 2.7;                                // dead end (A
 const TRIG_A = -112.9, TRIG_B = -113.9;                           // hysteresis on x inside C2
 export const KX0 = (C3.x0 + C3.x1) / 2 + O.x;                     // valley centre line (-109.3)
 const ZM = C3Z0_B + O.z;                                          // the tunnel mouth (-1097.3)
+export const ACID_AT = [KX0, 0.05, ZM + 3];                       // the acid gun lies here, inside the tunnel: the only place it is found
 const Z = (v) => ZM + 0.6 + v;                                    // Shivdham valley numbers -> here
 const LAKE = { z0: Z(-108), z1: Z(-152), y: -0.65 };
 const BRICK = [0.62, 0.5, 0.44], STONE = [0.55, 0.52, 0.5], ROCK = [0.46, 0.42, 0.44];

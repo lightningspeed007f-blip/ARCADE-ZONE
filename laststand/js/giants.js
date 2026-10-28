@@ -9,8 +9,8 @@
 //   THE GIANT WORM (models/worm.glb): a 9 m sand worm. It moves under the sand (a trail of dust), bursts
 //       out next to you, strikes and lunges (sections of its one long clip) or spits acid, then dives again.
 //       It can only be hurt while it is above the sand.
-// Kill both to finish the game. The acid gun from the Joker's crate is the gun for them; acid ammo lies
-// by the wreck and in the dunes.
+// Kill both to finish the game. The acid gun is the gun for them; it is found only in the hidden Kalidham
+// (kaali.js), so acid ammo lies by the wreck and in the dunes for whoever has it.
 //
 // Both models are rigged; the warrior's attacks are done by moving and tilting his whole body on top of
 // the walk, so they never depend on how the rig's bones are oriented.
@@ -223,7 +223,6 @@ export class Giants {
       drop('ammo', '7.62', -2, 29, 30); drop('ammo', '12G', 3, 28.5, 8);
       drop('food', 'water', -1, 30, 0); drop('food', 'laddoo', 18, 20, 0); drop('food', 'bread', -18, -20, 0);
       drop('bomb', 'bomb', 4, 29, 0); drop('bomb', 'bomb', -12, -2, 0);
-      if (!g.arsenal.owned.includes('acid')) drop('weapon', 'acid', 0.5, 28, 0);
     }
     this.stage = 'fight'; this.introT = 0;
     this.warrior.place(L(-6, -24), 0); this.worm.reset();
