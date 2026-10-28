@@ -481,7 +481,7 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.model && !e.roared) this.roar(e); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9, max: 30 }); if (T.model && !e.roared) this.roar(e); } }
     }
     // no player in sight: a living person close by is food too (thieves and looters get torn into)
     if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {

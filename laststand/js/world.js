@@ -261,9 +261,9 @@ function placeEnterables(W) {
   W.fuseSpots.push({ b: elec, p: elec.F.world(-0.4, 1.06, 2.0), label: 'वहाबगंज इलेक्ट्रिकल्स' });
   add('shop', R.WAHAB, 30, -1, { name: 'medical', w: 5, d: 8.5, sign: sign('शर्मा मेडिकल स्टोर', 'SHARMA MEDICAL STORE', '#2e7d32'), powered: true });
   add('courtyard', R.L2, 22, 1, { name: 'haveli', w: 14, d: 14, photos: [4, 5], radio: true });
-  add('narrow', R.L1, 44, 1, { name: 'narrow1', w: 4.4, d: 13, floors: 2, photos: [6] });
-  add('small', R.L3, 62, 1, { name: 'abandoned1', w: 7.4, d: 9, abandoned: true });
-  add('small', R.L3, 128, -1, { name: 'abandoned2', w: 7.4, d: 9, abandoned: true, locked: true });
+  add('narrow', R.L1, 44, 1, { name: 'narrow1', w: 4.4, d: 13, floors: 2, photos: [6], radio: true });
+  add('small', R.L3, 62, 1, { name: 'abandoned1', w: 7.4, d: 9, abandoned: true, radio: true });
+  add('small', R.L3, 128, -1, { name: 'abandoned2', w: 7.4, d: 9, abandoned: true, locked: true, radio: true });
   // Three-floor house south of the well street, facing the well
   const three = add('three', R.WELLST, 30, 1, { name: 'three', w: 12, d: 12, floors: 3, photos: [7, 8, 9], radio: true, powered: true, setback: 0.9,
     sign: S.board('निवास', 'NIWAS', '#5d4037', '#fff', 256, 64) });
@@ -274,10 +274,10 @@ function placeEnterables(W) {
   // east side
   add('school', R.E3, 34, 1, { name: 'school', w: 22, d: 10, photos: [11], sign: sign('प्राथमिक विद्यालय जायस', 'PRIMARY SCHOOL JAIS', '#1b5e20') });
   add('small', R.E1, 30, 1, { name: 'eastHouse', w: 7.4, d: 9, photos: [10], radio: true, powered: true });
-  add('shopHouse', R.MAIN, 150, 1, { name: 'mainShop', w: 6.4, d: 11, floors: 2, photos: [12], sign: sign('सोनी इलेक्ट्रॉनिक्स', 'SONI ELECTRONICS', '#0d47a1'), food: false });
+  add('shopHouse', R.MAIN, 150, 1, { name: 'mainShop', w: 6.4, d: 11, floors: 2, photos: [12], sign: sign('सोनी इलेक्ट्रॉनिक्स', 'SONI ELECTRONICS', '#0d47a1'), food: false, radio: true });
   add('narrow', R.SW, 34, 1, { name: 'narrow2', w: 4.4, d: 13, floors: 2, photos: [13], radio: true });
-  add('small', R.E2, 40, -1, { name: 'e2house', w: 7.4, d: 9, photos: [14], locked: true });
-  add('small', R.STN, 44, -1, { name: 'stnHouse', w: 7.4, d: 9, photos: [15] });
+  add('small', R.E2, 40, -1, { name: 'e2house', w: 7.4, d: 9, photos: [14], locked: true, radio: true });
+  add('small', R.STN, 44, -1, { name: 'stnHouse', w: 7.4, d: 9, photos: [15], radio: true });
   const chowki = add('chowki', R.MAIN, 266, 1, { name: 'chowki', w: 7, d: 6.5, sign: S.board('पुलिस सहायता केंद्र', 'POLICE HELP CENTRE · NAUGAZI', '#0d2a6a', '#fff', 512, 96), powered: true });
   W.keySpots.push({ b: chowki, p: chowki.F.world(-1.8, 0.8, 2.6), label: 'नौगजी पुलिस चौकी' });
   add('dhaba', R.SE, 30, -1, { name: 'dhaba', w: 9, d: 8, sign: sign('बाबा ढाबा · चाय नाश्ता', 'BABA DHABA', '#bf360c'), radio: true, powered: true });
