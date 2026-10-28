@@ -9,8 +9,8 @@
 //   THE GIANT WORM (models/worm.glb): a 9 m sand worm. It moves under the sand (a trail of dust), bursts
 //       out next to you, strikes and lunges (sections of its one long clip) or spits acid, then dives again.
 //       It can only be hurt while it is above the sand.
-// Kill both to finish the game. The acid gun is the gun for them; it is found only in the hidden Kalidham
-// (kaali.js), so acid ammo lies by the wreck and in the dunes for whoever has it.
+// Kill both to finish the game. The machine gun (found only in the hidden Kalidham, kaali.js) is the gun
+// for them, but its 200 rounds are all you get: no machine-gun ammo lies anywhere.
 //
 // Both models are rigged; the warrior's attacks are done by moving and tilting his whole body on top of
 // the walk, so they never depend on how the rig's bones are oriented.
@@ -215,11 +215,10 @@ export class Giants {
     g.chaseOn = false; g._chaseHold = 0; g.audio.fade('zombieChase', 0, 0.5);
     const fog = g.scene.fog; fog.color.setHex(0x2c1c12); fog.density = 0.013;
     if (g.audio.ctx && !this.wind) { this.wind = g.audio.loop('wind', 0, g.audio.amb); this.wind.gain.gain.linearRampToValueAtTime(0.5, g.audio.ctx.currentTime + 3); }
-    // acid by the wreck and in the dunes, a little food
+    // rifle and shotgun rounds by the wreck, a little food
     if (!this.stocked) {
       this.stocked = true;
       const drop = (kind, id, x, z, n) => g.loot.drop({ kind, id, n, p: [DESERT.x + x, 0.05, DESERT.z + z] });
-      drop('ammo', 'acid', 1.5, 29, 30); drop('ammo', 'acid', -26, -6, 20); drop('ammo', 'acid', 27, 4, 20); drop('ammo', 'acid', 0, -30, 25);
       drop('ammo', '7.62', -2, 29, 30); drop('ammo', '12G', 3, 28.5, 8);
       drop('food', 'water', -1, 30, 0); drop('food', 'laddoo', 18, 20, 0); drop('food', 'bread', -18, -20, 0);
       drop('bomb', 'bomb', 4, 29, 0); drop('bomb', 'bomb', -12, -2, 0);

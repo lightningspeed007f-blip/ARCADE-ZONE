@@ -8,7 +8,7 @@
 // breathes its red gas. He never stands still for long: hit him and he runs off honking, and
 // between attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cartwheel).
 // At the far end of the square sits his jack-in-the-box crate: opening it pops the jack out, but it holds no gun
-// (the acid gun is found only in the hidden Kalidham, kaali.js).
+// (the machine gun is found only in the hidden Kalidham, kaali.js).
 // Killing the Joker sends you back to town, where the last bus out of the Jais bus adda takes you
 // to the Worm Desert and its two giants (giants.js). If their models cannot load, it ends the game.
 //

@@ -754,7 +754,6 @@ export class Game {
       this.fx.burst(pt, [-dir.x * 0.4, 0.2, -dir.z * 0.4], bh.part === 'head' ? 16 : 9, [0.38, 0.05, 0.03], 2.4, 0.7);
       this.audio.play('flesh', { pos: pt, vol: 0.55 });
       if (src === 'player') this.hitMarker(bh.part === 'head', killed);
-      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, bh.e);
       return;
     }
     if (hit) {
@@ -765,7 +764,6 @@ export class Game {
       this.audio.play('flesh', { pos: pt, vol: 0.5 });
       if (src === 'player') this.hitMarker(hit.part === 'head', killed);
       if (Math.random() < 0.4) this.fx.bloodPool(e.pos.x + dir.x * 0.6, e.pos.y, e.pos.z + dir.z * 0.6, 0.5);
-      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, e);
       return;
     }
     if (wall) {
@@ -777,30 +775,6 @@ export class Game {
       this.audio.play(Math.random() < 0.15 ? 'ricochet' : 'wall', { pos: pt, vol: 0.5 });
       // doors take bullet damage too
       if (wall.box.tag === 'door') { const d = this.doors.find((x) => x.box === wall.box); if (d) { d.hp -= dmg; if (d.hp <= 0 && !d.metal) this.breakDoor(d); } }
-      if (w && w.acid) this.acidSplash(origin, pt, w, dmg, src, null);
-    } else if (w && w.acid) this.acidSplash(origin, [origin.x + dir.x * 40, origin.y + dir.y * 40, origin.z + dir.z * 40], w, 0, src, null);
-  }
-
-  // The acid gun's glob: a green streak to where it lands, a hiss of green smoke, and a splash that burns
-  // everything else within w.splash metres for part of the damage (zombies, Mutant, the Joker, the giants).
-  acidSplash(origin, pt, w, dmg, src, skip) {
-    const n = 7;
-    for (let k = 1; k <= n; k++) { const u = k / (n + 1); this.fx.burst([origin.x + (pt[0] - origin.x) * u, origin.y - 0.15 + (pt[1] - origin.y + 0.15) * u, origin.z + (pt[2] - origin.z) * u], [0, 0, 0], 2, [0.3, 1, 0.2], 0.4, 0.25, 0); }
-    if (!dmg) return;
-    this.fx.burst(pt, [0, 0.6, 0], 22, [0.35, 1, 0.25], 2.6, 0.8);
-    const S = this.explosives.smoke;
-    for (let i = 0; i < 6; i++) S.emit(pt[0], pt[1], pt[2], (Math.random() - 0.5) * 1.2, 0.6 + Math.random(), (Math.random() - 0.5) * 1.2, 1.2 + Math.random(), 0.4, 1.4, [0.35, 0.9, 0.3], [0.2, 0.45, 0.2], 0.6, 0.2, 0.8);
-    this.audio.play('sizzle', { pos: pt, vol: 0.7 });
-    const R = w.splash || 2, part = dmg * 0.4;
-    for (const e of this.enemies.list) {
-      if (e.dead || e === skip) continue;
-      const d = Math.hypot(e.pos.x - pt[0], e.pos.y + 1 - pt[1], e.pos.z - pt[2]);
-      if (d < R) this.enemies.damage(e, part * (1 - d / R * 0.5), 'body', { x: e.pos.x - pt[0], z: e.pos.z - pt[2] }, src);
-    }
-    for (const B of [this.boss, this.joker, this.joker.cat, ...(this.giants ? this.giants.foes() : [])]) {
-      if (!B || B === skip || !B.solid || !B.solid() || B.dead) continue;
-      const c = B.pos, d = Math.max(0, Math.hypot(c.x - pt[0], c.z - pt[2]) - (B.bodyR || 0.6));
-      if (d < R) B.damage(part * (1 - d / R * 0.5), 'body', null, src);
     }
   }
 
@@ -1083,7 +1057,7 @@ export class Game {
       if (this.food.length >= 8) { this.toast('झोला भरा है', 'Bag full — eat something first.'); return; }
       this.food.push(it.id); this.feed('+ ' + FOOD[it.id].name);
     } else if (it.kind === 'ammo') { A.reserve[it.id] += it.n; this.feed(`+${it.n} ${AMMO[it.id]}`); }
-    else if (it.kind === 'weapon') { const fresh = A.give(it.id); this.feed(fresh ? '+ ' + WEAPONS[it.id].name : `+${WEAPONS[it.id].mag} ${AMMO[WEAPONS[it.id].ammo]}`); }
+    else if (it.kind === 'weapon') { const fresh = A.give(it.id); this.feed(fresh ? '+ ' + WEAPONS[it.id].name : WEAPONS[it.id].noReload ? '+ 0 (no extra ammo)' : `+${WEAPONS[it.id].mag} ${AMMO[WEAPONS[it.id].ammo]}`); }
     else if (it.kind === 'key') { this.obj.key = true; this.feed('+ सिग्नल केबिन की चाबी'); this.updateObjective(); }
     else if (it.kind === 'fuse') { this.obj.fuse = true; this.feed('+ फ्यूज़'); this.updateObjective(); }
     else if (it.kind === 'bomb') {
@@ -1170,7 +1144,7 @@ export class Game {
       $('hp').classList.toggle('low', hp <= 30);
     }
     const V = this.vehicles, drv = V.driving;
-    const ammo = drv ? `${Math.round(Math.abs(V.car.speed) * 3.6)}<small> km/h</small>` : w.melee ? '—' : `${A.mag[A.cur]}<small> / ${A.reserve[w.ammo]}</small>`;
+    const ammo = drv ? `${Math.round(Math.abs(V.car.speed) * 3.6)}<small> km/h</small>` : w.melee ? '—' : (w.noReload ? `${A.mag[A.cur]}<small> / 200</small>` : `${A.mag[A.cur]}<small> / ${A.reserve[w.ammo]}</small>`);
     if (force || ammo !== this._ammo) { this._ammo = ammo; $('ammoNum').innerHTML = ammo; }
     const near = !drv && !!V.near();
     if (near !== this._canDrive) { this._canDrive = near; document.body.classList.toggle('canDrive', near); }
