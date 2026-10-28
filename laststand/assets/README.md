@@ -180,6 +180,25 @@ offline, so all four are posed in code (sitting, walking, running, swinging, aim
 The four load in the background right after the pickup (about 5.6 MB together); a fighter whose model hasn't
 arrived yet simply isn't in his house yet.
 
+## The dead of Jais — `models/body1`, `body2`, `body3`, `bodybags`, `pumpkin`
+Bodies lie about the town: about 46 of them on the streets, lanes and waste ground, and the **bus adda** has the most,
+23 in uneven heaps around its yard (a pile of bodies and rotten pumpkins here, a loner there). The layout is fixed
+(the same every run), and the bodies have no colliders, so you walk over them. They load in the background once the
+town is ready.
+
+| File | What it is |
+|------|------------|
+| `models/body1.glb` | A body under a bloodstained sheet (about 2.2 × 2.8 m). |
+| `models/body2.glb` | A body in grey wrapping, blood on the cloth (about 0.9 × 2.3 m). |
+| `models/body3.glb` | A body under a dark cover (about 2.4 × 1.5 m). |
+| `models/bodybags.glb` | Six Christmas body bags in a row (about 5.6 × 1.9 m). |
+| `models/pumpkin.glb` | A rotten pumpkin, scaled to about 0.6 m across. Its source was an unlit export with a black base colour, so it was made an ordinary lit material. |
+
+The uploads were cut short: their headers claim more data than the files hold, so the geometry is whole but the
+bottom part of one texture in each file was missing. The missing rows were rebuilt by mirroring the part that arrived
+(body1 lost about half of its sheet texture, the others between 4 and 16 percent of theirs). Then they were compressed (meshopt
+geometry, WebP textures) and the heavy ones simplified. Re-export from the originals if you have them.
+
 ## The map
 The full map (M / the map button) now has a **Beyond Jais** strip in the bottom-left corner: the forest road, the
 dead city and the old metro, each painted from its walkable ground once it has loaded, with arrows for the way
