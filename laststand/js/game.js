@@ -467,6 +467,7 @@ export class Game {
     }
     if (this.townMap.revealed) this.townMap.build();
     this.audio.startAmbience(this.displays.shivPos);
+    this.audio.startTemplePA(W.special.templeSpeakers);
     this.explosives.reset();
     this.vehicles.reset();
     this.boss.reset();

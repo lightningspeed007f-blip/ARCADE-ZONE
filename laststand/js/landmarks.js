@@ -149,6 +149,45 @@ function temple(W) {
   // sanctuary: zombies hesitate to cross the gate
   W.sanctuary.push({ F, x0: -w / 2, x1: w / 2, z0: 0, z1: d });
   W.templeFrame = F;
+  templeSpeakers(W, F, [tx, ty, tz]);
+}
+
+// The mandir's loudspeakers (music/templesong): four PA horns fed from one amplifier, so all four play
+// the same moment of the song. One at the turn off Wahabganj road into the lane toward the mandir,
+// one on the Alia Market arch, one on the temple gate and one tied high on the shikhara.
+function templeSpeakers(W, F, [tx, ty, tz]) {
+  const spk = [];
+  const add = (p, dx, dz) => { const l = Math.hypot(dx, dz); spk.push({ p, dir: [dx / l, dz / l] }); };
+  // 1) bamboo pole on the corner where the lane leaves Wahabganj road, facing traffic from the main road
+  const L2x = ROADS.L2.a[0], jx = L2x + ROADS.L2.w / 2 + 0.7, jz = ROADS.WAHAB.w / 2 + 0.7;
+  const PF = new Frame(W, jx, jz, 0);
+  PF.cyl('wood', 0, 0, 0, 0.075, 7.4, rgb(0xc8a860), 6, { collide: true });
+  add([jx, 6.7, jz], 1, -0.6);
+  // 2) top of the Alia Market arch's south post, facing back down the lane toward Wahabganj
+  add([-98.5, 5.45, 37.7], 0.25, -1);
+  // 3) left gate pillar, facing out over Alia lane
+  const g0 = F.world(-1.95, 4.95, 0.1), g1 = F.world(-1.95, 4.95, -1);
+  add(g0, g1[0] - g0[0], g1[2] - g0[2]);
+  // 4) tied to the shikhara, facing south-west over the market and the well
+  add([tx - 0.88, ty + 6.4, tz + 0.88], -1, 1);
+  W.special.templeSpeakers = spk;
+  W.deferred.push((scene) => {
+    const body = new THREE.MeshLambertMaterial({ color: 0xb4b8bc, side: THREE.DoubleSide });
+    const back = new THREE.MeshLambertMaterial({ color: 0x3a3c40 });
+    const bell = new THREE.CylinderGeometry(0.36, 0.08, 0.62, 14, 1, true).translate(0, 0.31, 0);
+    const lip = new THREE.TorusGeometry(0.36, 0.025, 4, 14).rotateX(Math.PI / 2).translate(0, 0.62, 0);
+    const driver = new THREE.CylinderGeometry(0.13, 0.13, 0.22, 10).translate(0, -0.08, 0);
+    const clamp = new THREE.BoxGeometry(0.06, 0.06, 0.34).translate(0, 0, -0.17);
+    for (const s of spk) {
+      const g = new THREE.Group();
+      g.position.set(...s.p);
+      g.rotation.y = Math.atan2(s.dir[0], s.dir[1]);
+      const h = new THREE.Group(); h.rotation.x = Math.PI / 2 + 0.22; g.add(h); // mouth forward, tilted a little down
+      h.add(new THREE.Mesh(bell, body), new THREE.Mesh(lip, body), new THREE.Mesh(driver, back));
+      g.add(new THREE.Mesh(clamp, back));
+      scene.add(g);
+    }
+  });
 }
 
 // ================= ALIA MARKET + WELL =================
