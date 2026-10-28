@@ -3,7 +3,8 @@
 // It never attacks and has no collisions: it fades in, glides slowly across the sky above the town,
 // then fades out and is gone for a while. It only appears while you are in the town itself (not
 // indoors, not in the valleys or the outlands), and only SPIDER.count times per run.
-// music/spider.mp3 (or sounds/spider.mp3) fades in while it is in the sky, see MANIFEST.userAudio.
+// music/spider.mp3 (a prowling growl) plays as it appears and again every few seconds while it is in
+// the sky. All the music dips a few seconds before it comes and comes back after it has gone.
 //
 //   models/spider.glb   the spider (static, one texture). Lambert like the rest of the town.
 import * as THREE from 'three';
@@ -19,6 +20,9 @@ export const SPIDER = {
   gap: [150, 220],       // seconds between appearances
   span: 130,             // how far it glides across (metres)
   fly: 42,               // seconds for one crossing
+  warn: 4,               // the music starts to dip this many seconds before it appears
+  duck: 0.2,             // music level while it is in the sky (0..1)
+  growl: [7, 11],        // seconds between its growls while it flies
 };
 
 const rand = (a, b) => a + (b - a) * Math.random();
@@ -56,7 +60,8 @@ export class Spider {
     this.waitT = rand(...SPIDER.first);
     this.t = 0;
     this.setOpacity(0);
-    this.g.audio.fade('spider', 0, 1);
+    this.growlT = 0;
+    this.g.audio.duck(1, 1);
   }
 
   // Whether you are in the main town: outdoors, not in a valley or the outlands.
@@ -81,21 +86,29 @@ export class Spider {
     this.count++;
     this.stage = 'fly';
     this.t = 0;
-    this.g.audio.fade('spider', 0.7, 2);
+    this.g.audio.duck(SPIDER.duck, 1.5);
+    this.growl();
+  }
+
+  growl() {
+    this.g.audio.play('spider', { vol: 1, verb: false });
+    this.growlT = rand(...SPIDER.growl);
   }
 
   end() {
     this.stage = 'wait';
     this.waitT = rand(...SPIDER.gap);
     this.setOpacity(0);
-    this.g.audio.fade('spider', 0, 2);
+    this.g.audio.duck(1, 3);       // the music comes back
   }
 
   update(dt) {
     if (!this.root) return;
     if (this.stage === 'wait') {
-      if (this.count >= SPIDER.count || !this.inTown()) return;
+      if (this.count >= SPIDER.count) return;
+      if (!this.inTown()) { this.g.audio.duck(1, 1.5); return; }   // walked off just before it came
       this.waitT -= dt;
+      if (this.waitT <= SPIDER.warn) this.g.audio.duck(SPIDER.duck, SPIDER.warn);   // the town goes quiet first
       if (this.waitT <= 0) this.begin();
       return;
     }
@@ -103,6 +116,8 @@ export class Spider {
     if (!this.inTown()) return this.end();
 
     this.t += dt;
+    this.growlT -= dt;
+    if (this.growlT <= 0 && this.t < SPIDER.fly - 4) this.growl();
     const u = clamp(this.t / SPIDER.fly, 0, 1);
     this.root.position.lerpVectors(this.from, this.to, u);
     this.root.position.y += Math.sin(this.g.time * 0.5) * 2.5;           // a slow float
