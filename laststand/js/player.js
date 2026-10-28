@@ -130,9 +130,20 @@ export class Player {
     this.cam.position.set(this.pos.x + bx * c + (Math.random() - 0.5) * sh, this.smoothY + this.eye + by + (Math.random() - 0.5) * sh, this.pos.z - bx * s);
     this.cam.rotation.order = 'YXZ';
     this.cam.rotation.set(this.pitch, this.yaw, Math.sin(this.bobT) * 0.004 * this.bobAmt * bob);
-    if (this.body) { this.body.position.set(this.pos.x, this.smoothY, this.pos.z); this.body.rotation.y = this.yaw + Math.PI; }
+    if (this.body) { this.body.position.set(this.pos.x, this.smoothY, this.pos.z); this.body.rotation.y = this.yaw + Math.PI; this.animate(dt, moving, sprinting, my); }
     this.hurtT = Math.max(0, this.hurtT - dt);
     return { sprinting, moving };
+  }
+
+  // the body's clips (models/player.glb): throw, crouch, back, run, pistol (also the idle, frozen)
+  animate(dt, moving, sprinting, my) {
+    const B = this.body; if (!B.acts) return;
+    this.throwT = Math.max(0, (this.throwT || 0) - dt);
+    const k = this.throwT > 0 ? 'throw' : this.crouched ? 'crouch' : moving && my < -0.3 ? 'back' : sprinting ? 'run' : 'pistol';
+    const a = B.acts[k];
+    if (B.cur !== a) { if (B.cur) B.cur.fadeOut(0.2); a.reset().fadeIn(0.2).play(); if (k === 'throw') a.time = 0.9; B.cur = a; }
+    a.timeScale = moving || k === 'throw' ? 1 : 0;
+    B.mixer.update(dt);
   }
 
   // Third person: the picture comes from a camera over the right shoulder, behind the eye. It looks
