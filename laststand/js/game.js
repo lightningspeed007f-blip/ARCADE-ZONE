@@ -26,6 +26,7 @@ import { Joker, buildArena } from './joker.js';
 import { Giants, buildDesert } from './giants.js';
 import { Outlands } from './outlands.js';
 import { Companions } from './companions.js';
+import { placeCorpses, Corpses } from './corpses.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -104,6 +105,7 @@ export class Game {
     buildDesert(W);                                   // the Worm Desert, the last stop (its giants load during the Joker fight)
     this.outlands = new Outlands(this);
     this.outlands.buildStatic(W, scene, mats);        // the highway sign and the metro entrance (the places beyond load later)
+    placeCorpses(W);                                  // the dead: after the cars, buses and carts have their colliders
     W.B.build(scene, mats);
     this.buildWell();
     this.buildSky();
@@ -165,6 +167,7 @@ export class Game {
     this.secret.build();
     this.kaali = new Kaali(this);
     this.kaali.build();
+    this.corpses = new Corpses(scene, W.corpses);     // the bodies (their models load in the background)
     // cached lists
     this.enterables = W.buildings.filter((b) => b.tpl);
     this.stairs = this.collectStairs();
@@ -174,6 +177,7 @@ export class Game {
     this.renderMenuBackdrop();
     requestAnimationFrame((t) => this.frame(t));
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
+    this.corpses.start();                             // the dead of Jais, in the background
   }
 
   makeMaterials(tex, signTex) {
