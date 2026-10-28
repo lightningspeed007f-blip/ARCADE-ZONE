@@ -19,7 +19,7 @@ export const MANIFEST = {
     zombieScream: { dirs: ['music/', 'sounds/'], names: ['zombiescream', 'zombie scream', 'zombie_scream'] },                              // far-off screams
     shivMusic:    { dirs: ['music/', 'sounds/'], names: ['shivjibackground', 'Shiv Ji background music', 'shiv ji background music', 'shivji_music'], loop: true }, // the Shivdham reveal
     kaaliMusic:   { dirs: ['music/', 'sounds/'], names: ['maakaalisong', 'maa kaali song', 'maakaali_song', 'kaalisong'], loop: true }, // the Kalidham tunnel + valley
-    spider:       { dirs: ['music/', 'sounds/'], names: ['spider', 'spider sound', 'spider_sound', 'spidersound'], loop: true }, // the giant spider in the sky (silent otherwise)
+    spider:       { dirs: ['music/', 'sounds/'], names: ['spider', 'spider sound', 'spider_sound', 'spidersound'] }, // the giant spider's sound, played 5 times per crossing (silent otherwise)
     jokerLaugh:   { dirs: ['music/', 'sounds/'], names: ['jokerlaugh'] }, // the Joker's laugh (a built-in cackle otherwise)
     jokerMusic:   { dirs: ['music/', 'sounds/'], names: ['jokermusic'], loop: true }, // the Joker's Playground (a music box otherwise)
     // the Joker's five silly sounds in the Playground (built-in versions otherwise)

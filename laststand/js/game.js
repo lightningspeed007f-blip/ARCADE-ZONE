@@ -31,6 +31,17 @@ import { placeCorpses, Corpses } from './corpses.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
+// Day and night over town (applyDaylight): each pair is [night, day]. One full day takes DAY_CYCLE
+// seconds of play; the game starts at night, and noon comes half a cycle later.
+const DAY_CYCLE = 900;
+const DAYLIGHT = {
+  fill: [new THREE.Color(0x5d6f9c), new THREE.Color(0xc4dcff)],
+  moon: [new THREE.Color(0xb0c2ff), new THREE.Color(0xfff0d6)],
+  top: [new THREE.Color(0x03060d), new THREE.Color(0x2f6cb4)],
+  hor: [new THREE.Color(0x1a2230), new THREE.Color(0xbfd7ea)],
+  glow: [new THREE.Color(0x3a2c22), new THREE.Color(0xffd9a0)],
+  fog: [new THREE.Color(0x0d1520), new THREE.Color(0xa6c0d6)],
+};
 
 // see Game.makeMaterials. amp: how far the brightness swings around 1 (mean stays ~1)
 function macroVariation(mat, macro, amp) {
@@ -124,6 +135,7 @@ export class Game {
     this.hemi = new THREE.HemisphereLight(0x5d6f9c, 0x342b20, HEMI_OUT);
     this.hemiSky = { out: new THREE.Color(0x5d6f9c), in: new THREE.Color(0x6a6052) };
     this.hemiK = 0;
+    this.day = 0;                                      // 0 = night, 1 = noon (see applyDaylight)
     scene.add(this.hemi);
     const moon = this.moonLight = new THREE.DirectionalLight(0xb0c2ff, 0.95); moon.position.set(-60, 120, -40); scene.add(moon);
     this.lightPool = new LightPool(scene, W.lights, this.quality === 'high' ? 8 : this.quality === 'med' ? 5 : 3);
@@ -314,10 +326,10 @@ export class Game {
       uniforms: {
         top: { value: new THREE.Color(0x03060d) }, hor: { value: new THREE.Color(0x1a2230) }, glow: { value: new THREE.Color(0x3a2c22) },
         fogc: { value: fogCol.clone().convertLinearToSRGB() }, clouds: { value: this.tex.macro },
-        time: { value: 0 }, cloudAmt: { value: this.quality === 'low' ? 0 : 1 },
+        time: { value: 0 }, cloudAmt: { value: this.quality === 'low' ? 0 : 1 }, day: { value: 0 },
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 glow; uniform vec3 fogc; uniform sampler2D clouds; uniform float time; uniform float cloudAmt;
+      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 glow; uniform vec3 fogc; uniform sampler2D clouds; uniform float time; uniform float cloudAmt; uniform float day;
         varying vec3 vP;
         void main(){
           vec3 d = normalize(vP);
@@ -329,6 +341,7 @@ export class Game {
             float n = texture2D(clouds, uv).r * 0.7 + texture2D(clouds, uv * 2.7 + 0.3).r * 0.3;
             float m = smoothstep(0.44, 0.62, n) * smoothstep(0.03, 0.3, h) * cloudAmt;
             vec3 cc = mix(vec3(0.14, 0.115, 0.1), vec3(0.075, 0.085, 0.11), smoothstep(0.05, 0.6, h));
+            cc = mix(cc, vec3(0.92, 0.92, 0.94), day);
             c = mix(c, cc, m * 0.85);
           }
           c = mix(fogc, c, smoothstep(-0.03, 0.16, d.y));
@@ -1502,9 +1515,28 @@ export class Game {
     if (st !== 'play' && st !== 'menu' && st !== 'dead' && st !== 'win') return; // paused: hold
     this.hemiK += ((st === 'play' && (this.inside || this.outlands.indoor) ? 1 : 0) - this.hemiK) * Math.min(1, dt * 3);
     const k = this.hemiK;
-    this.hemi.intensity = HEMI_OUT - 0.42 * k;
+    // the valleys and the outlands keep their own sky: only the fill and the moon follow the clock there
+    const local = !this.inValley();
+    if (local) this.day = 0.5 - 0.5 * Math.cos((this.time / DAY_CYCLE) * Math.PI * 2);
+    const d = this.day, D = DAYLIGHT;
+    this.hemiSky.out.lerpColors(D.fill[0], D.fill[1], d);
+    this.hemi.intensity = HEMI_OUT - 0.42 * k + 0.2 * d * (1 - k);
     this.hemi.color.copy(this.hemiSky.out).lerp(this.hemiSky.in, k);
-    this.moonLight.intensity = 0.95 - 0.6 * k;
+    this.moonLight.intensity = 0.95 - 0.6 * k + 0.5 * d * (1 - k);
+    this.moonLight.color.lerpColors(D.moon[0], D.moon[1], d);
+    if (local) this.paintSky(d);
+  }
+
+  // The town's sky, fog, stars and moon for this time of day.
+  paintSky(d) {
+    const D = DAYLIGHT, su = this.sky.material.uniforms;
+    su.top.value.lerpColors(D.top[0], D.top[1], d);
+    su.hor.value.lerpColors(D.hor[0], D.hor[1], d);
+    su.glow.value.lerpColors(D.glow[0], D.glow[1], d);
+    su.day.value = d;
+    this.scene.fog.color.lerpColors(D.fog[0], D.fog[1], d);
+    this.stars.material.opacity = 0.8 * (1 - d);
+    this.moon.visible = d < 0.5;
   }
 
   updateViewLights() {

@@ -3,7 +3,7 @@
 // It never attacks and has no collisions: it fades in, glides slowly across the sky above the town,
 // then fades out and is gone for a while. It only appears while you are in the town itself (not
 // indoors, not in the valleys or the outlands), and only SPIDER.count times per run.
-// music/spider.mp3 (or sounds/spider.mp3) fades in while it is in the sky, see MANIFEST.userAudio.
+// music/spider.mp3 (or sounds/spider.mp3) plays five times during each crossing, see MANIFEST.userAudio.
 //
 //   models/spider.glb   the spider (static, one texture). Lambert like the rest of the town.
 import * as THREE from 'three';
@@ -19,6 +19,7 @@ export const SPIDER = {
   gap: [150, 220],       // seconds between appearances
   span: 130,             // how far it glides across (metres)
   fly: 42,               // seconds for one crossing
+  plays: 5,              // how often its sound (music/spider.mp3, a 2-3 s clip) plays in one crossing
 };
 
 const rand = (a, b) => a + (b - a) * Math.random();
@@ -32,6 +33,7 @@ export class Spider {
     this.stage = 'wait';   // 'wait' -> 'fly' -> 'wait' ... (no more waiting after the last one)
     this.waitT = rand(...SPIDER.first);
     this.t = 0;
+    this.played = 0;       // sound plays so far in this crossing
     this.from = new THREE.Vector3();
     this.to = new THREE.Vector3();
 
@@ -56,7 +58,6 @@ export class Spider {
     this.waitT = rand(...SPIDER.first);
     this.t = 0;
     this.setOpacity(0);
-    this.g.audio.fade('spider', 0, 1);
   }
 
   // Whether you are in the main town: outdoors, not in a valley or the outlands.
@@ -81,14 +82,13 @@ export class Spider {
     this.count++;
     this.stage = 'fly';
     this.t = 0;
-    this.g.audio.fade('spider', 0.7, 2);
+    this.played = 0;
   }
 
   end() {
     this.stage = 'wait';
     this.waitT = rand(...SPIDER.gap);
     this.setOpacity(0);
-    this.g.audio.fade('spider', 0, 2);
   }
 
   update(dt) {
@@ -109,6 +109,11 @@ export class Spider {
     this.root.rotation.set(0, Math.atan2(this.to.x - this.from.x, this.to.z - this.from.z), 0);
     // fade in over the first part of the flight, out over the last part
     this.setOpacity(smooth(clamp(u / 0.12, 0, 1)) * smooth(clamp((1 - u) / 0.15, 0, 1)));
+    // its sound, spread evenly over the crossing: one play at the middle of each slice of time
+    while (this.played < SPIDER.plays && this.t >= (SPIDER.fly * (this.played + 0.5)) / SPIDER.plays) {
+      this.played++;
+      this.g.audio.play('spider', { vol: 0.9, verb: false });
+    }
     if (u >= 1) this.end();
   }
 }
