@@ -10,6 +10,9 @@ import { clamp, lerp, angleDiff, rgb } from './util.js';
 import { Physics } from './physics.js';
 import { BOMB } from './explosives.js';
 
+// a zombie's scream is heard only this close (metres), and it stops the moment that zombie dies
+const SCREAM_RANGE = 6;
+
 const MAX = 170;
 export const TYPES = {
   walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl' },
@@ -276,7 +279,7 @@ export class Enemies {
     e.roarT = hound ? 1.5 : 1.6;
     if (hound) {
       g.audio.play('bark', { pos: [e.pos.x, e.pos.y + 0.8, e.pos.z], vol: 1.1, rate: 0.75, max: 160 });
-      g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 0.8, e.pos.z], vol: 0.55, rate: 1.6, delay: 0.25, max: 160 });
+      this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 0.8, e.pos.z], vol: 0.55, rate: 1.6, delay: 0.25 });
       for (const o of this.list) {
         if (o === e || o.dead || o.type !== 'hound' || o.state === 'CHASE' || o.state === 'ATTACK') continue;
         if (Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) > 45) continue;
@@ -284,7 +287,7 @@ export class Enemies {
       }
     } else {
       g.audio.play('growlBig', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 1.1, rate: 0.85, max: 140 });
-      g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.7, rate: 0.6, delay: 0.35, max: 140 });
+      this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.7, rate: 0.6, delay: 0.35 });
     }
   }
 
@@ -330,8 +333,23 @@ export class Enemies {
     return false;
   }
 
+  // a zombie's scream: only within SCREAM_RANGE, and one at a time per zombie so it can be cut off
+  zombieScream(e, o) {
+    const g = this.game, P = g.player;
+    if (e.dead || Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) > SCREAM_RANGE) return;
+    this.stopScream(e);
+    e.screamSrc = g.audio.play('scream', { ...o, max: SCREAM_RANGE + 2 });
+  }
+
+  stopScream(e) {
+    if (!e.screamSrc) return;
+    try { e.screamSrc.stop(); } catch (err) { /* already finished */ }
+    e.screamSrc = null;
+  }
+
   kill(e, part, dir, src) {
     e.dead = true; e.deathT = 0;
+    this.stopScream(e);
     e.fallDir = dir ? (Math.cos(e.yaw) * dir.z + Math.sin(e.yaw) * dir.x > 0 ? -1 : 1) : 1;
     const g = this.game;
     g.audio.play(e.human ? 'flesh' : (e.type === 'brute' ? 'growlBig' : 'growl'), { pos: [e.pos.x, e.pos.y + 1.4, e.pos.z], vol: 0.6, rate: 0.7 });
@@ -467,7 +485,9 @@ export class Enemies {
     // heard only nearby (a chasing one a little further), and not at all from outside while the player is indoors
     if (e.nextGrowl <= 0 && d < (e.state === 'CHASE' ? 28 : 16) && g.audibleFrom(e.pos.x, e.pos.y, e.pos.z)) {
       const dog = e.type === 'hound';
-      g.audio.play(dog ? (e.state === 'CHASE' ? 'bark' : 'growl') : e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl, { pos: [e.pos.x, e.pos.y + (dog ? 0.8 : 1.6), e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' || e.type === 'ghoul' ? 0.8 : dog ? 0.85 + Math.random() * 0.3 : 1, ref: 2.5, max: 30 });
+      const sound = dog ? (e.state === 'CHASE' ? 'bark' : 'growl') : e.state === 'CHASE' && e.type === 'runner' ? 'scream' : T.growl === 'scream' ? 'growl' : T.growl;
+      const cry = { pos: [e.pos.x, e.pos.y + (dog ? 0.8 : 1.6), e.pos.z], vol: e.state === 'CHASE' ? 0.9 : 0.55, rate: e.type === 'brute' || e.type === 'ghoul' ? 0.8 : dog ? 0.85 + Math.random() * 0.3 : 1, ref: 2.5, max: 30 };
+      if (sound === 'scream') this.zombieScream(e, cry); else g.audio.play(sound, cry);
       // a runner's chase cry is a scream, so it comes much less often than the other growls
       e.nextGrowl = (e.state === 'CHASE' ? (e.type === 'runner' ? 7 : 2.5) : 6) + Math.random() * 6;
     }
@@ -481,7 +501,7 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') g.audio.play('scream', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.model && !e.roared) this.roar(e); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.model && !e.roared) this.roar(e); } }
     }
     // no player in sight: a living person close by is food too (thieves and looters get torn into)
     if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {

@@ -1,6 +1,7 @@
 // JAIS: LAST STAND — game orchestration.
 import * as THREE from 'three';
 import { buildTextures } from './textures.js';
+import { MANIFEST } from './assets.js';
 import { createWorldContext, buildWorld } from './world.js';
 import { buildProps, part, merge, Bx, Cy, WHEEL } from './props.js';
 import { Nav } from './nav.js';
@@ -456,12 +457,12 @@ export class Game {
     this.crew.reset(r);                                  // before the thieves: no thief waits in a crew house
     this.spawnEnemies(r);
     // radios: shuffle songs into the radio houses each run
-    const songs = r.shuffle([0, 1, 2, 3, 4, 5]);
+    const songs = r.shuffle(MANIFEST.songs.map((_, i) => i));
     this.radios = [];
     let si = 0;
     for (const slot of W.radioSlots) {
       const isStart = slot.building && slot.building.name === 'start';
-      const rad = this.audio.makeRadio(slot.p, isStart ? null : songs[si++ % 6]);
+      const rad = this.audio.makeRadio(slot.p, isStart ? null : songs[si++ % songs.length]);
       if (rad) { rad.building = slot.building; rad.start_ = isStart; this.radios.push(rad); }
     }
     if (this.townMap.revealed) this.townMap.build();
@@ -874,7 +875,8 @@ export class Game {
     }
     if (near < Infinity) { this._chaseHold = 3; this._chaseNear = near; } else this._chaseHold = Math.max(0, (this._chaseHold || 0) - dt);
     this.chaseOn = this._chaseHold > 0;
-    const vol = this.chaseOn ? Math.round((0.4 + 0.4 * clamp(1 - this._chaseNear / 32, 0, 1)) * 10) / 10 : 0;
+    // full volume when a chaser is on top of you, silent once the nearest one is 22 m or more away
+    const vol = this.chaseOn ? Math.round(0.8 * clamp(1 - this._chaseNear / 22, 0, 1) * 10) / 10 : 0;
     this.audio.fade('zombieChase', vol, vol > 0 ? 0.8 : 2.5);
   }
 
