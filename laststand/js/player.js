@@ -130,19 +130,28 @@ export class Player {
     this.cam.position.set(this.pos.x + bx * c + (Math.random() - 0.5) * sh, this.smoothY + this.eye + by + (Math.random() - 0.5) * sh, this.pos.z - bx * s);
     this.cam.rotation.order = 'YXZ';
     this.cam.rotation.set(this.pitch, this.yaw, Math.sin(this.bobT) * 0.004 * this.bobAmt * bob);
-    if (this.body) { this.body.position.set(this.pos.x, this.smoothY, this.pos.z); this.body.rotation.y = this.yaw + Math.PI; this.animate(dt, moving, sprinting, my); }
+    if (this.body) { this.body.position.set(this.pos.x, this.smoothY, this.pos.z); this.body.rotation.y = this.yaw + Math.PI; this.animate(dt, moving, sprinting, my, weapon); }
     this.hurtT = Math.max(0, this.hurtT - dt);
     return { sprinting, moving };
   }
 
-  // the body's clips (models/player.glb): throw, crouch, back, run, pistol (also the idle, frozen)
-  animate(dt, moving, sprinting, my) {
+  // the body's clips (models/player.glb). A new pose must be wanted for 0.15 s before it takes over,
+  // so sprint / step flickering on and off for a frame no longer makes the body twitch between clips.
+  animate(dt, moving, sprinting, my, weapon) {
     const B = this.body; if (!B.acts) return;
     this.throwT = Math.max(0, (this.throwT || 0) - dt);
-    const k = this.throwT > 0 ? 'throw' : this.crouched ? 'crouch' : moving && my < -0.3 ? 'back' : sprinting ? 'run' : 'pistol';
+    const armed = weapon && !weapon.w.melee;
+    const k = this.throwT > 0 ? 'throw' : this.crouched ? 'crouch' : !moving ? (armed ? 'pistol' : 'idle') : my < -0.3 ? 'back' : sprinting ? 'run' : 'pistol';
+    if (k !== B.want) { B.want = k; B.wantT = 0; } else B.wantT += dt;
     const a = B.acts[k];
-    if (B.cur !== a) { if (B.cur) B.cur.fadeOut(0.2); a.reset().fadeIn(0.2).play(); if (k === 'throw') a.time = 0.9; B.cur = a; }
-    a.timeScale = moving || k === 'throw' ? 1 : 0;
+    if (B.cur !== a && (k === 'throw' || B.wantT > 0.15)) {
+      if (B.cur) B.cur.fadeOut(0.25);
+      a.enabled = true; a.setEffectiveWeight(1); a.fadeIn(0.25).play();
+      if (k === 'throw') a.time = 0.9;
+      B.cur = a;
+    }
+    const c = B.cur;
+    if (c) c.timeScale = moving || c === B.acts.throw || c === B.acts.idle ? 1 : 0;
     B.mixer.update(dt);
   }
 
