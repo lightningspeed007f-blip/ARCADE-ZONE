@@ -15,7 +15,7 @@
 //     like Shivji: first the great one in the middle, then the left and right ones, last the sky.
 //   * music/maakaalisong swells in once you are round the blind corner; footsteps are silent
 //     while it plays;
-//   * the acid gun falls out of the sky over the valley the first time you step into it.
+//   * the machine gun falls out of the sky over the valley the first time you step into it.
 import * as THREE from 'three';
 import { rgb, clamp } from './util.js';
 import { ASSET_ROOT } from './assets.js';
@@ -474,9 +474,9 @@ export class Kaali {
     this.applySky();
   }
 
-  // The acid gun falls out of the sky over the valley, once per run, the first time you step into it.
+  // The machine gun falls out of the sky over the valley, once per run, the first time you step into it.
   dropGun(p) {
-    const g = this.g, it = { kind: 'weapon', id: 'acid', p: [KX0 + (Math.random() - 0.5) * 2, 60, clamp(p.z - 6, ZM - 40, ZM - 3)] };
+    const g = this.g, it = { kind: 'weapon', id: 'mg', p: [KX0 + (Math.random() - 0.5) * 2, 60, clamp(p.z - 6, ZM - 40, ZM - 3)] };
     this.gunSent = true;
     this.gunIt = it;
     this.gunFall = { t: 0 };
@@ -496,7 +496,7 @@ export class Kaali {
     this.g.audio.play('bang', { pos: [x, 0.5, z], vol: 0.8, rate: 0.8 });
     this.g.player.shake = Math.max(this.g.player.shake, 0.4);
     for (let i = 0; i < 16; i++) { const a = i / 16 * 6.28; X.smoke.emit(x, 0.3, z, Math.cos(a) * 3, 0.5, Math.sin(a) * 3, 1.4, 0.5, 2, [0.5, 0.47, 0.42], [0.4, 0.38, 0.35], 0.45, 0.2, 2); }
-    this.g.toast('तेज़ाब की बंदूक़ गिरी', this.g.input.touch ?'An acid gun fell from the sky — walk up and press USE.' : 'An acid gun fell from the sky — walk up and press E.');
+    this.g.toast('मशीन गन गिरी', this.g.input.touch ? 'A machine gun fell from the sky — 200 rounds, no reload, no more ammo ever. Walk up and press USE.' : 'A machine gun fell from the sky — 200 rounds, no reload, no more ammo ever. Walk up and press E.');
   }
 
   // ---- interaction with the trapdoor ----

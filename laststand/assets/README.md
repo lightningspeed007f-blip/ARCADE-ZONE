@@ -125,15 +125,15 @@ attacks he clowns about (a kazoo dance, a pirouette, a "nyah-nyah" taunt, a cart
 out his pet, **CatNap**, who hunts you and breathes red smoke. At 30% he goes wild.
 
 At the far end of the square sits his glowing **jack-in-the-box crate**: open it (USE) and the jack pops out, but
-there is no gun inside. The **acid gun** (150 damage a shot, the most of any gun, and the acid splashes whatever
-stands next to the target; key 8 or swap) is found only in the hidden **Kalidham**: the second trapdoor in the
-Mandir courtyard, beside the Shivdham trapdoor. It lies on the tunnel floor just inside the mouth, in the valley.
+there is no gun inside. The **machine gun** (50 damage a shot, fully automatic, one 200-round belt with
+no reload and no extra ammo anywhere in the game, so make it last; key 8 or swap) is found only in the hidden **Kalidham**: the second trapdoor in the
+Mandir courtyard, beside the Shivdham trapdoor. It falls out of the sky over the valley the first time you step into it.
 Killing the Joker sends you back to Jais: take the **last bus** from the bus adda (USE beside it, a
 glow marks it) to **the Worm Desert**, where the Giant Warrior and the Giant Worm wait. Kill both to win.
 
 | File | What it is |
 |------|------------|
-| `models/acidgun.glb` | The acid gun (“Acid Gun (Omnidroid v20.22)”), compressed to 0.3 MB. |
+| `models/acidgun.glb` | The old acid gun model. No longer used (the machine gun is built in code). |
 | `models/warrior.glb` | The Giant Warrior (“Lowpoly Giant Warrior (rigged)”), with its Walking clip. Its specular texture was cut off in the upload and is left out (the game doesn't use it). |
 | `models/worm.glb` | The Giant Worm (“Giant Worm”), 28.6 MB uploaded, 3.7 MB compressed. Its one 102 s clip is used in sections: idle, roar, strikes and lunges. |
 | `music/joker1` … `music/joker5` (optional) | The Joker's five silly sounds: 1 clown honk (running off), 2 kazoo (dance), 3 slide whistle (pirouette, cartwheel), 4 spring boing (cartwheel landing, the crate), 5 "nyah-nyah" taunt. Without them the game makes its own. |

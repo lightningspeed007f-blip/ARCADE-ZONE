@@ -3,9 +3,8 @@
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
 import { part, merge } from './props.js';
-import { loadGLB, lambertize } from './models.js';
 
-export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62': '7.62', rocket: 'रॉकेट', acid: 'एसिड' };
+export const AMMO = { '9mm': '9mm', '.32': '.32', '12G': '12 बोर', '7.62': '7.62', rocket: 'रॉकेट', mg: 'MG' };
 
 // rpm = rounds per minute, spread/recoil in degrees
 export const WEAPONS = {
@@ -17,9 +16,9 @@ export const WEAPONS = {
   rifle:    { name: 'राइफल', en: 'RIFLE', ammo: '7.62', mag: 30, dmg: 27, pellets: 1, rpm: 600, auto: true, reload: 2.5, spread: 1.6, adsSpread: 0.3, recoil: 1.15, noise: 90, sound: 'rifle', fov: 48 },
   // fires a real projectile (see explosives.js); one rocket in the tube, slow reload
   rpg:      { name: 'रॉकेट लॉन्चर', en: 'ROCKET LAUNCHER', ammo: 'rocket', mag: 1, dmg: 0, pellets: 1, rocket: true, rpm: 45, reload: 3.0, spread: 0.9, adsSpread: 0.25, recoil: 7.5, noise: 120, sound: 'rocket', fov: 56, ads: [0.12, -0.125, -0.5] },
-  // the Joker's own toy (found in his crate in the Playground): a glob of acid that hits harder than
-  // anything else in town and splashes whatever stands next to the target (see Game.fireRay)
-  acid:     { name: 'एसिड गन', en: 'ACID GUN', ammo: 'acid', mag: 10, dmg: 150, pellets: 1, acid: true, splash: 2.2, rpm: 200, reload: 2.4, spread: 0.9, adsSpread: 0.25, recoil: 3.2, noise: 80, sound: 'acid', fov: 56, hip: [0.19, -0.2, -0.42], ads: [0.07, -0.15, -0.38] },
+  // the machine gun (falls from the sky in the hidden Kalidham): one 200-round belt and that is all
+  // you ever get. No reload, no spare ammo anywhere in the game, so every round counts.
+  mg:       { name: 'मशीन गन', en: 'MACHINE GUN', ammo: 'mg', mag: 200, noReload: true, dmg: 50, pellets: 1, rpm: 720, auto: true, reload: 1, spread: 1.7, adsSpread: 0.4, recoil: 0.95, noise: 110, sound: 'rifle', rate: 0.85, fov: 50, hip: [0.17, -0.2, -0.44], ads: [0, -0.096, -0.32] },
 };
 
 const DEG = Math.PI / 180;
@@ -144,14 +143,39 @@ function buildModels(mats) {
     hand(g, 0, -0.12, -0.06); hand(g, -0.01, -0.11, -0.33);
     g.userData.muzzle = new THREE.Vector3(0, 0.02, -0.8); g.userData.warhead = head;
   });
-  // acid gun stand-in (the real model, models/acidgun.glb, replaces it once downloaded): a glowing
-  // green tank riding on a dark body, a pistol grip under the back
-  M.acid = vm((g) => {
-    const tank = new THREE.MeshLambertMaterial({ color: 0x3a8a2a, emissive: 0x2a8a1a, emissiveIntensity: 0.6 });
-    cy(g, gun, 0.03, 0.5, 0, 0.0, -0.18); cy(g, tank, 0.045, 0.34, 0, 0.07, -0.14); bx(g, gun, 0.05, 0.05, 0.12, 0, 0.0, 0.05);
-    bx(g, gun, 0.035, 0.12, 0.05, 0, -0.07, 0.06, 0.3);
-    hand(g, 0, -0.08, 0.07); g.children[g.children.length - 1].userData.keep = true;
-    g.userData.muzzle = new THREE.Vector3(0, 0.0, -0.45);
+  // machine gun (a belt-fed light machine gun): boxy receiver, long barrel in a ventilated heat
+  // shield, carry handle, folded bipod, a drum-like ammo box hanging under the left side with the
+  // brass belt feeding in, pistol grip and a solid stock
+  M.mg = vm((g) => {
+    const olive = mats.olive || gun;
+    bx(g, gun, 0.062, 0.08, 0.36, 0, 0.0, -0.12);                                   // receiver
+    cy(g, gun, 0.013, 0.42, 0, 0.012, -0.5);                                       // barrel
+    const shield = new THREE.Mesh(merge([
+      part(new THREE.CylinderGeometry(0.026, 0.026, 0.24, 10, 1, true), 0xffffff, 0, 0.012, -0.42, Math.PI / 2, 0, 0),
+      ...[0, 1, 2, 3, 4].map((i) => part(new THREE.CylinderGeometry(0.029, 0.029, 0.012, 10), 0xffffff, 0, 0.012, -0.32 - i * 0.05, Math.PI / 2, 0, 0)),
+      part(new THREE.CylinderGeometry(0.019, 0.016, 0.06, 8), 0xffffff, 0, 0.012, -0.72, Math.PI / 2, 0, 0),   // flash hider
+      part(B(0.006, 0.03, 0.01), 0xffffff, 0, 0.04, -0.68),                       // front sight post
+    ]), gun); g.add(shield);
+    bx(g, gun, 0.07, 0.022, 0.2, 0, 0.051, -0.13);                                 // feed cover
+    const handle = new THREE.Mesh(merge([
+      part(B(0.012, 0.045, 0.012), 0xffffff, 0, 0.085, -0.2), part(B(0.012, 0.045, 0.012), 0xffffff, 0, 0.085, -0.06),
+      part(B(0.016, 0.014, 0.17), 0xffffff, 0, 0.11, -0.13),
+      part(B(0.022, 0.016, 0.02), 0xffffff, 0, 0.07, 0.03),                        // rear sight
+    ]), gun); g.add(handle);
+    const ammoBox = bx(g, olive, 0.07, 0.11, 0.12, -0.045, -0.085, -0.1);           // ammo box
+    bx(g, brass, 0.014, 0.05, 0.08, -0.04, 0.02, -0.1, 0.0);                       // belt rounds feeding in
+    bx(g, gun, 0.034, 0.12, 0.05, 0, -0.09, 0.03, 0.3);                            // pistol grip
+    bx(g, wood || gun, 0.05, 0.075, 0.24, 0, -0.02, 0.17);                         // stock
+    bx(g, gun, 0.055, 0.1, 0.02, 0, -0.03, 0.295);                                 // butt plate
+    bx(g, gun, 0.05, 0.035, 0.16, 0, -0.045, -0.33);                               // handguard under the barrel
+    const bipod = new THREE.Mesh(merge([                                           // folded bipod legs
+      part(B(0.01, 0.01, 0.2), 0xffffff, -0.018, -0.012, -0.52), part(B(0.01, 0.01, 0.2), 0xffffff, 0.018, -0.012, -0.52),
+      part(B(0.05, 0.016, 0.02), 0xffffff, 0, -0.008, -0.62),
+    ]), gun); g.add(bipod);
+    hand(g, 0.0, -0.1, 0.03); hand(g, -0.01, -0.07, -0.33);
+    guard(g, -0.06, -0.035, -0.008);
+    g.userData.muzzle = new THREE.Vector3(0, 0.012, -0.76); g.userData.eject = new THREE.Vector3(0.035, 0.0, -0.1);
+    g.userData.ammoBox = ammoBox;
   });
   return M;
 }
@@ -292,7 +316,7 @@ export class Arsenal {
   reset() {
     this.owned = ['lathi'];
     this.mag = { lathi: 0 };
-    this.reserve = { '9mm': 0, '.32': 0, '12G': 0, '7.62': 0, rocket: 0, acid: 0 };
+    this.reserve = { '9mm': 0, '.32': 0, '12G': 0, '7.62': 0, rocket: 0, mg: 0 };
     this.cur = 'lathi';
     this.cool = 0; this.reloadT = 0; this.switchT = 0; this.adsT = 0;
     this.kick = 0; this.bloom = 0; this.swingT = 0; this.shotsFired = 0; this.sprintT = 0;
@@ -306,29 +330,10 @@ export class Arsenal {
 
   get w() { return WEAPONS[this.cur]; }
 
-  // the acid gun's real model replaces its stand-in once it has downloaded (the hand stays)
-  _loadAcid() {
-    if (this._acidLoad) return;
-    this._acidLoad = true;
-    loadGLB('models/acidgun.glb').then((gltf) => {
-      const m = this.models.acid, s = lambertize(gltf.scene, false, 0.2);
-      const box = new THREE.Box3().setFromObject(s), c = box.getCenter(new THREE.Vector3()), k = 0.42 / box.getSize(new THREE.Vector3()).z;
-      // the model's open, ringed muzzle faces +Z: turn it round (and a little inward, so you see the
-      // glowing tank's flank and the muzzle points at the crosshair), pivoting round its middle
-      const piv = new THREE.Group(); piv.position.set(0, 0.02, -0.2); piv.rotation.set(0.03, Math.PI + 0.2, -0.04); piv.add(s);
-      s.scale.setScalar(k); s.position.set(-c.x * k, -c.y * k, -c.z * k);
-      s.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; } });
-      for (const o of [...m.children]) if (!o.userData.keep) m.remove(o);
-      m.add(piv);
-      m.userData.muzzle.set(-0.04, 0.06, -0.41);
-    }).catch((e) => { console.warn('acid gun model failed to load', e); this._acidLoad = false; });
-  }
-
   give(id) {
-    if (id === 'acid') this._loadAcid();
     const fresh = !this.owned.includes(id);
     if (fresh) { this.owned.push(id); this.mag[id] = WEAPONS[id].mag; this.equip(id); }
-    else this.reserve[WEAPONS[id].ammo] += WEAPONS[id].mag;
+    else if (!WEAPONS[id].noReload) this.reserve[WEAPONS[id].ammo] += WEAPONS[id].mag;   // the machine gun never gets more
     return fresh;
   }
 
@@ -365,7 +370,7 @@ export class Arsenal {
 
   startReload() {
     const w = this.w;
-    if (w.melee || this.reloadT > 0 || this.mag[this.cur] >= w.mag || this.reserve[w.ammo] <= 0) return false;
+    if (w.melee || w.noReload || this.reloadT > 0 || this.mag[this.cur] >= w.mag || this.reserve[w.ammo] <= 0) return false;
     this.reloadT = w.reload;
     this.reloadPhase = 0;
     if (this.cur === 'rifle' && this.audio.has('rifle_reload_out')) this.audio.play('rifle_reload_out', { vol: 0.9, vary: 0, verbAmt: 0.3 });
@@ -512,7 +517,7 @@ export class Arsenal {
     const m = this.models[this.cur];
     const mp = m.userData.muzzle.clone(); m.updateMatrixWorld(); m.localToWorld(mp);
     this.flash.position.copy(mp); this.flash.material.rotation = Math.random() * 6;
-    this.flash.material.color.setHex(w.acid ? 0x70ff50 : 0xffc070);
+    this.flash.material.color.setHex(0xffc070);
     const fs = w.rocket ? 0.55 : w.pellets > 1 || this.cur === 'katta' ? 0.5 : 0.3;
     this.flash.scale.setScalar(fs * (0.8 + Math.random() * 0.4)); this.flash.visible = true; this.flashT = 0.045;
     // world-space flash light at the muzzle direction
@@ -525,7 +530,7 @@ export class Arsenal {
       const v = right.clone().multiplyScalar(1.8 + Math.random()).addScaledVector(up, 1.5 + Math.random()).addScaledVector(fwd, -0.4);
       this.fx.casing([ep.x, ep.y, ep.z], [v.x, v.y, v.z]);
     }
-    this.audio.play(w.sound, { vol: 1, verbAmt: 0.9 });
+    this.audio.play(w.sound, { vol: 1, verbAmt: 0.9, rate: w.rate });
     game.noise(player.pos, w.noise, 'gun');
     // auto-reload an empty gun a moment later (only if it is still the gun in hand)
     const id = this.cur;
