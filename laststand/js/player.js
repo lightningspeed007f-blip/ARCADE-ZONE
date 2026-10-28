@@ -106,6 +106,9 @@ export class Player {
     // bob + footsteps
     const moving = this.onGround && this.speedNow > 0.6;
     this.bobAmt = lerp(this.bobAmt, moving ? Math.min(1, this.speedNow / 5) : 0, 1 - Math.exp(-dt * 8));
+    // recorded walk / run loop (falls back to the generated steps below if the files are missing)
+    const footRec = moving && !(world.stepsMuted && world.stepsMuted()) &&
+      this.audio.footLoop(sprinting ? 'run' : 'walk', this.crouched ? 0.35 : sprinting ? 0.8 : 0.6);
     if (moving) {
       const freq = sprinting ? 2.25 : this.crouched ? 1.25 : 1.8;
       this.bobT += dt * freq * Math.PI * 2;
@@ -113,7 +116,7 @@ export class Player {
       if (this.stepAcc >= 1) {
         this.stepAcc = 0;
         // no footstep sounds while a tunnel's music is playing (Shivdham, Kalidham)
-        if (!(world.stepsMuted && world.stepsMuted())) {
+        if (!footRec && !(world.stepsMuted && world.stepsMuted())) {
           const surf = this.surfaceAt(world);
           this.audio.play('step_' + surf, { vol: this.crouched ? 0.25 : sprinting ? 0.75 : 0.5, verb: false });
         }

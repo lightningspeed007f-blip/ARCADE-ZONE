@@ -304,7 +304,7 @@ export class Explosives {
       b.live = false; b.mesh.visible = false;
       if (b.hiss) { try { b.hiss.stop(); } catch (e) { /* already stopped */ } b.hiss = null; }
       if (o.y > -60) this.explode(o.x, o.y + 0.1, o.z, {
-        radius: BOMB.radius, dmg: BOMB.dmg, self: BOMB.self, src: b.src, shake: 0.9,
+        radius: BOMB.radius, dmg: BOMB.dmg, self: BOMB.self, src: b.src, shake: 0.9, sound: b.src === 'player' ? 'grenadeBlast' : null,
         reason: b.src === 'player' ? null : b.src === 'joker' ? 'जोकर के बम से · blown up by the Joker' : 'लुटेरे के बम से · killed by a looter\'s bomb',
       });
     }
@@ -347,7 +347,8 @@ export class Explosives {
     const gy = g.physics.groundAt(x, z, 0.3, y + 0.6);
     if (y - gy < 1.6) this._scorch(x, gy, z, 2.6 + Math.random());
     // sound + shake + every zombie in earshot hears it
-    g.audio.play('explosion', { pos: [x, y + 1, z], vol: 1.5, max: 450, far: 45, roll: 0.5, ref: 8, verbAmt: 1.1, vary: 0.08 });
+    const snd = o.sound && g.audio.b[o.sound] ? o.sound : 'explosion';
+    g.audio.play(snd, { pos: [x, y + 1, z], vol: snd === 'explosion' ? 1.5 : 1.3, max: 450, far: 45, roll: 0.5, ref: 8, verbAmt: 1.1, vary: snd === 'explosion' ? 0.08 : 0 });
     const pd = Math.hypot(P.pos.x - x, P.pos.y + 1 - y, P.pos.z - z);
     P.shake = Math.max(P.shake, clamp(1.35 - pd / 22, 0, 1.25) * (o.shake ?? 1));
     g.noise({ x, z }, 95, 'gun');

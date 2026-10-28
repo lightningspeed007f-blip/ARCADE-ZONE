@@ -23,6 +23,13 @@ export const MANIFEST = {
     spider:       { dirs: ['music/', 'sounds/'], names: ['spider', 'spider sound', 'spider_sound', 'spidersound'] }, // the giant spider's prowl: plays as it appears, again every few seconds while it is in the sky
     jokerLaugh:   { dirs: ['music/', 'sounds/'], names: ['jokerlaugh'] }, // the Joker's laugh (a built-in cackle otherwise)
     jokerMusic:   { dirs: ['music/', 'sounds/'], names: ['jokermusic'], loop: true }, // the Joker's Playground (a music box otherwise)
+    // door, car, footstep and blast recordings (sounds/*.mp3); built-in versions play when a file is missing
+    doorOpen:     { dirs: ['sounds/'], names: ['dooropen'] },     // a door is unlocked / opened
+    doorClose:    { dirs: ['sounds/'], names: ['doorclose'] },    // a door closes
+    carDoor:      { dirs: ['sounds/'], names: ['cardoor'] },      // you get in or out of a car
+    walkLoop:     { dirs: ['sounds/'], names: ['walk'], loop: false },   // walking (looped while you move)
+    runLoop:      { dirs: ['sounds/'], names: ['run'], loop: false },    // sprinting (looped while you move)
+    grenadeBlast: { dirs: ['sounds/'], names: ['grenade_blast'] }, // a grenade YOU throw going off (trimmed to start right at the bang)
     // the Joker's five silly sounds in the Playground (built-in versions otherwise)
     jkHonk:       { dirs: ['music/'], names: ['joker1'] },   // clown horn: he honks as he runs off after being hit
     jkKazoo:      { dirs: ['music/'], names: ['joker2'] },   // kazoo tune: his little dance
