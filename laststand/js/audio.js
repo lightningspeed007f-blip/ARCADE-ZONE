@@ -40,7 +40,7 @@ function scale(a, k) { for (let i = 0; i < a.length; i++) a[i] *= k; return a; }
 // ---------- sound recipes ----------
 const R = {
   gun(kind) {
-    const p = { pistol: [0.22, 3200, 0.06, 90, 0.5], rifle: [0.3, 2600, 0.07, 80, 0.7], shotgun: [0.5, 1800, 0.12, 60, 1.0], katta: [0.55, 1500, 0.14, 55, 1.1], revolver: [0.35, 2300, 0.09, 70, 0.8] }[kind];
+    const p = { pistol: [0.22, 3200, 0.06, 90, 0.5], rifle: [0.3, 2600, 0.07, 80, 0.7], shotgun: [0.5, 1800, 0.12, 60, 1.0], katta: [0.55, 1500, 0.14, 55, 1.1], revolver: [0.35, 2300, 0.09, 70, 0.8], mg: [0.36, 2100, 0.08, 62, 0.85] }[kind];
     const crack = env(lp(noise(p[0]), p[1]), 0.0008, p[2], 1);
     const thump = env(sine(p[0], p[3] * 1.6, p[3] * 0.6), 0.001, p[2] * 1.5);
     const tail = env(lp(noise(p[4]), 900), 0.01, p[4] * 0.35);
@@ -305,7 +305,7 @@ export class Audio {
   _ab(arr) { const b = this.ctx.createBuffer(1, arr.length, SR); b.getChannelData(0).set(arr); return b; }
   _make() {
     const set = (name, fn, n = 1) => { this.b[name] = []; for (let i = 0; i < n; i++) this.b[name].push(this._ab(fn())); };
-    for (const g of ['pistol', 'rifle', 'shotgun', 'katta', 'revolver']) set(g, () => R.gun(g), 2);
+    for (const g of ['pistol', 'rifle', 'shotgun', 'katta', 'revolver', 'mg']) set(g, () => R.gun(g), 2);
     set('click', R.click); set('clank', () => R.clank(0.9 + Math.random() * 0.3), 3); set('slide', R.slide); set('shell', R.shell, 2);
     for (const s of ['asphalt', 'dirt', 'tile', 'wood', 'metal']) set('step_' + s, () => R.step(s, Math.random() * 10), 4);
     set('creak', R.creak); set('slam', R.slam); set('bang', R.bang, 2);

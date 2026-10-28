@@ -18,7 +18,7 @@ export const WEAPONS = {
   rpg:      { name: 'रॉकेट लॉन्चर', en: 'ROCKET LAUNCHER', ammo: 'rocket', mag: 1, dmg: 0, pellets: 1, rocket: true, rpm: 45, reload: 3.0, spread: 0.9, adsSpread: 0.25, recoil: 7.5, noise: 120, sound: 'rocket', fov: 56, ads: [0.12, -0.125, -0.5] },
   // the machine gun (falls from the sky in the hidden Kalidham): one 200-round belt and that is all
   // you ever get. No reload, no spare ammo anywhere in the game, so every round counts.
-  mg:       { name: 'मशीन गन', en: 'MACHINE GUN', ammo: 'mg', mag: 200, noReload: true, dmg: 50, pellets: 1, rpm: 720, auto: true, reload: 1, spread: 1.7, adsSpread: 0.4, recoil: 0.95, noise: 110, sound: 'rifle', rate: 0.85, fov: 50, hip: [0.17, -0.2, -0.44], ads: [0, -0.096, -0.32] },
+  mg:       { name: 'मशीन गन', en: 'MACHINE GUN', ammo: 'mg', mag: 200, noReload: true, dmg: 50, pellets: 1, rpm: 720, auto: true, reload: 1, spread: 1.7, adsSpread: 0.4, recoil: 0.95, noise: 110, sound: 'mg', fov: 50, hip: [0.17, -0.2, -0.44], ads: [0, -0.096, -0.32] },
 };
 
 const DEG = Math.PI / 180;
@@ -530,7 +530,7 @@ export class Arsenal {
       const v = right.clone().multiplyScalar(1.8 + Math.random()).addScaledVector(up, 1.5 + Math.random()).addScaledVector(fwd, -0.4);
       this.fx.casing([ep.x, ep.y, ep.z], [v.x, v.y, v.z]);
     }
-    this.audio.play(w.sound, { vol: 1, verbAmt: 0.9, rate: w.rate });
+    this.audio.play(w.sound, { vol: 1, verbAmt: 0.9 });
     game.noise(player.pos, w.noise, 'gun');
     // auto-reload an empty gun a moment later (only if it is still the gun in hand)
     const id = this.cur;

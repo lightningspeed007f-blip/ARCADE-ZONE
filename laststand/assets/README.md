@@ -13,7 +13,7 @@ laststand/assets/
   banners/banner01.jpg … banner05.jpg
   music/song01.mp3 … song06.mp3
   music/templesong.mp3                                       ← the mandir's four loudspeakers
-  sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3   ← gun fire sounds
+  sounds/pistol.mp3  revolver.mp3  dunali.mp3  rifle.mp3  machinegun.mp3   ← gun fire sounds
   music/zombiechase.mp3  zombiebye.mp3  zombiescream.mp3     ← zombie sounds
   music/shivjibackground.mp3                                 ← the Shivdham reveal music
   maakaali1.png  maakaali3.JPG  maakaali2.png  maakaali4.JPG  ← the hidden Kalidham (see below)
@@ -83,6 +83,7 @@ Replace the file to change the song (keep the name).
 ## Gun fire sounds — `sounds/`
 Trimmed one-shot clips (`.mp3`, `.wav` or `.ogg`; the loader tries them in that order, so keep one format per name):
 `pistol`, `revolver`, `dunali` (one shot each), `rifle` (a single ~0.1 s shot, so it can repeat at 600 rpm),
+`machinegun` (a single short shot, about 0.1 s, so it can repeat at 720 rpm),
 plus `rifle_reload_out` (magazine out, at reload start) and `rifle_reload_in` (magazine in, mid-reload).
 A missing file keeps the built-in generated sound. The katta keeps its generated sound.
 
