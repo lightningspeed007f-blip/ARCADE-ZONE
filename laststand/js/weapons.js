@@ -482,7 +482,7 @@ export class Arsenal {
     m.position.set(x, y, z);
     m.rotation.set(rx, ry, rz);
     if (m.userData.warhead) m.userData.warhead.visible = this.mag[this.cur] > 0 || (this.reloadT > 0 && this.reloadT < w.reload * 0.45);
-    this.holder.position.copy(this.cam.position);
+    player.handAt(this.holder.position);      // third person: held by the body's right hand
     this.holder.quaternion.copy(this.cam.quaternion);
   }
 

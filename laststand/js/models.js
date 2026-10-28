@@ -100,6 +100,23 @@ function prepCat(gltf) {
   return { root: holder, scene, clips, bones: named };
 }
 
+// ---------- the player's own body (third person) ----------
+// models/vampire.glb: a static mesh (no rig, no clips), about 9.4 model units tall with its feet at y ≈ 0.
+// It is scaled to the player's height and stood on the origin, so the player controller can place it directly.
+const BODY_HEIGHT = 1.8;
+export function prepVampire(gltf) {
+  const holder = new THREE.Group();
+  holder.add(gltf.scene);
+  lambertize(gltf.scene, false, 0.12);
+  const box = new THREE.Box3().setFromObject(holder);
+  const c = box.getCenter(new THREE.Vector3());
+  const k = BODY_HEIGHT / (box.max.y - box.min.y);
+  holder.scale.setScalar(k);
+  holder.position.set(-c.x * k, -box.min.y * k, -c.z * k);
+  holder.traverse((o) => { o.frustumCulled = false; });
+  return holder;
+}
+
 // ---------- the street ----------
 export const STREET = { S: 4, x: -420, y: 0.22, z: -420 };   // metres per model unit, and where it sits (x, z > -600: clear of the Shivdham / Kalidham checks)
 function prepStreet(gltf) {
