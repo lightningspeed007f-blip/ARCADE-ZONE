@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Last Stand</string>
+    <string name="title_activity_main">Last Stand</string>
+    <string name="package_name">com.lightningspeed.laststand</string>
+    <string name="custom_url_scheme">com.lightningspeed.laststand</string>
+</resources>

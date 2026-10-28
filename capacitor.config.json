@@ -1,0 +1,12 @@
+{
+  "appId": "com.lightningspeed.laststand",
+  "appName": "Last Stand",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}
