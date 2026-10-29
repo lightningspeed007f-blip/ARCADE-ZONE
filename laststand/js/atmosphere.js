@@ -7,7 +7,7 @@
 // happens at night, in town, while you play.
 import { Particles, puffTex } from './explosives.js';
 
-// where the mist lies: the stone row by Jais City station, the graves by MUTANT, and the railway line itself
+// where the mist lies: the stone row by Jais City station, the graves by MAW, and the railway line itself
 const MIST = [
   { x0: -178, x1: -104, z0: -196, z1: -182, rate: 1.4 },
   { x0: 52, x1: 98, z0: -198, z1: -184, rate: 1.0 },

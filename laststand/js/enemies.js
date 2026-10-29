@@ -1,29 +1,31 @@
-// Zombies and hostile humans. Bodies are built from rounded, vertex-coloured
-// parts (skull with a face, tapered torso, capsule limbs, hands and shoes),
-// drawn with one instanced mesh per part (~16 draw calls for every enemy on
-// the map) and animated procedurally. The three factions read differently at
-// a glance: zombies are pale, blood-stained, reach forward and have glowing
-// eyes; thieves (chor) wear dark clothes and a bright gamchha wrapped over
-// the face and sneak in a crouch; armed looters stand upright with a cap and gun.
+// Zombies and hostile humans. The zombies wear the four uploaded zombie models (creatures.js: the prisoner,
+// the girl scout, the zombie girl and the parasite, each with its own Mixamo clips). People are built from
+// rounded, vertex-coloured parts (skull with a face, tapered torso, capsule limbs, hands and shoes), drawn with
+// one instanced mesh per part (~16 draw calls for every enemy on the map) and animated procedurally: thieves
+// (chor) wear dark clothes and a bright gamchha wrapped over the face and sneak in a crouch; armed looters stand
+// upright with a cap and gun. Until a zombie's model has downloaded it is drawn the same way (pale, blood-stained,
+// reaching forward, glowing eyes).
 import * as THREE from 'three';
 import { clamp, lerp, angleDiff, rgb } from './util.js';
 import { Physics } from './physics.js';
 import { BOMB } from './explosives.js';
+import { ZOMBIE_SKINS } from './creatures.js';
 
 // a zombie's scream is heard only this close (metres), and it stops the moment that zombie dies
 const SCREAM_RANGE = 6;
 
 const MAX = 170;
+// model: 'zombie' wears one of the four zombie models (creatures.js); roar: stops and screams when it first sees you
 export const TYPES = {
-  walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl' },
-  runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream' },
-  brute:  { hp: 260, speed: 1.0, chase: 1.9, dmg: 30, reach: 1.7, wind: 0.8, sight: 15, scale: 1.25, growl: 'growlBig' },
+  walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl', model: 'zombie' },
+  runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream', model: 'zombie' },
+  brute:  { hp: 260, speed: 1.0, chase: 1.9, dmg: 30, reach: 1.7, wind: 0.8, sight: 15, scale: 1.25, growl: 'growlBig', model: 'zombie' },
   human:  { hp: 95, speed: 1.6, chase: 3.6, dmg: 0, reach: 0, wind: 0, sight: 34, scale: 1, growl: null },
   // chor: a masked knife thief. Fast, melee, grabs food from the bag and bolts.
   thief:  { hp: 60, speed: 1.55, chase: 5.0, dmg: 9, reach: 1.5, wind: 0.4, sight: 30, scale: 0.98, growl: null },
-  // the uploaded models (creatures.js gives them bodies): a tough rotting ghoul and a fast zombie hound
-  ghoul:  { hp: 190, speed: 1.0, chase: 2.5, dmg: 20, reach: 1.65, wind: 0.6, sight: 22, scale: 1, growl: 'growlBig', model: 'ghoul' },
-  hound:  { hp: 55, speed: 1.9, chase: 6.4, dmg: 9, reach: 1.55, wind: 0.32, sight: 28, scale: 1, growl: 'growl', model: 'hound' },
+  // the outlands' beasts: a tough ghoul (a zombie that screams when it spots you) and a fast zombie hound
+  ghoul:  { hp: 190, speed: 1.0, chase: 2.5, dmg: 20, reach: 1.65, wind: 0.6, sight: 22, scale: 1.05, growl: 'growlBig', model: 'zombie', roar: true },
+  hound:  { hp: 55, speed: 1.9, chase: 6.4, dmg: 9, reach: 1.55, wind: 0.32, sight: 28, scale: 1, growl: 'growl', model: 'hound', roar: true },
 };
 const THIEF_GUN = { dmg: 0, rate: 1, burst: 0, sound: 'pistol', drop: 'katta' };
 const HUMAN_GUNS = {
@@ -265,6 +267,11 @@ export class Enemies {
     };
     if (e.gun && !thief) e.gunKey = o.gun || Object.keys(HUMAN_GUNS).find((k) => HUMAN_GUNS[k] === e.gun);
     if (type === 'brute') { e.colors.top = 0x3a2a20; e.colors.legs = 0x2a2620; }
+    // which body it wears: one of the four zombies (the big ones lean to the parasite), or its own model
+    if (T.model === 'zombie') {
+      e.skin = o.skin || ((type === 'brute' || type === 'ghoul') && r() < 0.6 ? 'parasite' : pick(ZOMBIE_SKINS));
+      e.mkind = 'z:' + e.skin;
+    } else e.mkind = T.model || null;
     if (!human) e.colors.fa = e.colors.skin;
     else if (!thief) e.colors.fa = e.colors.skin;
     this.list.push(e);
@@ -325,7 +332,11 @@ export class Enemies {
     if (dir) { e.hitDir = Math.atan2(dir.x, dir.z); e.lastHitPos = { x: e.pos.x - dir.x * 2, z: e.pos.z - dir.z * 2 }; }
     e.lastHitBy = src;
     if (!e.human && e.type !== 'brute' && n > 20) e.stagger = 0.35;
-    if (part === 'leg' && !e.human) e.limp = Math.min(0.75, e.limp + 0.2);
+    if (part === 'leg' && !e.human) {
+      e.limp = Math.min(0.75, e.limp + 0.2);
+      // legs shot to pieces: a zombie may drop and come crawling (only the modelled zombies have the clips)
+      if (e.limp >= 0.7 && !e.crawler && e.T.model === 'zombie' && e.type !== 'brute' && Math.random() < 0.5) e.crawler = true;
+    }
     // being shot always reveals the shooter
     if (src === 'player') { e.alert = 1; e.lastSeen = { x: this.game.player.pos.x, z: this.game.player.pos.z }; if (e.thief) { if (e.state !== 'FLEE') e.state = 'CHASE'; } else if (e.human) { e.state = 'ATTACK'; e.react = 0.1; } else e.state = 'CHASE'; if (e.zone) this.alertZone(e); }
     if (e.hp <= 0) { this.kill(e, part, dir, src); return true; }
@@ -351,6 +362,8 @@ export class Enemies {
     e.dead = true; e.deathT = 0;
     this.stopScream(e);
     e.fallDir = dir ? (Math.cos(e.yaw) * dir.z + Math.sin(e.yaw) * dir.x > 0 ? -1 : 1) : 1;
+    // the zombie models: knocked back when hit from the front, a slumping collapse otherwise
+    e.dieClip = e.fallDir > 0 ? 'death' : 'dying';
     const g = this.game;
     g.audio.play(e.human ? 'flesh' : (e.type === 'brute' ? 'growlBig' : 'growl'), { pos: [e.pos.x, e.pos.y + 1.4, e.pos.z], vol: 0.6, rate: 0.7 });
     g.fx.bloodPool(e.pos.x, e.pos.y, e.pos.z, 1.2 + Math.random());
@@ -501,7 +514,7 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.model && !e.roared) this.roar(e); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.roar && !e.roared) this.roar(e); } }
     }
     // no player in sight: a living person close by is food too (thieves and looters get torn into)
     if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {
@@ -929,7 +942,11 @@ export class Enemies {
     for (const e of this.list) {
       const far = Math.hypot(e.pos.x - cx, e.pos.z - cz);
       if (far > 105) { e.hs.length = 0; continue; }
-      if (e.T.model) { models.push(e); continue; }          // the ghouls and hounds have bodies of their own
+      // the zombies and hounds have bodies of their own (a zombie whose model is still downloading keeps the box body)
+      if (e.T.model) {
+        if (this.creatures && this.creatures.has(e.mkind)) { models.push(e); continue; }
+        if (e.T.model !== 'zombie') { e.hs.length = 0; continue; }
+      }
       this.pose(e);
       R.root.updateMatrixWorld(true);
       const col = e.colors;
@@ -968,7 +985,7 @@ export class Enemies {
     if (this.creatures) {
       this.creatures.draw(models, cam, this.game.dt || 0.016);
       for (const e of models) {
-        if (!e._inst) { e.hs.length = 0; continue; }
+        if (!e._inst && !e._far) { e.hs.length = 0; continue; }
         if (Math.hypot(e.pos.x - cx, e.pos.z - cz) > 60 || ns >= MAX) continue;
         const dog = e.type === 'hound';
         v.set(e.pos.x, e.pos.y + 0.03, e.pos.z);

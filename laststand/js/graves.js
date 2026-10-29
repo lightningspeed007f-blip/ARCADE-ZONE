@@ -2,7 +2,7 @@
 //
 //   models/tombstone_bonaventure.glb  a tall headstone scan: forty of them in one straight line along the
 //                                     north side of the railway, beside Jais City station
-//   models/tombstone_koszeg.glb       a grey stone scan: six graves on the far side of the track, around MUTANT
+//   models/tombstone_koszeg.glb       a grey stone scan: six graves on the far side of the track, around MAW
 //   models/eclipso_car.glb            a post-apocalypse car, parked on the lane west of the Mandir road
 //   models/l200_pickup.glb            a red pickup, parked on the waste ground south-west of the main road
 //   models/aircraft_wreck.glb         a small aircraft down in the fields at the south-west edge of town
@@ -17,8 +17,8 @@ import { loadGLB, lambertize } from './models.js';
 
 // the straight row: forty stones from x0 to x1, all facing the same way (toward the station)
 const STONE_ROW = { x0: -170, x1: -110, z: -188, n: 40 };
-// six graves beside MUTANT, north of the railway (x, z, yaw); he lies at (73.6, -182.6)
-const MUTANT_GRAVES = [[60, -190, 0.3], [66, -191.5, -0.2], [72, -189, 0.1], [78, -192, 0.5], [85, -189.5, -0.4], [91, -191, 0.2]];
+// six graves beside MAW, north of the railway (x, z, yaw); he lies at (73.6, -182.6)
+const MAW_GRAVES = [[60, -190, 0.3], [66, -191.5, -0.2], [72, -189, 0.1], [78, -192, 0.5], [85, -189.5, -0.4], [91, -191, 0.2]];
 // model scale is metres per model unit (each file is a different size); yaw turns it around the up axis
 const STONE_SCALE = { bonaventure: 0.82, koszeg: 0.086 };
 const WRECKS = [
@@ -86,7 +86,7 @@ export class Graves {
   }
 
   mutant(model) {
-    const at = MUTANT_GRAVES.map(([x, z, yaw]) => ({ x, z, yaw }));
+    const at = MAW_GRAVES.map(([x, z, yaw]) => ({ x, z, yaw }));
     this.instances(model, at);
     this.colliders(model, at);
   }

@@ -19,7 +19,6 @@ import * as THREE from 'three';
 import { loadGLB, lambertize } from './models.js';
 import { ASSET_ROOT } from './assets.js';
 import { ROADS, roadInfo } from './layout.js';
-import { Creatures } from './creatures.js';
 import { rollAmmo, rollFood } from './loot.js';
 import { part, merge, Bx, Cy } from './props.js';
 import { LANDMARKS } from './minimap.js';
@@ -158,7 +157,6 @@ export class Outlands {
     this.zone = null;             // the place you are in (null: Jais)
     this.travel = null; this.inGate = null;
     this.spawned = {};
-    this.creatures = null;
   }
 
   // ================= with the town (before navigation and the light pool) =================
@@ -217,7 +215,6 @@ export class Outlands {
       // the crew waiting in the houses (about 5.6 MB)
       ...Object.keys(CREW).map((k) => step('crew-' + k, CREW[k].file, (m) => this.g.crew.add(k, m))),
       step('hound', 'models/hound.glb', (m) => this._creature('hound', m)),
-      step('ghoul', 'models/ghoul.glb', (m) => this._creature('ghoul', m)),
     ]);
   }
   startPlaces() {
@@ -237,11 +234,17 @@ export class Outlands {
     this.g.vehicles.setTruck({ root, wheels });
   }
 
+  // the creatures' bodies (enemies.js owns them; the zombies download on their own, creatures.js)
+  get creatures() { return this.g.enemies && this.g.enemies.creatures; }
   _creature(kind, gltf) {
     const g = this.g;
-    if (!this.creatures) { this.creatures = new Creatures(g); g.enemies.creatures = this.creatures; }
     this.creatures.add(kind, gltf);
-    if ((g.state === 'play' || g.state === 'pause') && this.creatures.has('ghoul') && this.creatures.has('hound')) { this.spawnTown(); if (this.zone) this.enterPlace(this.zone); }
+    this.beastsIn();
+  }
+  // the hounds and a zombie model are in: the beasts can be let loose
+  beastsIn() {
+    const g = this.g;
+    if ((g.state === 'play' || g.state === 'pause') && this.creatures.beastsReady()) { this.spawnTown(); if (this.zone) this.enterPlace(this.zone); }
   }
 
   _place(key, gltf, B) {
@@ -327,7 +330,7 @@ export class Outlands {
     this.setZone(null);
     this.travel = null; this.inGate = null; this.spawned = {}; this.townDone = false; this._crackle = null;
     this.fade(false, true);
-    if (this.creatures && this.creatures.has('ghoul') && this.creatures.has('hound')) this.spawnTown();
+    if (this.creatures && this.creatures.beastsReady()) this.spawnTown();
   }
 
   // the ghouls and hounds loose in Jais (once per run, once their models are in)
@@ -349,7 +352,7 @@ export class Outlands {
   enterPlace(key) {
     if (!this.places[key]) return;
     const S = this.spawned[key] || (this.spawned[key] = { first: false, beasts: false });
-    const beasts = !!(this.creatures && this.creatures.has('ghoul') && this.creatures.has('hound'));
+    const beasts = !!(this.creatures && this.creatures.beastsReady());
     if (S.first && (S.beasts || !beasts)) return;
     const first = !S.first; S.first = true; S.beasts = S.beasts || beasts;
     // make room: the town's idle stragglers far behind you are forgotten (the town fills up again when you are back)

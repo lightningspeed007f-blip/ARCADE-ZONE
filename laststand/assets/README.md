@@ -117,7 +117,7 @@ Transparent PNGs work best for the three standing images. The exact names above 
 The images load in the background after the town is ready, so they don't slow the loading screen.
 
 ## The Joker finale — `models/`, `music/jokerlaugh`, `music/jokermusic`
-Mutant is no longer the last fight. When he is nearly dead, **the Joker** (the jester) steps out of
+MAW is no longer the last fight. When he is nearly dead, **the Joker** (the jester) steps out of
 purple smoke beside him, shoots him dead, laughs and throws a laughing-gas canister at you. You wake up in
 **the Joker's Playground** — an abandoned city street far from Jais — and fight him there. He skips around
 the square, shoots three-round bursts (watch for the red laser: that's your cue to take cover), lobs bombs,
@@ -147,10 +147,10 @@ glow marks it) to **the Worm Desert**, where the Giant Warrior and the Giant Wor
 | `music/jokerlaugh` (optional) | The Joker's laugh. Without it the game uses its own cackle. |
 | `music/jokermusic` (optional, loops) | Music for the Playground. Without it a creepy music box plays. |
 
-The models are compressed (about 8 MB together) and only start downloading when Mutant wakes up. If they
-can't be downloaded at all, killing Mutant ends the game the old way.
+The models are compressed (about 8 MB together) and only start downloading when MAW wakes up. If they
+can't be downloaded at all, killing MAW ends the game the old way.
 
-## Beyond Jais — `models/truck`, `ghoul`, `hound`, `forest`, `city`, `metro`
+## Beyond Jais — `models/truck`, `hound`, `forest`, `city`, `metro`
 The Amethi road now ends at a **highway sign**. Drive (or walk) past it and you come out on **the forest road**:
 a winding dirt road through pines at night, with hound packs and a burnt-out camp at the bend. The far end of
 the road reaches **the dead city**: a lamp-lit avenue between tower blocks, full of ghouls, with a **metro
@@ -161,7 +161,6 @@ Jais City station. Cars come along on the road; the metro is on foot.
 | File | What it is |
 |------|------------|
 | `models/truck.glb` | The armoured zombie pickup you can drive, parked on the Amethi road facing the highway (“ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0). Faster and heavier than the jeep. The upload was cut short; the missing part of one texture was rebuilt from what arrived. The wheels were cut out of the body so they spin and steer. |
-| `models/ghoul.glb` | The ghoul: a tough rotting zombie that roars when it sees you (“Zombie” by David Glynch). Reduced from 109k to 16k triangles. In town, the forest, the city and the metro. |
 | `models/hound.glb` | The hound: a fast zombie dog that hunts in packs and howls to call them (“Zombie Dog” by LostBoyz2078, CC BY 4.0). Packs roam the town edges and the forest. |
 | `models/forest.glb` | The forest road (“a forest (3) with a road at night for game” by dasy444, CC BY 4.0), scaled 12×. |
 | `models/city.glb` | The dead city (“street city (7) for games FREE” by dasy444), scaled 4×. |
@@ -169,8 +168,41 @@ Jais City station. Cars come along on the road; the metro is on foot.
 | `models/forest.json`, `city.json`, `metro.json` | Collision and walkable ground baked from the three models (walls, floors, stairs, the forest's hills). Re-bake them if you replace a model. |
 
 Everything here downloads in the background once the town is ready (about 10 MB, smallest first: the pickup,
-the hound, the ghoul, then the three places). Until a place has arrived, its road or stairs tell you it is still
+the hound, then the three places). Until a place has arrived, its road or stairs tell you it is still
 loading; if a file can't be downloaded, that way stays closed and the rest of the game is unchanged.
+
+## The zombies and MAW — `models/zombies/*.glb`, `models/maw.glb`
+Every zombie in the game (walkers, runners, brutes and the ghouls of the outlands) wears one of four models from
+the uploaded **Scary Zombie Packs**; the railyard boss is **MAW** from the **Creature NPC Pack** (he took the place
+of the old box-built giant, once called Lohasur, then MUTANT). All five are Mixamo characters with their own clips.
+```
+models/zombies/prisoner.glb     the prisoner in stripes          (Scary_Zombie_Pack)
+models/zombies/girlscout.glb    the girl scout                   (Scary_Zombie_Pack_1)
+models/zombies/zombiegirl.glb   the zombie girl                  (Scary_Zombie_Pack_2)
+models/zombies/parasite.glb     the parasite (most brutes)       (Scary_Zombie_Pack_3)
+models/maw.glb                  MAW, asleep on the tracks        (Creature_NPC_Pack)
+```
+- **Zombies** use idle, walk, run, attack, scream (the ghouls, when they spot you), death / dying and the two
+  crawls: a zombie whose legs are shot to pieces may drop and crawl after you. The stride is matched to how fast
+  each one really moves. The nearest few of each kind (7 on a computer, 4 on a phone) get a fully animated body;
+  the hordes further off are drawn as a low-poly copy of the same model posed in a few frames of its walk, run or
+  crawl, so hundreds cost only a handful of draw calls. Until a model has downloaded (about 3.2 MB for all four),
+  its zombies are drawn the old way.
+- **MAW** sleeps where he fell (the last frame of his death clip), gets up by playing that fall backwards, flexes
+  and roars, then walks, runs, swipes, leaps and slams (the ground-pound lands on the frame he comes down) and
+  throws chunks of concrete with his right hand. His fight is the same as before; the Joker still steps in when
+  he is nearly dead. His torn loincloth's see-through parts are cut out of the texture (the pack's opacity map was
+  not in the FBX).
+- The hounds keep their own model.
+
+Converted from the uploaded zips by `scripts/zombies` (FBX2glTF; textures to webp, normal maps dropped, the walk
+forward taken out of the moving clips and stored as a speed, a low-poly copy added for the far zombies):
+```
+cd scripts/zombies && npm install
+UPLOADS=/folder/with/the/unzipped/packs node build.mjs all      # one folder per zip, named like the zip
+cp out/prisoner.glb out/girlscout.glb out/zombiegirl.glb out/parasite.glb ../../laststand/assets/models/zombies/
+cp out/maw.glb ../../laststand/assets/models/
+```
 
 ## The crew — `models/viking`, `samurai`, `soldier`, `tactical`
 Four fighters hide in the houses of Jais. Every run they sit waiting in four different houses (picked at random among
@@ -261,7 +293,7 @@ the trunk was scanned on is cut away.
 ## The graves and the wrecks of Jais (`models/`, placed by `js/graves.js`)
 ```
 models/tombstone_bonaventure.glb   forty headstones in one straight line along the north side of the railway, by Jais City station
-models/tombstone_koszeg.glb        six grey stones on the far side of the track, around MUTANT
+models/tombstone_koszeg.glb        six grey stones on the far side of the track, around MAW
 models/eclipso_car.glb             a post-apocalypse car, parked on the lane west of the Mandir road
 models/l200_pickup.glb             a red pickup, parked on the waste ground south-west of the main road
 models/aircraft_wreck.glb          a small aircraft down in the fields at the south-west edge of town
@@ -280,7 +312,7 @@ geometry is meshopt-compressed. Three uploads were cut off in transfer and were 
   plaster ruin converted from the FBX. Add its textures to get the original look.
 
 ## Night mist and lightning (`js/atmosphere.js`)
-At night a low mist drifts east over the stones by the station, the graves by MUTANT and the railway line; it is
+At night a low mist drifts east over the stones by the station, the graves by MAW and the railway line; it is
 thin in the day. Now and then at night, out in the town, lightning flickers the fill light and its thunder
 (`thunder` in `js/audio.js`) rolls in a moment later. Nothing to upload: the thunder is generated.
 

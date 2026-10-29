@@ -229,7 +229,7 @@ export class Companions {
   // a crew member's dead weight for e.prey checks in enemies.js
   isDown(c) { return c.state !== 'follow' && c.state !== 'hold'; }
 
-  // everything the crew can pick a fight with: the zombies and thieves, plus Mutant and the Joker once they are up and fighting
+  // everything the crew can pick a fight with: the zombies and thieves, plus MAW and the Joker once they are up and fighting
   _targets() {
     const g = this.g, out = g.enemies.list.slice(), B = g.boss, J = g.joker;
     if (B && B.solid() && B.state !== 'DOOMED') out.push(B);
