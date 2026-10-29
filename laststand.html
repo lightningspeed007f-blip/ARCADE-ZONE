@@ -214,6 +214,14 @@ body.editing #touch .tb { outline: 2px dashed var(--gold); }
 #loading .bar { width: min(60vw, 360px); height: 3px; background: rgba(255,255,255,.1); }
 #loadFill { height: 100%; width: 0; background: var(--gold); transition: width .2s; }
 #loadText { font-size: 13px; color: var(--muted); font-family: 'Noto Sans Devanagari'; }
+#lock { background: #05070a; flex-direction: column; gap: 18px; z-index: 40; }
+#lock .t { font-size: 28px; font-weight: 700; letter-spacing: 6px; color: var(--gold); }
+#lockForm { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#lockForm label { font-family: 'Noto Sans Devanagari', sans-serif; font-size: 13px; color: var(--muted); }
+#lockInput { width: 190px; padding: 8px 10px; text-align: center; font: 700 26px 'Rajdhani', sans-serif; letter-spacing: 8px; color: #fff; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; }
+#lockInput:focus { outline: none; border-color: var(--gold); }
+#lockForm button { padding: 10px 30px; border-radius: 8px; background: var(--gold); color: #111; font-weight: 700; font-size: 16px; letter-spacing: 3px; }
+#lockMsg { min-height: 18px; font-size: 13px; color: #ff8a80; text-align: center; }
 #menu { background: linear-gradient(90deg, rgba(4,6,10,0.92) 0%, rgba(4,6,10,0.55) 45%, rgba(4,6,10,0.05) 100%); justify-content: flex-start; padding-left: calc(7vw + env(safe-area-inset-left)); }
 .title { line-height: .95; }
 .title .a { font-size: clamp(28px, min(8vw, 13vh), 84px); font-weight: 700; letter-spacing: 8px; color: #f3ead6; text-shadow: 0 4px 30px rgba(0,0,0,.8); }
@@ -329,6 +337,16 @@ a.back { position: fixed; right: 16px; top: 12px; z-index: 21; font-size: 13px; 
 <div id="editBar" class="hidden">Drag buttons to move them <button id="editDone">DONE</button></div>
 
 <div id="loading" class="screen"><div class="t">JAIS: LAST STAND</div><div class="bar"><div id="loadFill"></div></div><div id="loadText">लोड हो रहा है…</div></div>
+
+<div id="lock" class="screen hidden">
+  <div class="t">JAIS: LAST STAND</div>
+  <form id="lockForm" autocomplete="off">
+    <label for="lockInput">PIN दर्ज करें · Enter PIN</label>
+    <input id="lockInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" required>
+    <button type="submit">UNLOCK</button>
+    <div id="lockMsg" role="alert"></div>
+  </form>
+</div>
 
 <div id="menu" class="screen hidden">
   <a class="back" href="index.html">← GAME ZONE</a>
