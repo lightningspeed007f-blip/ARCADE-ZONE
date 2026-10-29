@@ -264,7 +264,9 @@ export function buildProps(W, scene, mats, tex) {
 
   const BIKE_C = [0x1a1a1a, 0xb01010, 0x1040a0, 0x202020, 0xe0e0e0, 0x404040];
   const CAR_C = [0xf0f0f0, 0xb8bcc0, 0x8a1010, 0x2a2a2e, 0x1a4a8a, 0xd8d0b8];
-  instanced(scene, GEO.bike(), vc, pr.bikes, (b, i) => { P.add(b.p[0], 0.5, b.p[2], 0.25, 0.5, 0.95, b.yaw); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.12, color: BIKE_C[i % BIKE_C.length] }; });
+  // the box bikes are the fallback: swaps.js hides them once the uploaded rusty motorbike has loaded (they only stand there: nobody rides them)
+  out.bikes = pr.bikes;
+  out.bikeMesh = instanced(scene, GEO.bike(), vc, pr.bikes, (b, i) => { P.add(b.p[0], 0.5, b.p[2], 0.25, 0.5, 0.95, b.yaw); return { x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.12, color: BIKE_C[i % BIKE_C.length] }; });
   // the box cars and autos are the fallback: swaps.js hides them once the uploaded models (rusty car, burnt police car, ambulance) have loaded
   out.cars = pr.cars; out.autos = pr.autos;
   out.carMesh = instanced(scene, GEO.car(), vc, pr.cars, (c, i) => { P.add(c.p[0], 0.75, c.p[2], 0.84, 0.75, 2.1, c.yaw); return { x: c.p[0], y: 0, z: c.p[2], yaw: c.yaw, rz: c.wreck ? 0.08 : 0, color: c.wreck ? 0x4a3a30 : CAR_C[i % CAR_C.length] }; });

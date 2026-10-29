@@ -276,6 +276,7 @@ models/rusty_car.glb     parked cars (most) and some wrecks
 models/police_car.glb    burnt police car: crashed cars across the roads, some wrecks and parked cars
 models/police_car2.glb   the same wreck upside down (the overturned wreck)
 models/ambulance.glb     M725 army ambulance: the tempus
+models/bike.glb          a rusty motorbike: every parked bike, just for show (nobody can ride it). Simplified from 81k to 6k triangles (scripts/zombies/bike.mjs)
 models/dry_grass.glb     seven dry tufts   } scattered along the kerbs, in cracks and in
 models/grass06.glb       green blades      } patches on every road
 ```

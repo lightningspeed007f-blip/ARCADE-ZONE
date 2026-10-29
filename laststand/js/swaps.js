@@ -4,6 +4,7 @@
 //   models/police_car.glb   a burnt-out police car: the crashed cars across the roads, and some wrecks and parked cars
 //   models/police_car2.glb  the same wreck upside down: the overturned wreck
 //   models/ambulance.glb    an M725 army ambulance: the tempus (auto-rickshaws)
+//   models/bike.glb         a rusty motorbike: every parked bike (just for show: nobody can ride it)
 //   models/dry_grass.glb    seven dry tufts, and models/grass06.glb a fan of green blades
 //
 // Everything loads in the background after the town is up. Until a model arrives its box stand-in stays; when
@@ -19,7 +20,7 @@ import { makeRng } from './util.js';
 
 const FILES = {
   rusty: 'models/rusty_car.glb', police: 'models/police_car.glb', flipped: 'models/police_car2.glb',
-  ambulance: 'models/ambulance.glb', dry: 'models/dry_grass.glb', blades: 'models/grass06.glb',
+  ambulance: 'models/ambulance.glb', bike: 'models/bike.glb', dry: 'models/dry_grass.glb', blades: 'models/grass06.glb',
 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 
@@ -38,6 +39,7 @@ export class Swaps {
     step('police');
     step('flipped', () => { this.cars(); this.wrecks(); });
     step('ambulance', () => this.autos());
+    step('bike', () => this.bikes());
     this.grass = this._scatter();
     step('dry', () => this._grassModel('dry'));
     step('blades', () => this._grassModel('blades'));
@@ -118,6 +120,14 @@ export class Swaps {
     if (!P || !P.autos || !P.autoMesh || !this.model.ambulance) return;
     this._place('ambulance', P.autos.map((a) => ({ x: a.p[0], y: 0, z: a.p[2], yaw: a.yaw })));
     P.autoMesh.visible = false;
+  }
+
+  // ---------- the parked bikes: the rusty motorbike, standing where the box bikes were (the colliders are already in) ----------
+  bikes() {
+    const P = this.g.props;
+    if (!P || !P.bikes || !P.bikeMesh || !this.model.bike) return;
+    this._place('bike', P.bikes.map((b) => ({ x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.04 })));
+    P.bikeMesh.visible = false;
   }
 
   // ---------- grass: tufts along both kerbs, in the cracks and in small patches in the middle of the road ----------
