@@ -1,0 +1,14 @@
+{
+  "name": "scenery-build",
+  "private": true,
+  "type": "module",
+  "description": "Converts the uploaded look-only scenery models for Last Stand (see laststand/assets/README.md)",
+  "dependencies": {
+    "@gltf-transform/core": "4.1.1",
+    "@gltf-transform/extensions": "4.1.1",
+    "@gltf-transform/functions": "4.1.1",
+    "meshoptimizer": "0.22.0",
+    "meshoptimizer-sloppy": "npm:meshoptimizer@1.0.1",
+    "sharp": "0.33.5"
+  }
+}

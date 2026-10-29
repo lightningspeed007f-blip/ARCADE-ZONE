@@ -35,6 +35,7 @@ import { Companions } from './companions.js';
 import { placeCorpses, Corpses } from './corpses.js';
 import { DayCycle } from './daytime.js';
 import { ModelHouses } from './houses.js';
+import { Mountains } from './scenery.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -121,6 +122,8 @@ export class Game {
     const housesP = this.houses.load((p) => { housesK = p; });
     this.buildWell();
     this.buildSky();
+    this.mountains = new Mountains(this);             // the Himalaya on the horizon (loads with the houses)
+    const mountainsP = this.mountains.load();
     for (const fn of W.deferred) fn(scene, mats);
     progress(0.55, 'रास्ते… navigation');
     await tick();
@@ -129,7 +132,7 @@ export class Game {
     progress(0.62, 'तस्वीरें और बैनर… your images');
     this.assets = await loadUserAssets((p) => progress(0.62 + p * 0.2, 'तस्वीरें और बैनर… your images'));
     const housesTick = setInterval(() => progress(0.82 + housesK * 0.1, 'घर… houses'), 200);
-    await housesP; clearInterval(housesTick);
+    await housesP; await mountainsP; clearInterval(housesTick);
     this.displays = buildDisplays(W, scene, this.assets, tex);
     // lights
     // Fill light: dimmer and less saturated than a flat blue wash, so the moon, the street
@@ -1578,6 +1581,7 @@ export class Game {
     if (this.player.body) this.player.body.visible = onFoot;
     view.updateMatrixWorld();
     if (this.houses) this.houses.update(view);
+    if (this.mountains) this.mountains.update(view);
     R.info.reset(); R.clear();
     R.render(this.scene, view);
     if (this.state === 'play') { this.updateViewLights(); R.clearDepth(); R.render(this.wscene, view); }

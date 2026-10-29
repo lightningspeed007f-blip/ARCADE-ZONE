@@ -270,7 +270,7 @@ thin in the day. Now and then at night, out in the town, lightning flickers the 
 The plain box houses in the residential rows and in the blocks behind the streets are now nine uploaded house
 models, and **every one of them can be walked into**, like the town's other houses: the game hangs its own door in
 each doorway (open / close, kick in when it is locked, zombies can break it), the inside counts as indoors (the
-light dims, the street goes quiet), and a few houses hold loot or a thief waiting inside. About 65 of them stand
+light dims, the street goes quiet), and a few houses hold loot or a thief waiting inside. About 57 of them stand
 in town (`CAP` in `js/houses.js` sets how many of each). Shops in the bazaar rows stay as they were, and so do the
 named houses of the story (the house you wake up in, Gupta store, the three-floor house, and the rest).
 ```
@@ -302,3 +302,40 @@ node gen.mjs                                                                    
 ```
 `bake.mjs` also draws `out/walk_<name>.png`: a map of where you can walk (coloured by floor height), so you can see
 that the doors and steps work before trying it in the game.
+
+## Look-only scenery (`models/scenery/*.glb`, `js/scenery.js`)
+Three more uploads are there only to be looked at: none of them can be entered.
+```
+models/scenery/provence.glb    a photo-scanned stone cottage from Provence, vines over its wall, a garage on one end
+models/scenery/seahouse.glb    "the house lost at sea": a tall gothic house with a tower, on its grassy mound
+models/scenery/himalaya.glb    Mount Everest and the peaks around it
+```
+**The two houses** take the place of plain box homes, in the residential rows and in the blocks behind the streets
+(about 60 in town: `CAP` in `js/scenery.js`). Shops, the walk-in houses and the named houses stay as they were.
+Each is one solid block: you walk round it, bullets stop on it, zombies path round it. The Provence scan is only
+the cottage's front wall, so the game builds the rest behind it from the town's own materials (stone walls, a
+terracotta tile roof with a ridge cap and a chimney). The sea house stands on its own mound with its dead tree,
+and its windows are lit at night. They are drawn like the walk-in houses (one instanced mesh per part, only the
+ones in view), and not past 140 m, where the haze hides them anyway.
+
+Only the plain box homes on lots big enough for one of them (they are 12 to 14 m wide) were replaced; the small
+gaps between buildings, too narrow for either, keep their plain blocks.
+
+**The Himalaya** stand in a ring on the horizon all round the town: six copies of the Everest tile, each showing a
+different face of the range, so the skyline doesn't repeat. They move with the camera, so they stay on the horizon
+wherever you go, and are lit by the town's own moon or sun (snow pale blue under the moon, gold in the evening).
+From the middle of town they are a faint shape behind the haze; toward the edge of the map they come out clear,
+so at the end of the map the whole range stands over the fields. They are hidden in the valleys, the outlands,
+the Joker's Playground and the Worm Desert, which keep their own skies.
+
+Converted once from the uploads: scaled to metres, turned to face the street, the colour textures kept (webp),
+geometry simplified and meshopt-compressed (about 3.4 MB for the three). Left out: the sea house's sea, sky, mist,
+floating debris, dust and the mirrored reflections under the water; the Provence scan's patio, plants and loose
+specks. Two uploads were cut off in transfer: the Everest and Provence textures lost their last rows, which were
+refilled from the rows next to them. The sea house was made for unlit display, so its very dark wall texture is
+lifted for the town's lighting. To change one, edit `scripts/scenery/config.mjs` and rebuild:
+```
+cd scripts/scenery && npm install
+UPLOADS=/folder/with/the/original/uploads node build.mjs all    # or one name: provence, seahouse, himalaya
+cp out/*.glb ../../laststand/assets/models/scenery/
+```
