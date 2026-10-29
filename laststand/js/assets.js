@@ -29,6 +29,8 @@ export const MANIFEST = {
     carDoor:      { dirs: ['sounds/'], names: ['cardoor'] },      // you get in or out of a car
     walkLoop:     { dirs: ['sounds/'], names: ['walk'], loop: false },   // walking (looped while you move)
     runLoop:      { dirs: ['sounds/'], names: ['run'], loop: false },    // sprinting (looped while you move)
+    zombieRoar:   { dirs: ['sounds/'], names: ['zombie_roar'] },   // the scream a zombie lets out with its scream animation (trimmed to the clip's scream, see enemies.js ROAR)
+    zombieEat:    { dirs: ['sounds/'], names: ['zombie_eat'] },    // a zombie feeding on a body (looped; its loudness drives the chewing in creatures.js)
     grenadeBlast: { dirs: ['sounds/'], names: ['grenade_blast'] }, // a grenade YOU throw going off (trimmed to start right at the bang)
     // the Joker's five silly sounds in the Playground (built-in versions otherwise)
     jkHonk:       { dirs: ['music/'], names: ['joker1'] },   // clown horn: he honks as he runs off after being hit

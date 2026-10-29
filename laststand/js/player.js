@@ -70,7 +70,8 @@ export class Player {
     let mx = input.move.x, my = input.move.y;
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
-    const wantSprint = (input.sprint || input.joySprint) && my > 0.3 && !this.crouched && !ads;
+    // pulling the trigger breaks the sprint, so the gun comes back out to shoot
+    const wantSprint = (input.sprint || input.joySprint) && my > 0.3 && !this.crouched && !ads && !input.fire;
     const sprinting = wantSprint && this.stamina > 2;
     if (sprinting) this.stamina = Math.max(0, this.stamina - dt * 16);
     else this.stamina = Math.min(100, this.stamina + dt * (ml > 0.1 ? 9 : 16));
@@ -153,6 +154,8 @@ export class Player {
       if (k === 'throw') a.time = 1.1;   // wind-up starts here; the hand is at the top (release) at 2.0 s
       B.cur = a;
     }
+    // the running clip pumps both arms, so no hand can hold the gun: it is put away for as long as the clip runs
+    this.gunAway = B.cur === B.acts.run;
     const c = B.cur;
     if (c) c.timeScale = c === B.acts.throw ? 1.5 : moving || c === B.acts.idle || c === B.acts.aim ? 1 : 0;
     B.mixer.update(dt);

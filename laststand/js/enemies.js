@@ -9,10 +9,17 @@ import * as THREE from 'three';
 import { clamp, lerp, angleDiff, rgb } from './util.js';
 import { Physics } from './physics.js';
 import { BOMB } from './explosives.js';
-import { ZOMBIE_SKINS } from './creatures.js';
+import { ZOMBIE_SKINS, ROAR } from './creatures.js';
 
 // a zombie's scream is heard only this close (metres), and it stops the moment that zombie dies
 const SCREAM_RANGE = 6;
+// ...but the scream that goes with the scream animation carries as far as the zombie can see you from
+const ROAR_RANGE = 30;
+// Feeding: an idle zombie may crouch over one of the town's dead (corpses.js) and eat, and a zombie that kills
+// someone eats them. You hear the eating this close (metres); at most this many feeding zombies at once.
+const FEED_HEAR = 15, FEED_LOOPS = 3;
+const FEED_LOOK = 14;                                   // how far an idle zombie looks for a body to eat
+const EDIBLE = new Set(['body1', 'body2', 'body3']);   // not the row of body bags, not the pumpkins
 
 const MAX = 170;
 // model: 'zombie' wears one of the four zombie models (creatures.js); roar: stops and screams when it first sees you
@@ -227,7 +234,7 @@ export class Enemies {
     this.tmpBoxes = [];
   }
 
-  clear() { this.list.length = 0; }
+  clear() { for (const e of this.list) this.endFeed(e); this.list.length = 0; }
   get alive() { return this.list.filter((e) => !e.dead); }
 
   spawn(type, x, y, z, o = {}) {
@@ -293,8 +300,13 @@ export class Enemies {
         o.state = 'CHASE'; o.lastSeen = { x: P.pos.x, z: P.pos.z }; o.lostT = 0; o.hold = false; o.roared = true;
       }
     } else {
-      g.audio.play('growlBig', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 1.1, rate: 0.85, max: 140 });
-      this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.7, rate: 0.6, delay: 0.35 });
+      // it stands and screams (creatures.js plays the scream clip on the same clock): the sound starts as its mouth opens
+      e.roarT = ROAR.total;
+      if (g.audio.has('zombieRoar')) this.zombieScream(e, { key: 'zombieRoar', range: ROAR_RANGE, pos: [e.pos.x, e.pos.y + 1.5, e.pos.z], vol: 1, ref: 4, vary: 0.02, delay: ROAR.cry });
+      else {
+        g.audio.play('growlBig', { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 1.1, rate: 0.85, max: 140 });
+        this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.7, rate: 0.6, delay: 0.35 });
+      }
     }
   }
 
@@ -345,11 +357,54 @@ export class Enemies {
   }
 
   // a zombie's scream: only within SCREAM_RANGE, and one at a time per zombie so it can be cut off
+  // (o.key / o.range: another scream sound, heard further)
   zombieScream(e, o) {
-    const g = this.game, P = g.player;
-    if (e.dead || Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) > SCREAM_RANGE) return;
+    const g = this.game, P = g.player, range = o.range || SCREAM_RANGE;
+    if (e.dead || Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) > range) return;
     this.stopScream(e);
-    e.screamSrc = g.audio.play('scream', { ...o, max: SCREAM_RANGE + 2 });
+    e.screamSrc = g.audio.play(o.key || 'scream', { ...o, max: range + 2 });
+  }
+
+  // ---------- feeding ----------
+  // crouch over a body at (cx, cz), on the side the zombie comes from
+  _feed(e, cx, cz, until, prop, body) {
+    const dx = e.pos.x - cx, dz = e.pos.z - cz, l = Math.hypot(dx, dz) || 1;
+    const off = prop ? 0.85 : 0.75;
+    e.meal = { x: cx + dx / l * off, z: cz + dz / l * off, cx, cz, until, c: prop || null, body: body || null };
+    if (prop) prop.eater = e;
+    e.state = 'FEED'; e.stateT = 0; e.eating = false; e.hold = false;
+  }
+  canFeed(e) { return e.T.model === 'zombie' && !e.crawler && !e.dead && e.t > (e.nextFeed || 0); }
+  // an idle zombie looks round for one of the town's dead nobody is eating yet
+  feedOnProp(e) {
+    const list = this.game.W && this.game.W.corpses;
+    if (!list || !this.canFeed(e) || e.hold || e.tunnel || e.pos.y > 0.6) return false;
+    let best = null, bd = FEED_LOOK;
+    for (const c of list) {
+      if (!EDIBLE.has(c.k) || (c.eater && !c.eater.dead && c.eater.meal && c.eater.meal.c === c)) continue;
+      const d = Math.hypot(c.x - e.pos.x, c.z - e.pos.z);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (!best) return false;
+    this._feed(e, best.x, best.z, 25 + Math.random() * 35, best, null);
+    return true;
+  }
+  endFeed(e) {
+    const m = e.meal;
+    if (m && m.c && m.c.eater === e) m.c.eater = null;
+    e.meal = null; e.eating = false;
+    this.stopEat(e);
+    if (m) e.nextFeed = e.t + 25 + Math.random() * 35;
+  }
+  stopEat(e) { if (e.eatSrc) { e.eatSrc.stop(); e.eatSrc = null; this.eatLoops--; } }
+  // the eating sound, while it is feeding and you are near enough (and not shut in a building away from it)
+  _eatSound(e, d) {
+    const g = this.game;
+    const want = e.state === 'FEED' && e.eating && !e.dead && g.audibleFrom(e.pos.x, e.pos.y, e.pos.z);
+    if (e.eatSrc) { if (!want || d > FEED_HEAR + 2) this.stopEat(e); return; }
+    if (!want || d > FEED_HEAR || (this.eatLoops || 0) >= FEED_LOOPS || !g.audio.has('zombieEat')) return;
+    e.eatSrc = g.audio.loopAt('zombieEat', 0.8, [e.meal.cx, e.pos.y + 0.5, e.meal.cz], { ref: 2.2, rate: 0.95 + Math.random() * 0.1, verbAmt: 0.25 });
+    if (e.eatSrc) this.eatLoops = (this.eatLoops || 0) + 1;
   }
 
   stopScream(e) {
@@ -360,7 +415,7 @@ export class Enemies {
 
   kill(e, part, dir, src) {
     e.dead = true; e.deathT = 0;
-    this.stopScream(e);
+    this.stopScream(e); this.endFeed(e);
     e.fallDir = dir ? (Math.cos(e.yaw) * dir.z + Math.sin(e.yaw) * dir.x > 0 ? -1 : 1) : 1;
     // the zombie models: knocked back when hit from the front, a slumping collapse otherwise
     e.dieClip = e.fallDir > 0 ? 'death' : 'dying';
@@ -473,6 +528,7 @@ export class Enemies {
       if (e.dead) { e.deathT += dt; continue; }
       const d = Math.hypot(e.pos.x - px, e.pos.z - pz);
       e.dist = d;
+      if (e.eatSrc && d > FEED_HEAR + 2) this.stopEat(e);
       if (e.frozen && d > 45) continue;
       e.frozen = false;
       // far enemies tick slower
@@ -493,8 +549,10 @@ export class Enemies {
   updateZombie(e, dt, d, px, pz, peye, P) {
     const g = this.game, T = e.T;
     e.stateT += dt;
-    // growls
+    if (e.meal && e.state !== 'FEED') this.endFeed(e);   // spotted you, shot, ...: it leaves the body
+    // growls (not while its mouth is full: the eating is heard instead)
     e.nextGrowl -= dt;
+    if (e.state === 'FEED' && e.eating) e.nextGrowl = Math.max(e.nextGrowl, 1);
     // heard only nearby (a chasing one a little further), and not at all from outside while the player is indoors
     if (e.nextGrowl <= 0 && d < (e.state === 'CHASE' ? 28 : 16) && g.audibleFrom(e.pos.x, e.pos.y, e.pos.z)) {
       const dog = e.type === 'hound';
@@ -532,7 +590,10 @@ export class Enemies {
     const speedK = e.speedK * (1 - e.limp * 0.5);
     switch (e.state) {
       case 'IDLE': {
-        if (e.stateT > 3 + Math.random() * 4) { e.stateT = 0; e.wanderYaw += (Math.random() - 0.5) * 2.5; e.idleWalk = Math.random() < 0.6; }
+        if (e.stateT > 3 + Math.random() * 4) {
+          e.stateT = 0; e.wanderYaw += (Math.random() - 0.5) * 2.5; e.idleWalk = Math.random() < 0.6;
+          if (Math.random() < 0.4 && this.feedOnProp(e)) break;   // hungry: goes to eat one of the dead
+        }
         if (e.hold) e.idleWalk = false;
         if (e.idleWalk && !e.hold) this.goTo(e, e.pos.x + Math.sin(e.wanderYaw) * 3, e.pos.z + Math.cos(e.wanderYaw) * 3, T.speed * 0.5 * speedK, dt, false);
         else this.move(e, 0, 0, 0, dt);
@@ -592,11 +653,26 @@ export class Enemies {
           e.huntAtk = true;
           if (e.attackT <= 0) {
             const dd = { x: (h.pos.x - e.pos.x) / (hd || 1), z: (h.pos.z - e.pos.z) / (hd || 1) };
-            if (crew) g.crew.hurt(h, T.dmg); else this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
+            const killed = crew ? (g.crew.hurt(h, T.dmg), false) : this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
             g.audio.play('flesh', { pos: [h.pos.x, h.pos.y + 1.2, h.pos.z], vol: 0.6 });
             e.attackT = T.wind + 0.6;
+            // it brought them down: it crouches over them and eats (until the body is gone)
+            if (killed && this.canFeed(e)) { e.nextFeed = 0; this._feed(e, h.pos.x, h.pos.z, 32, null, h); e.prey = null; }
           }
         } else { e.huntAtk = false; e.attackT = 0; this.goTo(e, h.pos.x, h.pos.z, T.chase * speedK, dt, false); }
+        break;
+      }
+      case 'FEED': {
+        const m = e.meal;
+        if (!m || e.stateT > m.until || (m.body && !this.list.includes(m.body))) { this.endFeed(e); e.state = 'IDLE'; e.stateT = 0; break; }
+        if (!e.eating) {
+          // walking over to the body; it gives up if it can't get there
+          if (Math.hypot(m.x - e.pos.x, m.z - e.pos.z) > 0.35 && e.stateT < 20) { this.goTo(e, m.x, m.z, T.speed * speedK, dt, false); break; }
+          if (e.stateT >= 20) { this.endFeed(e); e.state = 'IDLE'; e.stateT = 0; break; }
+          e.eating = true; e.stateT = 0;
+        }
+        this.move(e, 0, 0, 0, dt);
+        e.yaw += angleDiff(e.yaw, Math.atan2(m.cx - e.pos.x, m.cz - e.pos.z)) * Math.min(1, dt * 4);
         break;
       }
       case 'BANG': {
@@ -616,6 +692,7 @@ export class Enemies {
       }
       default: e.state = 'IDLE';
     }
+    this._eatSound(e, d);
   }
 
   updateHuman(e, dt, d, px, pz, peye, P) {

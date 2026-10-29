@@ -31,6 +31,22 @@ const HUMAN_HS = [['Head', 0.16, 'head', 0.06], ['Spine2', 0.24, 'body'], ['Spin
   ['LeftForeArm', 0.09, 'arm'], ['RightForeArm', 0.09, 'arm'], ['LeftArm', 0.1, 'arm'], ['RightArm', 0.1, 'arm']];
 // the zombie attack clip: the claws land this far into it
 const ATTACK_HIT = 0.39;
+// The scream clip, as the game plays it (a zombie that spots you: enemies.js roar()). It draws breath with its head
+// thrown back (clip 0-0.85 s), screams hunched forward with its arms out (0.85-1.95 s, slowed down so the scream
+// has time to be heard), then straightens up (1.95 s to the end). The scream sound (sounds/zombie_roar.mp3, trimmed
+// to this) starts as the mouth opens and fades out as it straightens.
+const ROAR_IN = 0.85, ROAR_OUT = 1.95, ROAR_END = 2.708, ROAR_FAST = 1.1, ROAR_HOLD = 0.7;
+export const ROAR = {
+  total: ROAR_IN / ROAR_FAST + (ROAR_OUT - ROAR_IN) / ROAR_HOLD + (ROAR_END - ROAR_OUT) / ROAR_FAST,
+  cry: ROAR_IN / ROAR_FAST - 0.04,        // when the scream sound starts, seconds into the roar
+};
+const roarClipTime = (age) => {
+  const a = ROAR_IN / ROAR_FAST, b = a + (ROAR_OUT - ROAR_IN) / ROAR_HOLD;
+  return age < a ? age * ROAR_FAST : age < b ? ROAR_IN + (age - a) * ROAR_HOLD : ROAR_OUT + (age - b) * ROAR_FAST;
+};
+// Feeding: crouched over a body, held in the deepest part of the scream clip, the head tearing down into it. Each
+// bite follows the loudness of the eating sound, so the chewing lands on the crunches you hear.
+const FEED_LO = 1.25, FEED_SWAY = 0.45;
 // the frames the far-away copies are posed in: clip, and where in it (0..1)
 const FAR = {
   idle: ['idle', [0.3]],
@@ -294,8 +310,15 @@ export class Creatures {
     }
     const sp = e.moveSpeed || 0;
     const attacking = e.state === 'ATTACK' || (e.state === 'HUNT' && e.huntAtk);
-    if (e.roarT > 0) this._play(I, 'scream', 0.25, 1.1, true);
-    else if (attacking && !e.crawler) {
+    const feeding = e.state === 'FEED' && e.eating && !e.crawler;
+    if (e.roarT > 0 && !e.crawler) {
+      // the clip follows the roar's own clock, the same one that starts the scream sound
+      const a = this._play(I, 'scream', 0.2, 1, true);
+      if (a) { a.paused = true; a.time = clamp(roarClipTime(ROAR.total - e.roarT), 0, a.getClip().duration - 0.01); }
+    } else if (feeding) {
+      const a = this._play(I, 'scream', 0.5, 1, false);
+      if (a) { a.paused = true; e.feedSway = (e.feedSway || 0) + dt * 0.9; a.time = FEED_LO + FEED_SWAY * (0.5 - 0.5 * Math.cos(e.feedSway)); }
+    } else if (attacking && !e.crawler) {
       // the wind-up runs the clip up to the moment the claws land, exactly as the bite lands (enemies.js)
       const a = this._play(I, 'attack', 0.15, 1, true);
       if (a) { a.paused = true; a.time = clamp(1 - Math.max(0, e.attackT) / e.T.wind, 0, 1) * ATTACK_HIT * a.getClip().duration; }
@@ -308,9 +331,26 @@ export class Creatures {
     I.mixer.update(dt);
     // a crawler lunging at you: the clip, faster
     if (attacking && e.crawler) this._play(I, 'crawlRun', 0.2, 1.6);
+    if (feeding) this._feedPose(e, I, dt);
     // flinch: thrown back a little by the hit
     if (e.flinch > 0.05) this._add(I, 'Spine', D(-e.flinch * 0.45));
     this._hits(e, I);
+  }
+
+  // hunched lower over the body, hands down in it, the head dipping to tear at it on every bite
+  _feedPose(e, I, dt) {
+    const A = this.g.audio, h = e.eatSrc, env = h && A.envelope(h.name);
+    e.chewT = (e.chewT ?? Math.random() * 9) + dt;
+    let bite;
+    if (env) bite = clamp((env[Math.min(env.length - 1, Math.floor(h.at() / 0.05))] - 0.15) / 0.6, 0, 1);
+    else { bite = Math.pow(Math.max(0, Math.sin(e.chewT * 10.5)), 2); }   // too far to hear: its own rhythm
+    // a quick dip, a slower lift back up
+    const k = bite > (e.bite || 0) ? 1 - Math.exp(-dt * 25) : 1 - Math.exp(-dt * 7);
+    const b = e.bite = (e.bite || 0) + (bite - (e.bite || 0)) * k;
+    this._add(I, 'Spine', D(0.15)); this._add(I, 'Spine1', D(0.1)); this._add(I, 'Spine2', D(0.15 + 0.1 * b));
+    this._add(I, 'Neck', D(0.25 + 0.3 * b)); this._add(I, 'Head', D(0.15 + 0.25 * b, 0.15 * Math.sin(e.chewT * 2.3)));
+    this._add(I, 'LeftArm', D(0.5, 0, -0.45)); this._add(I, 'RightArm', D(0.5, 0, 0.45));
+    this._add(I, 'LeftForeArm', D(0, 0.35 * b)); this._add(I, 'RightForeArm', D(0, -0.35 * b));
   }
 
   // a zombie too far off for a body of its own: one of the posed copies

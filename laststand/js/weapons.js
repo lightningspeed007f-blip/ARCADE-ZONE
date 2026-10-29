@@ -406,7 +406,7 @@ export class Arsenal {
       }
     }
     // fire
-    if (input.fire && this.switchT <= 0 && this.reloadT <= 0 && this.cool <= 0 && this.throwT <= 0) {
+    if (input.fire && this.switchT <= 0 && this.reloadT <= 0 && this.cool <= 0 && this.throwT <= 0 && !player.gunAway) {
       if (w.melee) { this.swing(ctx); this.cool = 60 / w.rpm; }
       else if (this.mag[this.cur] > 0) { this.shoot(ctx); this.cool = 60 / w.rpm; if (!w.auto) input.fire = input.touch ? input.fire && false : false; }
       else { this.audio.play('click', { vol: 0.6 }); this.cool = 0.3; if (!w.auto) input.fire = false; if (!this.startReload() && !input.touch) { /* empty */ } }
@@ -472,7 +472,7 @@ export class Arsenal {
     // third person: the grip sits in the body's right hand; only the bob, kick and reload dips stay
     const gp = m.userData.grip || { x: 0, y: 0, z: 0 };
     m.position.set(x - lerp(hip[0], adsP[0], a) - gp.x, y - lerp(hip[1], adsP[1], a) - gp.y, z - lerp(hip[2], adsP[2], a) - gp.z);
-    this.holder.visible = this.throwT <= 0 && !(ctx.game && ctx.game.vehicles.driving);   // put away while the right hand throws (and in a vehicle)
+    this.holder.visible = this.throwT <= 0 && !player.gunAway && !(ctx.game && ctx.game.vehicles.driving);   // put away while the right hand throws, while running (player.gunAway) and in a vehicle
     m.rotation.set(rx, ry, rz);
     if (m.userData.warhead) m.userData.warhead.visible = this.mag[this.cur] > 0 || (this.reloadT > 0 && this.reloadT < w.reload * 0.45);
     player.handAt(this.holder.position);      // third person: held by the body's right hand
