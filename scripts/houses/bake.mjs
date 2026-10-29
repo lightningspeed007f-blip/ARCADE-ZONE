@@ -9,6 +9,7 @@ const T = await triangles(`${OUT}/${name}.glb`, 1);
 const cs = 0.1, vy = 0.05, STEP = 0.45, HEAD = 1.7;
 let mnx = 1e9, mnz = 1e9, mxx = -1e9, mxz = -1e9, mxy = 0;
 for (let i = 0; i < T.length; i += 3) { mnx = Math.min(mnx, T[i]); mxx = Math.max(mxx, T[i]); mxy = Math.max(mxy, T[i + 1]); mnz = Math.min(mnz, T[i + 2]); mxz = Math.max(mxz, T[i + 2]); }
+for (const q of C.shell || []) { mnx = Math.min(mnx, q[0]); mnz = Math.min(mnz, q[1]); mxx = Math.max(mxx, q[2]); mxz = Math.max(mxz, q[3]); }
 const M = 1.5, X0 = Math.floor((mnx - M) * 10) / 10, Z0 = Math.floor((mnz - M) * 10) / 10;
 const nx = Math.ceil((mxx + M - X0) / cs), nz = Math.ceil((mxz + M - Z0) / cs), ny = Math.ceil((mxy + 0.5) / vy) + 1;
 const vox = new Uint8Array(nx * nz * ny);
@@ -23,7 +24,7 @@ for (let i = 0; i < T.length; i += 9) {
   for (let u = 0; u <= n; u++) for (let v = 0; v <= n - u; v++) { const w = n - u - v; mark((a[0] * u + b[0] * v + c[0] * w) / n, (a[1] * u + b[1] * v + c[1] * w) / n, (a[2] * u + b[2] * v + c[2] * w) / n); }
 }
 // extra solid volumes: the added floors, and steps up to a raised door: [x0,z0,x1,z1,y0,y1]
-const solids = [...(C.solids || []), ...(C.floors || []).map((f) => [f[0], f[1], f[2], f[3], f[4] - 0.2, f[4]])];
+const solids = [...(C.solids || []), ...(C.shell || []), ...(C.floors || []).map((f) => [f[0], f[1], f[2], f[3], f[4] - 0.2, f[4]])];
 const steps = [];
 for (const d of C.doors || []) {
   if (d.inner || !(d.y > 0.3)) continue;
@@ -107,7 +108,8 @@ for (let gz = 0; gz < nz; gz += 4) for (let gx = 0; gx < nx; gx += 4) {
 let fx0 = 1e9, fx1 = -1e9, fz0 = 1e9, fz1 = -1e9, top = 0;
 for (const b of boxes) if (b[5] > 0.5) { fx0 = Math.min(fx0, b[0] - b[2]); fx1 = Math.max(fx1, b[0] + b[2]); fz0 = Math.min(fz0, b[1] - b[3]); fz1 = Math.max(fz1, b[1] + b[3]); top = Math.max(top, b[5]); }
 fx0 = mnx; fx1 = mxx; fz0 = mnz; fz1 = mxz; top = mxy;     // footprint and height of what you see
-fs.writeFileSync(`${OUT}/${name}.bake.json`, JSON.stringify({ name, foot: [+fx0.toFixed(2), +fz0.toFixed(2), +fx1.toFixed(2), +fz1.toFixed(2)], top: +top.toFixed(2), boxes, spots, doors: C.doors || [], floors: C.floors || [] }));
+for (const q of C.shell || []) { fx0 = Math.min(fx0, q[0]); fz0 = Math.min(fz0, q[1]); fx1 = Math.max(fx1, q[2]); fz1 = Math.max(fz1, q[3]); top = Math.max(top, q[5]); }   // and the walls the game adds
+fs.writeFileSync(`${OUT}/${name}.bake.json`, JSON.stringify({ name, foot: [+fx0.toFixed(2), +fz0.toFixed(2), +fx1.toFixed(2), +fz1.toFixed(2)], top: +top.toFixed(2), boxes, spots, doors: C.doors || [], floors: C.floors || [], ...(C.shell ? { shell: C.shell } : {}), ...(C.lights ? { lights: C.lights } : {}), ...(C.seat ? { seat: C.seat } : {}), ...(C.special ? { special: true } : {}) }));
 // picture
 const PX = 5, W = nx * PX, H = nz * PX, img = Buffer.alloc(W * H * 3, 255);
 for (let k = 0; k < nx * nz; k++) {

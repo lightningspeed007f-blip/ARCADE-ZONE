@@ -321,6 +321,25 @@ node gen.mjs                                                                    
 `bake.mjs` also draws `out/walk_<name>.png`: a map of where you can walk (coloured by floor height), so you can see
 that the doors and steps work before trying it in the game.
 
+### The Hunter's Rest (`models/houses/hunters.glb`, `hunters_door.glb`)
+Three uploads put together into one house: an arched **castle door** (two leaves that swing open together), a
+scanned **stone corridor** behind it (about 10 m), and the candle-lit **crypt hall** at its end (the coffin on the
+altar, the colonnades, the moon window). The hall is exactly as it came; only its tiled floor was carried on by 7
+rows of tiles (about 5 m) toward the corridor, so the room is bigger. The corridor scan was scaled to a walkable
+2.2 m wide, 3.7 m high, its slight drift straightened, and its smeared far end left out. The hall came as an open
+cut-away (no front wall, no roof, open colonnades), so the game builds dark stone walls and a roof round it, and
+warm candle light inside. The whole house is lifted 10 cm (the hall's tiles sit just below its own zero).
+
+There is only one: it stands across lane L1 from the house you wake up in, its door facing the lane (`HUNTERS_LOT`
+in `js/world.js`), with a dot and a label on the map. **One of the four crew always waits inside**, on the hall
+floor (which one changes each run). Two uploads were cut off in transfer: the corridor lost the bottom quarter of
+one texture (refilled by mirroring the rows above), and the door lost its glass map (not used).
+```
+cd scripts/houses
+UPLOADS=/folder/with/the/uploads node hunters.mjs     # puts the three together -> out/hunters_src.glb, out/hunters_door.glb
+node build.mjs hunters && node bake.mjs hunters && node gen.mjs
+```
+
 ## Look-only scenery (`models/scenery/*.glb`, `js/scenery.js`)
 Three more uploads are there only to be looked at: none of them can be entered.
 ```

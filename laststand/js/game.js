@@ -6,7 +6,7 @@ import { createWorldContext, buildWorld } from './world.js';
 import { buildProps, part, merge, Bx, Cy, WHEEL } from './props.js';
 import { Nav } from './nav.js';
 import { Player } from './player.js';
-import { loadGLB, prepVampire } from './models.js';
+import { loadGLB, prepVampire, lambertize } from './models.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
 import { Enemies } from './enemies.js';
@@ -252,7 +252,7 @@ export class Game {
 
   // ================= doors =================
   buildDoors() {
-    const W = this.W, list = [];
+    const W = this.W, list = [], leafFiles = {};
     const woodM = new THREE.MeshLambertMaterial({ map: this.tex.wood, color: 0xb08060 });
     const metalM = new THREE.MeshLambertMaterial({ map: this.tex.metal, color: 0x9aa4ac });
     for (const d of W.doors) {
@@ -264,6 +264,18 @@ export class Game {
       pivot.add(leaf);
       // a small handle
       const h = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.08), this.mats.dark); h.position.set(d.w - 0.1, 1.0, 0); pivot.add(h);
+      // a leaf from a model file (the Hunter's Rest castle door): the plain leaf stands in until it arrives
+      if (d.model) {
+        const file = d.model;
+        (leafFiles[file] || (leafFiles[file] = loadGLB('models/houses/' + file + '_door.glb').then((g) => lambertize(g.scene, false, 0.12))))
+          .then((root) => {
+            const src = root.getObjectByName('leaf' + d.leaf); if (!src) return;
+            const m = src.clone(true);
+            m.traverse((o) => { if (o.isMesh) { o.material = [].concat(o.material).map((x) => { x.side = THREE.DoubleSide; return x; }); if (o.material.length === 1) o.material = o.material[0]; } });
+            leaf.visible = false; h.visible = false; pivot.add(m);
+          })
+          .catch((e) => console.warn('could not load door leaves', file, e));
+      }
       this.scene.add(pivot);
       d.pivot = pivot; d.angle = 0; d.target = 0;
       const c = Math.cos(d.closedYaw), s = Math.sin(d.closedYaw);
@@ -301,6 +313,9 @@ export class Game {
     const ref = byPlayer ? P.pos : (this._doorOpener || P.pos);
     const nz = (ref.x - d.cx) * s + (ref.z - d.cz) * c;
     d.open = true; d.target = nz > 0 ? 1.55 : -1.55; d.box.enabled = false;
+    // a double door: the other leaf swings the same way, away from the opener (it is turned half round, so its sign flips)
+    const q = d.pair;
+    if (q && !q.open && !q.broken) { q.open = true; q.target = -d.target; q.box.enabled = false; q.locked = false; }
     this.audio.play(this.audio.b.doorOpen ? 'doorOpen' : 'creak', { pos: [d.cx, 1.2, d.cz], vol: 0.8, vary: 0.02 });
     this.noise({ x: d.cx, z: d.cz }, 6, 'door');
   }
@@ -308,7 +323,10 @@ export class Game {
   closeDoor(d) {
     // don't close onto the player
     if (Physics.circleOverlaps(d.box, this.player.pos.x, this.player.pos.z, 0.4)) return;
+    const q = d.pair;
+    if (q && q.open && !q.broken && Physics.circleOverlaps(q.box, this.player.pos.x, this.player.pos.z, 0.4)) return;
     d.open = false; d.target = 0; d.box.enabled = true;
+    if (q && q.open && !q.broken) { q.open = false; q.target = 0; q.box.enabled = true; }
     this.audio.play(this.audio.b.doorClose ? 'doorClose' : 'slam', { pos: [d.cx, 1.2, d.cz], vol: this.audio.b.doorClose ? 0.8 : 0.35, vary: 0.02 });
   }
 

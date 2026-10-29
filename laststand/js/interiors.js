@@ -235,15 +235,20 @@ export const Furn = {
 export function door(F, along, fixed, c, ly, opts = {}) {
   const w = opts.w || 0.95, h = opts.h || 2.1;
   const W = F.W;
-  const hingeL = along === 'x' ? [c - w / 2, fixed] : [fixed, c - w / 2];
+  // flip: hinged on the other side (the right-hand leaf of a double door), the leaf turned half round
+  const e = opts.flip ? w / 2 : -w / 2;
+  const hingeL = along === 'x' ? [c + e, fixed] : [fixed, c + e];
   const hinge = F.world(hingeL[0], ly, hingeL[1]);
-  const closedYaw = F.yaw + (along === 'x' ? 0 : -Math.PI / 2);
-  W.doors.push({
+  const closedYaw = F.yaw + (along === 'x' ? 0 : -Math.PI / 2) + (opts.flip ? Math.PI : 0);
+  const d = {
     hinge, closedYaw, w, h, t: 0.06,
     open: false, locked: !!opts.locked, kick: opts.kick !== false, hp: opts.hp || 120,
     metal: !!opts.metal, label: opts.label || 'दरवाज़ा', building: W.currentBuilding,
     swing: opts.swing || 1,
-  });
+    model: opts.model || null, leaf: opts.leaf || null,      // a leaf from a model file (game.js buildDoors)
+  };
+  W.doors.push(d);
+  return d;
 }
 
 // ---------- building shell ----------
