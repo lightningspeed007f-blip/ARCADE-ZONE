@@ -265,3 +265,40 @@ geometry is meshopt-compressed. Three uploads were cut off in transfer and were 
 At night a low mist drifts east over the stones by the station, the graves by MUTANT and the railway line; it is
 thin in the day. Now and then at night, out in the town, lightning flickers the fill light and its thunder
 (`thunder` in `js/audio.js`) rolls in a moment later. Nothing to upload: the thunder is generated.
+
+## Walk-in houses (`models/houses/*.glb`, placed by `js/houses.js`)
+The plain box houses in the residential rows and in the blocks behind the streets are now nine uploaded house
+models, and **every one of them can be walked into**, like the town's other houses: the game hangs its own door in
+each doorway (open / close, kick in when it is locked, zombies can break it), the inside counts as indoors (the
+light dims, the street goes quiet), and a few houses hold loot or a thief waiting inside. About 65 of them stand
+in town (`CAP` in `js/houses.js` sets how many of each). Shops in the bazaar rows stay as they were, and so do the
+named houses of the story (the house you wake up in, Gupta store, the three-floor house, and the rest).
+```
+models/houses/american.glb     two-storey clapboard house, porch and garage      (door up the porch steps)
+models/houses/apocalypse.glb   rusty-roofed shack with a lean-to
+models/houses/abandoned.glb    collapsing timber house                           (an open doorway, no door left)
+models/houses/wooden.glb       plank house on a concrete base
+models/houses/farm.glb         square farmhouse on a stone plinth                 (front and side doors)
+models/houses/japan.glb        narrow Japanese shop-house
+models/houses/old.glb          low timber cottage, entered from its veranda
+models/houses/test.glb         small clapboard cabin with a brick chimney
+models/houses/horror.glb       big house with a wraparound porch                  (up the porch's side steps)
+```
+Converted once from the uploads: turned so the front door faces the street, scaled to metres, only the colour
+textures kept (webp, 1024 px; 768 px for the wooden house), geometry meshopt-compressed, the heaviest three
+simplified. The modelled door panels were cut out (the game's door replaces them); the horror kit's loose spare
+pieces and the Japanese shop's round ground patch were left out. Four uploads were cut off in transfer: three lost
+only a normal map (not used), and the farmhouse's roof texture lost its last rows, which were refilled from the
+shingle pattern above them.
+
+`js/housedata.js` holds what the game needs from each model, baked from the geometry: collision boxes for walls,
+floors and steps up to head height, the doorways, open floor spots for loot, and the floor (with a ceiling) the
+game adds to the hollow shells. The houses load during the loading screen (about 6 MB).
+To change a house (door position, scale, which way it faces), edit `scripts/houses/config.mjs` and re-bake:
+```
+cd scripts/houses && npm install
+UPLOADS=/folder/with/the/original/uploads node build.mjs american && node bake.mjs american   # each house you changed
+node gen.mjs                                                                                     # writes housedata.js, copies the models
+```
+`bake.mjs` also draws `out/walk_<name>.png`: a map of where you can walk (coloured by floor height), so you can see
+that the doors and steps work before trying it in the game.

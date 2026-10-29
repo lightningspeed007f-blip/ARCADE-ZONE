@@ -68,7 +68,7 @@ export class TownMap {
     this.hidden = new Set(['abandoned2', 'e2house']);
     this.dots = [];
     for (const b of W.buildings) {
-      if (!b.tpl || ['jaisCity', 'ggd', 'cabin'].includes(b.name)) continue;
+      if (!b.tpl || b.tpl === 'model' || ['jaisCity', 'ggd', 'cabin'].includes(b.name)) continue;   // the many model houses get no dot
       const [cx, cz] = b.F.p(0, b.d / 2);
       const dot = { name: b.name, x: cx, z: cz, shown: false };
       this.dots.push(dot);

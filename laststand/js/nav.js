@@ -10,7 +10,7 @@ export class Nav {
     this.w = Math.ceil((BOUNDS.maxX - BOUNDS.minX) / cs); this.h = Math.ceil((BOUNDS.maxZ - BOUNDS.minZ) / cs);
     this.grid = new Uint8Array(this.w * this.h); // 0 free, 1 blocked, 2 door
     for (const b of physics.boxes) {
-      if (b.maxY < 0.42 || b.minY > 1.5) continue;
+      if (b.maxY < 0.42 || b.minY > 1.5 || b.tag === 'slab') continue;   // slab: a raised floor or step in a model house
       const door = b.tag === 'door';
       const pad = 0.2;
       const x0 = Math.floor((b.minX - pad - this.x0) / cs), x1 = Math.ceil((b.maxX + pad - this.x0) / cs);
