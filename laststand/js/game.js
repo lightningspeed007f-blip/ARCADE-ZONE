@@ -10,6 +10,7 @@ import { loadGLB, prepVampire, lambertize } from './models.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
 import { Enemies } from './enemies.js';
+import { Creatures } from './creatures.js';
 import { Loot, FOOD, AMMO_PICK, rollFood, rollAmmo, rollWeapon, containerLoot } from './loot.js';
 import { Audio } from './audio.js';
 import { LightPool } from './lights.js';
@@ -177,9 +178,10 @@ export class Game {
     this.arsenal = new Arsenal(cam, scene, this.wscene, tex, gunMats, this.audio);
     this.fx = this.arsenal.fx;
     this.enemies = new Enemies(scene, { grime: tex.grime }, this);
+    this.enemies.creatures = new Creatures(this);       // the zombie models (and the hounds), shared out to the nearest
     this.explosives = new Explosives(this);
     this.boss = new Boss(this);                          // exactly one, created once and reset every run
-    this.joker = new Joker(this);                        // the real villain: steps in when Mutant is nearly dead
+    this.joker = new Joker(this);                        // the real villain: steps in when MAW is nearly dead
     this.giants = new Giants(this);                      // after the Joker: the last bus, the warrior and the worm
     this.spider = new Spider(this);                      // a showcase: a giant spider drifts across the sky over town
     this.day = new DayCycle(this);                       // night -> morning -> day -> evening over the town
@@ -199,6 +201,8 @@ export class Game {
     this.state = 'menu';
     this.renderMenuBackdrop();
     requestAnimationFrame((t) => this.frame(t));
+    this.enemies.creatures.loadZombies();             // the four zombie models: every zombie wears one of them
+    this.boss.load();                                 // MAW, the creature asleep on the tracks
     this.swaps = new Swaps(this);
     this.swaps.start();                               // the uploaded cars and ambulances, and grass breaking through the roads
     this.trees = new Trees(this);
@@ -206,7 +210,7 @@ export class Game {
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
     this.corpses.start();                             // the dead of Jais, in the background
     this.graves = new Graves(this);
-    this.graves.start();                              // the headstones by the station and MUTANT, and the wrecks
+    this.graves.start();                              // the headstones by the station and MAW, and the wrecks
     this.atmos = new Atmosphere(this);                // night mist over the graves and the rail, lightning and thunder
   }
 
@@ -851,7 +855,7 @@ export class Game {
     }
   }
 
-  // the nearest of the big ones on a ray: Mutant, the Joker or his cat, the desert giants
+  // the nearest of the big ones on a ray: MAW, the Joker or his cat, the desert giants
   bigHit(o, d, maxT) {
     const a = this.boss.hitTest(o, d, maxT);
     const b = this.joker.hitTest(o, d, a ? a.t : maxT) || a;
@@ -877,7 +881,7 @@ export class Game {
     const v = $('vignette'); v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
     if (P.dead) {
       if (reason) { this.gameOver(reason); return; }
-      this.gameOver(from === this.boss ? 'MUTANT ने कुचल डाला · crushed by MUTANT' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from === this.giants.warrior ? 'दैत्य ने कुचल डाला · crushed by the Giant Warrior' : from === this.giants.worm ? 'रेत के कीड़े ने निगल लिया · swallowed by the Giant Worm' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
+      this.gameOver(from === this.boss ? 'MAW ने कुचल डाला · crushed by MAW' : from === this.joker ? 'जोकर की आख़िरी हँसी · the Joker had the last laugh' : from === this.joker.cat ? 'कैटनैप ने दबोच लिया · CatNap got you' : from === this.giants.warrior ? 'दैत्य ने कुचल डाला · crushed by the Giant Warrior' : from === this.giants.worm ? 'रेत के कीड़े ने निगल लिया · swallowed by the Giant Worm' : from && from.thief ? 'चोरों ने मार डाला' : from && from.human ? 'लुटेरों ने मार डाला' : from && from.type === 'hound' ? 'शिकारी कुत्तों ने नोच डाला · the hounds got you' : from && from.type === 'ghoul' ? 'घूल ने चीर डाला · torn apart by a ghoul' : 'ज़ॉम्बी ने मार डाला');
       if (from && !from.human) this.audio.play('zombieByeBye', { vol: 2.2, vary: 0, verbAmt: 0.3 });   // only a zombie's kill (the clip is mixed ~9 dB quieter than the others)
     }
   }
@@ -1716,10 +1720,10 @@ export class Game {
       $('overSub').textContent = 'जोकर मारा गया — the Joker is dead, his Playground is silent, and the night is yours. Who is laughing now?';
     } else if (kind === 'boss') {
       $('overTitle').textContent = 'MISSION COMPLETE';
-      $('overSub').textContent = 'MUTANT मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
+      $('overSub').textContent = 'MAW मारा गया — the giant of the railyard is dead, and the line to Guru Gorakhnath Dham is yours.';
     } else {
       $('overTitle').textContent = 'YOU MADE IT OUT';
-      $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.' + (this.stats.boss ? ' MUTANT भी मारा गया।' : '');
+      $('overSub').textContent = 'आप जायस से निकल गए — the relief train pulls away from Guru Gorakhnath Dham.' + (this.stats.boss ? ' MAW भी मारा गया।' : '');
     }
     this.fillStats();
     $('over').classList.remove('hidden');

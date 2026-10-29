@@ -1,6 +1,6 @@
 // THE JOKER — the real villain of the night.
 //
-// When Mutant, the railyard giant (boss.js), is about to die, the Joker steps out of a puff of
+// When MAW, the railyard giant (boss.js), is about to die, the Joker steps out of a puff of
 // purple smoke, shoots the giant dead and takes his place: he laughs, lobs a laughing-gas canister
 // at the player and everything goes white. The player wakes up in the Joker's Playground — the
 // abandoned city street (models/street.glb), far from the town — and has to fight him there.
@@ -21,7 +21,7 @@ import { BOMB } from './explosives.js';
 
 export const JOKER = { name: 'जोकर', en: 'THE JOKER · KING OF JESTERS', hp: 1700 };
 export const CATNAP = { name: 'कैटनैप', en: 'CATNAP', hp: 900 };
-const AMBUSH_AT = 0.1;          // Mutant's health share when the Joker steps in
+const AMBUSH_AT = 0.1;          // MAW's health share when the Joker steps in
 
 // Collision boxes of the street model, in its own units: [cx, cz, half x, half z, y0, y1, yaw].
 // Worked out from the mesh once (one box per building block / wreck, rotated to fit).

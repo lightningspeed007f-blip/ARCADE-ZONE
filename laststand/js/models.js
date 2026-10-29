@@ -152,11 +152,12 @@ export function poseBone(rig, name, D) {
 }
 export function restAll(rig) { for (const [b, r] of rig.rest) b.quaternion.copy(r.q); }
 
-// ---------- the night's other uploads: the pickup, the ghoul, the hound and three far-off places ----------
-// Each loads on its own, in the background, once the town is ready (see outlands.js).
+// ---------- the night's other uploads: the pickup, the hound, the zombies, MAW and three far-off places ----------
+// Each loads on its own, in the background, once the town is ready (see outlands.js, creatures.js, boss.js).
 //   models/truck.glb   the zombie pickup (wheels cut out of the body so they can spin and steer)
-//   models/ghoul.glb   a rotting zombie (Mixamo rig, one clip: a scream, then a swaying idle)
 //   models/hound.glb   a zombie dog (one clip: a howl)
+//   models/zombies/*.glb  the four zombies every walker, runner, brute and ghoul wears (Mixamo clips)
+//   models/maw.glb     MAW, the railyard boss (Mixamo clips)
 //   models/forest.glb, city.glb, metro.glb   the forest road, the dead city and the old metro
 // Materials become Lambert like everything else in town.
 const loader = { l: null };

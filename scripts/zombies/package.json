@@ -1,0 +1,14 @@
+{
+  "name": "zombie-build",
+  "private": true,
+  "type": "module",
+  "description": "Converts the uploaded Mixamo zombie and creature packs (FBX) for Last Stand (see laststand/assets/README.md)",
+  "dependencies": {
+    "@gltf-transform/core": "4.1.1",
+    "@gltf-transform/extensions": "4.1.1",
+    "@gltf-transform/functions": "4.1.1",
+    "fbx2gltf": "0.9.7-p1",
+    "meshoptimizer": "0.22.0",
+    "sharp": "0.33.5"
+  }
+}

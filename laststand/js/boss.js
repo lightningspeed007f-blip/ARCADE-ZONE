@@ -1,5 +1,5 @@
-// MUTANT · MUTANT — the one and only boss: a giant railway-gang zombie who
-// sleeps in the gravel beside the main line west of Guru Gorakhnath Dham.
+// MAW — the one and only boss: a giant antlered creature (models/maw.glb, from the uploaded Creature NPC
+// Pack) who sleeps in the gravel beside the main line west of Guru Gorakhnath Dham.
 //
 // He wakes only when the station signal is set (the final objective), when
 // the player deliberately wakes him (USE beside him, shooting him, a rocket,
@@ -8,16 +8,24 @@
 // charging and, when he cannot reach you, throwing chunks of concrete.
 // He never dies by your hand: when he is nearly finished the Joker (joker.js) steps out and
 // shoots him, and the game goes on with the Joker. If the Joker's models cannot be loaded at
-// all, killing Mutant completes the game as before.
+// all, killing MAW completes the game as before.
 //
-// The body is built from merged coloured boxes, one mesh per bone (about 20
-// draw calls), animated procedurally like the ordinary zombies.
+// The body is the creature's own rigged model with its own clips: he sleeps where he fell (the last frame of
+// his death), gets up by playing that fall backwards, flexes and roars, then walks, runs, swipes, leaps and
+// slams; each attack's clip is timed so the blow lands on its own frame. Until the model has downloaded he
+// is drawn the old way, from merged coloured boxes animated in code.
 import * as THREE from 'three';
 import { part, merge, Bx, Cy } from './props.js';
 import { clamp, lerp, angleDiff, smooth } from './util.js';
+import { loadGLB, lambertize } from './models.js';
+
+// how tall MAW stands (the height of his head bone, metres), and where in each attack clip the blow lands
+const MAW_HEAD = 3.7;
+const HIT = { swipe: 0.53, jump: 0.68 };
+const _v = new THREE.Vector3();
 
 export const BOSS = {
-  name: 'MUTANT', en: 'MUTANT · THE RAILYARD BEHEMOTH',
+  name: 'MAW', en: 'MAW · THE RAILYARD BEHEMOTH',
   hp: 2600,
   // lying on his back in the gravel north of the main line, feet to the west, head toward the station
   x: 73.6, z: -182.6, yaw: -Math.PI / 2,
@@ -34,8 +42,63 @@ export class Boss {
     this.vel = { x: 0, z: 0 };
     this.hs = [];
     this.build();
+    this.boxHs = this.hs;
+    this.M = null;
     this.reset();
   }
+
+  // ---------- MAW's model ----------
+  load() {
+    if (this._loading) return; this._loading = true;
+    setTimeout(() => loadGLB('models/maw.glb').then((m) => this.setModel(m)).catch((e) => console.warn('could not load models/maw.glb', e)), this.g.mobile ? 900 : 200);
+  }
+
+  setModel(gltf) {
+    const scene = gltf.scene, clean = (n) => n.replace(/^mixamorig\d*:?/, '');
+    lambertize(scene, false, 0.06);                 // keeps the glow map: the embers in his arm
+    scene.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+    const bones = {};
+    scene.traverse((o) => { if (o.isBone) bones[clean(o.name)] = o; });
+    const clips = {};
+    for (const a of gltf.animations) clips[a.name] = a;
+    if (!bones.Head || !bones.Hips || !clips.walk || !clips.dying) { console.warn('maw.glb: missing bones or clips'); return; }
+    const root = new THREE.Group(), off = new THREE.Group();
+    off.add(scene); root.add(off); root.rotation.order = 'YXZ';
+    // measure him standing
+    const mixer = new THREE.AnimationMixer(scene);
+    mixer.clipAction(clips.breathe || clips.idle || clips.walk).play(); mixer.update(0); scene.updateMatrixWorld(true);
+    scene.traverse((o) => { if (o.isSkinnedMesh) o.boundingBox = null; });
+    const box = new THREE.Box3().setFromObject(scene);
+    const s = MAW_HEAD / (bones.Head.getWorldPosition(_v).y - box.min.y);
+    off.position.y = -box.min.y;
+    root.scale.setScalar(s);
+    root.updateMatrixWorld(true);
+    const hip0 = root.worldToLocal(bones.Hips.getWorldPosition(new THREE.Vector3()));
+    mixer.stopAllAction();
+    const acts = {};
+    for (const k in clips) acts[k] = mixer.clipAction(clips[k]);
+    // hit spheres on his bones (radii in metres)
+    const hs = [];
+    const mark = (bone, x, y, z, r, partName) => { const b = bones[bone]; if (!b) return null; const o = new THREE.Object3D(); o.position.set(x, y, z); b.add(o); const h = { o, r, part: partName, p: new THREE.Vector3() }; hs.push(h); return o; };
+    mark('Head', 0, 0.12, 0.05, 0.42, 'head');
+    const chest = mark('Spine2', 0, 0.1, 0.05, 0.8, 'body');
+    mark('Spine1', 0, 0, 0.05, 0.62, 'body'); mark('Spine', 0, 0, 0, 0.6, 'body'); mark('Hips', 0, 0, 0, 0.58, 'body');
+    for (const side of ['Left', 'Right']) {
+      mark(side + 'UpLeg', 0, 0.2, 0, 0.34, 'leg'); mark(side + 'Leg', 0, 0.2, 0, 0.3, 'leg');
+      mark(side + 'Arm', 0, 0.12, 0, 0.34, 'arm'); mark(side + 'ForeArm', 0, 0.12, 0, 0.3, 'arm');
+    }
+    mark('LeftHand', 0, 0.08, 0, 0.36, 'arm');
+    const fist = mark('RightHand', 0, 0.08, 0, 0.36, 'arm');
+    this.M = { root, off, scene, bones, mixer, acts, clips, s, hip0, hs, chest, fist, cur: null, speeds: Object.assign({ walk: 1.25, run: 2.26 }, scene.userData.speeds || {}) };
+    this.g.scene.add(root);
+    this.rig.root.visible = false;
+    this.hs = hs; this.chestMark = chest;
+    this.animate(0); this.finish();
+  }
+
+  // the body in use: MAW's model, or the box giant while it downloads
+  get body() { return this.M ? this.M.root : this.rig.root; }
+  fistObj() { return this.M ? this.M.fist : this.rig.fist[1]; }
 
   // ---------- the lair: crushed sleepers, a bent rail, bones and a dying red signal lamp ----------
   static buildLair(W) {
@@ -145,7 +208,8 @@ export class Boss {
     this.victoryT = -1; this.announced = false; this.woken = null; this.byJoker = false;
     this.eyeK = 0; this.ring.visible = false;
     this.ui(false);
-    this.pose(0); this.finish();
+    if (this.M) { this.M.mixer.stopAllAction(); this.M.cur = null; this.M.off.position.x = this.M.off.position.z = 0; }
+    this.animate(0); this.finish();
   }
 
   solid() { return this.state !== 'SLEEP' && this.state !== 'DEAD'; }
@@ -159,7 +223,7 @@ export class Boss {
     if (g.joker) g.joker.preload();                // the real villain's models start downloading now
     g.audio.play('growlBig', { pos: this.chestPos(), vol: 1.1, rate: 0.45, max: 300 });
     if (reason === 'final') g.toast('पटरी पर कुछ जाग गया है…', 'Something huge has woken on the tracks west of the station…');
-    else g.toast('MUTANT जाग गया!', 'You woke MUTANT. Run — or fight.');
+    else g.toast('MAW जाग गया!', 'You woke MAW. Run — or fight.');
     this.ui(true);
   }
 
@@ -233,7 +297,7 @@ export class Boss {
     if (!this.enraged && this.hp < this.maxHp * 0.4 && this.hp > 0) {
       this.enraged = true;
       this.g.audio.play('roar', { pos: this.chestPos(), vol: 1.6, rate: 1.1, max: 400 });
-      this.g.toast('MUTANT भड़क उठा!', 'MUTANT is enraged — faster and angrier!');
+      this.g.toast('MAW भड़क उठा!', 'MAW is enraged — faster and angrier!');
     }
     if (this.hp <= 0) { this.hp = 0; this.die(); return true; }
     return false;
@@ -274,13 +338,13 @@ export class Boss {
     // far away and asleep: nothing to do but breathe (and he is not drawn past the fog)
     if (this.state === 'SLEEP') {
       this.sleep(dt, d);
-      this.pose(dt); this.finish();
+      this.animate(dt); this.finish();
       return;
     }
     if (this.state === 'WAKE') this.rise(dt);
     else if (this.state === 'DEAD') this.dying(dt);
     else this.fight(dt, d, dx, dz, dy);
-    this.pose(dt); this.finish();
+    this.animate(dt); this.finish();
     // keep the player out of his body
     if (this.solid() && !g.vehicles.driving && d < 1.35 && Math.abs(dy) < 3 && d > 1e-3) g.physics.moveCharacter(P.pos, dx / d * (1.35 - d), dz / d * (1.35 - d), 0, 0.016, P.radius, 1.75, 0.45, P.state);
     // and shove ordinary zombies aside
@@ -294,9 +358,9 @@ export class Boss {
 
   finish() {
     // past the fog he is not drawn at all
-    const cam = this.g.camera.position;
-    this.rig.root.visible = Math.abs(cam.x - this.pos.x) < 140 && Math.abs(cam.z - this.pos.z) < 140;
-    this.rig.root.updateMatrixWorld(true);
+    const cam = this.g.camera.position, body = this.body;
+    body.visible = Math.abs(cam.x - this.pos.x) < 140 && Math.abs(cam.z - this.pos.z) < 140;
+    body.updateMatrixWorld(true);
     const c = this.centre || (this.centre = new THREE.Vector3());
     c.set(0, 0, 0);
     for (const h of this.hs) { h.p.setFromMatrixPosition(h.o.matrixWorld); c.add(h.p); }
@@ -348,7 +412,7 @@ export class Boss {
     }
     if (t > 3.0 && !this.announced) {
       this.announced = true;
-      if (!this.byJoker) g.banner('BOSS DEFEATED', 'MUTANT मारा गया · MISSION COMPLETE', 'win');
+      if (!this.byJoker) g.banner('BOSS DEFEATED', 'MAW मारा गया · MISSION COMPLETE', 'win');
       document.getElementById('bossHud').classList.add('gone');
     }
     if (t > 7.5 && this.victoryT < 0 && !this.byJoker) { this.victoryT = t; g.bossVictory(); }
@@ -524,7 +588,7 @@ export class Boss {
         this.face(P.pos.x, P.pos.z, dt, 4);
         if (this.stateT > 0.9 && !this.struck) {
           this.struck = true;
-          const f = this.rig.fist[1], hp = new THREE.Vector3().setFromMatrixPosition(f.matrixWorld);
+          const f = this.fistObj(), hp = new THREE.Vector3().setFromMatrixPosition(f.matrixWorld);
           const lead = g.vehicles.driving ? 0.6 : 0.35, pv = P.vel || { x: 0, y: 0 };
           const to = [P.pos.x + (pv.x || 0) * lead, P.pos.y + 1.0, P.pos.z + (pv.y || 0) * lead];
           g.audio.play('whoosh', { pos: [hp.x, hp.y, hp.z], vol: 1, rate: 0.6 });
@@ -567,7 +631,73 @@ export class Boss {
     }
   }
 
-  // ---------- procedural animation ----------
+  animate(dt) { if (this.M) this.poseModel(dt); else this.pose(dt); }
+
+  // ---------- MAW's clips ----------
+  _act(name, fade = 0.3, ts = 1, once = false) {
+    const M = this.M, a = M.acts[name] || M.acts.idle || M.acts.walk;
+    a.timeScale = ts; a.paused = false;
+    if (M.cur === a) return a;
+    a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.play();
+    if (M.cur) { if (fade > 0) M.cur.crossFadeTo(a, fade, false); else M.cur.stop(); }
+    M.cur = a;
+    return a;
+  }
+  // one frame of a clip, held (u: 0..1 through it)
+  _hold(name, u, fade = 0) {
+    const a = this._act(name, fade, 1, true);
+    a.paused = true; a.time = clamp(u, 0, 1) * (a.getClip().duration - 0.001);
+    return a;
+  }
+  // an attack: the wind-up runs the clip to the blow's frame exactly when the blow lands, then it plays on
+  _strike(name, wind, T, follow = 1.3) {
+    const a = this._act(name, 0.15, 1, true), hit = (HIT[name] || 0.5) * a.getClip().duration;
+    if (T < wind) { a.paused = true; a.time = (T / wind) * hit; } else a.timeScale = follow;
+    return a;
+  }
+
+  poseModel(dt) {
+    const M = this.M, st = this.state, T = this.stateT, rage = this.enraged ? 1.25 : 1;
+    M.root.position.set(this.pos.x, this.pos.y, this.pos.z);
+    M.root.rotation.set(0, this.yaw, 0);
+    // asleep, getting up and dying, his hips stay put (the clip's own fall would carry him off his spot)
+    let pin = false;
+    const sp = this.moveSpeed || 0;
+    if (st === 'SLEEP') { this._hold('dying', 1); pin = true; }
+    else if (st === 'WAKE') {
+      if (T < 1.3) { this._hold('dying', 1); pin = true; }
+      else if (T < 4.0) { this._hold('dying', 1 - ease((T - 1.3) / 2.7)); pin = true; }    // his fall, backwards: he gets up
+      else this._act('flex', 0.3, 1.45, true);                                              // the roar
+    } else if (st === 'DEAD') { this._act('dying', 0.2, 1, true); pin = true; }
+    else if (st === 'SWIPE') this._strike('swipe', this.enraged ? 0.6 : 0.78, T, 1.4);
+    else if (st === 'THROW') this._strike('swipe', 0.9, T, 1.3);
+    else if (st === 'SLAM') this._strike('jump', this.enraged ? 0.85 : 1.05, T, 1.2);
+    else if (st === 'CHARGE_WIND') this._act('flex', 0.2, 2.2, true);
+    else if (st === 'CHARGE') this._act('run', 0.15, clamp(sp / (M.speeds.run * M.s), 1.2, 2.6));
+    else if (st === 'STUN' || st === 'DOOMED') this._act('idle', 0.3, st === 'DOOMED' ? 0.6 : 1.3);
+    else if (sp > 3.3) this._act('run', 0.3, clamp(sp / (M.speeds.run * M.s), 0.6, 2.6));
+    else if (sp > 0.4) this._act('walk', 0.3, clamp(sp / (M.speeds.walk * M.s), 0.5, 2.2) * (this.enraged ? 1.08 : 1));
+    else this._act('breathe', 0.4, rage);
+    // the stride, for his footsteps (fight())
+    this.phase += (sp * 1.25 + 0.0001) * dt;
+    M.mixer.update(dt);
+    // a heavy hit rocks him back
+    const fl = Math.max(this.flinch * 0.35, this.stagger > 0 ? 0.45 * Math.sin(this.stagger / 0.55 * Math.PI) : 0);
+    if (fl > 0.02 && M.bones.Spine1 && st !== 'DEAD') M.bones.Spine1.rotateX(-fl);
+    M.root.updateMatrixWorld(true);
+    const o = M.off.position;
+    if (pin) {
+      const h = M.root.worldToLocal(M.bones.Hips.getWorldPosition(_v));
+      o.x += M.hip0.x - h.x; o.z += M.hip0.z - h.z;
+      M.root.updateMatrixWorld(true);
+    } else if (o.x || o.z) {
+      const k = Math.min(1, dt * 4);
+      o.x -= o.x * k; o.z -= o.z * k; if (Math.abs(o.x) + Math.abs(o.z) < 1e-3) o.x = o.z = 0;
+      M.root.updateMatrixWorld(true);
+    }
+  }
+
+  // ---------- procedural animation (the box giant) ----------
   pose(dt) {
     const R = this.rig, t = this.t;
     R.root.position.set(this.pos.x, this.pos.y, this.pos.z);
