@@ -3,7 +3,7 @@
 //
 // He wakes only when the station signal is set (the final objective), when
 // the player deliberately wakes him (USE beside him, shooting him, a rocket,
-// ramming him with the jeep) — never on his own. Then he rises, roars and
+// ramming him with a vehicle) — never on his own. Then he rises, roars and
 // hunts the player with the town's flow field, swiping, slamming the ground,
 // charging and, when he cannot reach you, throwing chunks of concrete.
 // He never dies by your hand: when he is nearly finished the Joker (joker.js) steps out and

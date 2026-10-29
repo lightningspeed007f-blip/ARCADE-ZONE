@@ -1,3 +1,18 @@
+Converted once from the uploads: scaled to metres, turned to face the street, the colour textures kept (webp),
+geometry simplified and meshopt-compressed. Left out: the sea house's sea, sky, mist, floating debris, dust and the
+mirrored reflections under the water; the Provence scan's patio, plants and loose specks. Uploads that were cut off in
+transfer (Everest, Provence, the bhelpuri cart) had their lost last texture rows refilled from the rows next to them.
+The sea house was made for unlit display, so its very dark wall texture is lifted for the town's lighting; the
+department store's plain white sides are tinted beige per vertex (`sideTint`). The bhelpuri cart was a rigged model
+standing still: its rest pose is baked in (`bakeSkin`). The rickshaw and the bobbers are converted the same way (they
+sit in `models/`, not `models/scenery/`; the rickshaw's length is 2.75 m, the bobber's 2.2 m, nose toward +z).
+To change one, edit `scripts/scenery/config.mjs` and rebuild:
+```
+cd scripts/scenery && npm install
+UPLOADS=/folder/with/the/original/uploads node build.mjs all    # or one name: shop2, streetshop, bhelpuri, gazebo, rickshaw, bobber, bobber_lite, provence, seahouse, himalaya
+cp out/shop2.glb out/streetshop.glb out/bhelpuri.glb out/gazebo.glb ../../laststand/assets/models/scenery/
+cp out/rickshaw.glb out/bobber.glb out/bobber_lite.glb ../../laststand/assets/models/
+```
 # JAIS: LAST STAND — your images and music
 
 Put your files in this folder with **exactly** these names (lower case — GitHub Pages is case-sensitive).
@@ -160,7 +175,7 @@ Jais City station. Cars come along on the road; the metro is on foot.
 
 | File | What it is |
 |------|------------|
-| `models/truck.glb` | The armoured zombie pickup you can drive, parked on the Amethi road facing the highway (“ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0). Faster and heavier than the jeep. The upload was cut short; the missing part of one texture was rebuilt from what arrived. The wheels were cut out of the body so they spin and steer. |
+| `models/truck.glb` | The armoured zombie pickup you can drive, parked on the Amethi road facing the highway (“ZOMBIE PICKUP TRUCK” by seangorman, CC BY 4.0). Faster and heavier than the bobber. The upload was cut short; the missing part of one texture was rebuilt from what arrived. The wheels were cut out of the body so they spin and steer. |
 | `models/hound.glb` | The hound: a fast zombie dog that hunts in packs and howls to call them (“Zombie Dog” by LostBoyz2078, CC BY 4.0). Packs roam the town edges and the forest. |
 | `models/forest.glb` | The forest road (“a forest (3) with a road at night for game” by dasy444, CC BY 4.0), scaled 12×. |
 | `models/city.glb` | The dead city (“street city (7) for games FREE” by dasy444), scaled 4×. |
@@ -258,18 +273,26 @@ One full day is 12 minutes (night 5, morning 2½, day 2, evening 2½; change `DA
 The time shows under the minimap. The hidden valleys, the outlands, the Joker's Playground and the
 Worm Desert keep their own night look.
 
-## Cars, ambulances and road grass (`models/*.glb`, loaded by `js/swaps.js`)
+## Cars, rickshaws, bikes and road grass (`models/*.glb`, loaded by `js/swaps.js`)
 ```
 models/rusty_car.glb     parked cars (most) and some wrecks
 models/police_car.glb    burnt police car: crashed cars across the roads, some wrecks and parked cars
 models/police_car2.glb   the same wreck upside down (the overturned wreck)
-models/ambulance.glb     M725 army ambulance: the tempus
+models/rickshaw.glb      Indian cycle rickshaw: every auto-rickshaw in town (the tempus). The old ambulance stand-in is gone
+models/bobber.glb        the bobber motorbike, full detail: the ONE bike you can ride (see below)
+models/bobber_lite.glb   the same bike at about a quarter of the triangles: every parked bike in town (not rideable)
 models/dry_grass.glb     seven dry tufts   } scattered along the kerbs, in cracks and in
 models/grass06.glb       green blades      } patches on every road
 ```
 These are the uploaded Sketchfab files, converted once: node transforms baked in, rotated to y-up, scaled to metres
 (nose toward +z, wheels on y = 0), only the colour texture kept (1024 px JPEG, PNG where there is alpha).
-The burning cars are unchanged (`js/vehicles.js`). The uploaded `grass_06` file was cut off in transfer, so its blade
+The burning cars are unchanged (`js/vehicles.js`). The box rickshaws and box bikes are no longer drawn at all (they
+only come back if their file fails to download); their colliders were resized to the new models.
+
+**The bobber you can ride** stands where the army jeep used to be, on the main road just south of the Wahabganj
+junction (`BIKE_AT` in `js/vehicles.js`); the jeep is gone. Walk up to it and press DRIVE / G / E. It is quicker
+and lighter than the pickup (top speed 25 m/s, tight turns, it leans into them) and has a rider and a headlight.
+Its wheels do not spin: the upload is one welded mesh. Every other bike in town is the same model standing still. The uploaded `grass_06` file was cut off in transfer, so its blade
 texture was rebuilt from the part that survived; re-upload the file if you want the original texture.
 
 ## Trees (`models/trees/*.glb`, placed by `js/trees.js`)
@@ -373,22 +396,31 @@ node build.mjs hunters && node bake.mjs hunters && node gen.mjs
 ```
 
 ## Look-only scenery (`models/scenery/*.glb`, `js/scenery.js`)
-Three more uploads are there only to be looked at: none of them can be entered.
+Several uploads are there only to be looked at: none of them can be entered.
 ```
-models/scenery/provence.glb    a photo-scanned stone cottage from Provence, vines over its wall, a garage on one end
-models/scenery/seahouse.glb    "the house lost at sea": a tall gothic house with a tower, on its grassy mound
-models/scenery/himalaya.glb    Mount Everest and the peaks around it
+models/scenery/shop2.glb        "Kirana King": a department-store front with its steps (the photo-scanned front, beige sides)
+models/scenery/streetshop.glb   a red tin pan-ki-dukaan kiosk on stilts, "पान की दुकान", shutter down
+models/scenery/bhelpuri.glb     the Kailash Bhelpuri Center handcart
+models/scenery/gazebo.glb       a marble gazebo with four stairways, a rangoli floor and a golden dome
+models/scenery/provence.glb     a photo-scanned stone cottage from Provence, vines over its wall, a garage on one end
+models/scenery/seahouse.glb     "the house lost at sea": a tall gothic house with a tower, on its grassy mound
+models/scenery/himalaya.glb     Mount Everest and the peaks around it
 ```
-**The two houses** take the place of plain box homes, in the residential rows and in the blocks behind the streets
-(about 60 in town: `CAP` in `js/scenery.js`). Shops, the walk-in houses and the named houses stay as they were.
-Each is one solid block: you walk round it, bullets stop on it, zombies path round it. The Provence scan is only
-the cottage's front wall, so the game builds the rest behind it from the town's own materials (stone walls, a
-terracotta tile roof with a ridge cap and a chimney). The sea house stands on its own mound with its dead tree,
-and its windows are lit at night. They are drawn like the walk-in houses (one instanced mesh per part, only the
-ones in view), and not past 140 m, where the haze hides them anyway.
+**The Indian street** replaces the plain box buildings: every ordinary building on the street rows (shops and
+homes alike) and in the blocks behind them is now one of these (`placeScenic` in `js/scenery.js`; the choice per lot
+is in `tryScenic` / `backScenic` in `js/world.js`). The department store is the building of the streets: it is
+scaled to fit each lot (62% to 122% of its size), so rows are not all the same width. Pan kiosks and bhelpuri carts
+stand in the bazaar and the lanes (at most 45 and 36 in town), and the gazebo in the blocks behind (at most 10).
+The two odd houses are rare now (at most 6 Provence cottages and 3 sea houses; the weights are in `WEIGHT`).
+A few of the shops keep a lamp on after dark. A plain box building is only built where none of them fits.
+The walk-in houses, the named shops and houses (Gupta General Store, the electrical shop, the school…) and the
+Hunter's Rest are not touched.
 
-Only the plain box homes on lots big enough for one of them (they are 12 to 14 m wide) were replaced; the small
-gaps between buildings, too narrow for either, keep their plain blocks.
+Each is one solid block: you walk round it, bullets stop on it, zombies path round it, and you cannot go in or up.
+The Provence scan is only the cottage's front wall, so the game builds the rest behind it from the town's own
+materials (stone walls, a terracotta tile roof with a ridge cap and a chimney). The sea house stands on its own mound
+with its dead tree, and its windows are lit at night. They are drawn like the walk-in houses (one instanced mesh per
+part, only the ones in view), and not past 140 m, where the haze hides them anyway.
 
 **The Himalaya** stand in a ring on the horizon all round the town: six copies of the Everest tile, each showing a
 different face of the range, so the skyline doesn't repeat. They move with the camera, so they stay on the horizon

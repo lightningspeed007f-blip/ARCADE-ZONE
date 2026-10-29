@@ -3,12 +3,15 @@
 //   models/rusty_car.glb    an old rusty saloon: the parked cars, and some of the wrecks
 //   models/police_car.glb   a burnt-out police car: the crashed cars across the roads, and some wrecks and parked cars
 //   models/police_car2.glb  the same wreck upside down: the overturned wreck
-//   models/ambulance.glb    an M725 army ambulance: the tempus (auto-rickshaws)
+//   models/rickshaw.glb     an Indian cycle rickshaw: every auto-rickshaw in town (the tempus)
+//   models/bobber_lite.glb  a bobber motorbike, light enough to stand all over town: every parked bike
+//   models/bobber.glb       the same bike in full: the one you can ride (vehicles.js, in the jeep's old place)
 //   models/dry_grass.glb    seven dry tufts, and models/grass06.glb a fan of green blades
 //
 // Everything loads in the background after the town is up. Until a model arrives its box stand-in stays; when
 // it does, the stand-in is hidden and the model is drawn at the same spots (colliders were added with the town).
-// The burning cars keep their own geometry (vehicles.js).
+// The burning cars keep their own geometry (vehicles.js). The box rickshaws and bikes are not drawn at all while their
+// models load (only if a file fails do they come back).
 // The files are pre-shrunk (1024 px JPEG / PNG textures, no normal or specular maps) by the conversion script
 // described in assets/README.md. models/grass06.glb's own texture was cut off in the upload: the blade was rebuilt
 // from the part that survived.
@@ -19,7 +22,8 @@ import { makeRng } from './util.js';
 
 const FILES = {
   rusty: 'models/rusty_car.glb', police: 'models/police_car.glb', flipped: 'models/police_car2.glb',
-  ambulance: 'models/ambulance.glb', dry: 'models/dry_grass.glb', blades: 'models/grass06.glb',
+  rickshaw: 'models/rickshaw.glb', bobber: 'models/bobber.glb', bobberLite: 'models/bobber_lite.glb',
+  dry: 'models/dry_grass.glb', blades: 'models/grass06.glb',
 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 
@@ -33,11 +37,13 @@ export class Swaps {
   start() {
     const g = this.g;
     let q = new Promise((r) => setTimeout(r, g.mobile ? 3500 : 1500));
-    const step = (name, fn) => { q = q.then(() => loadGLB(FILES[name]).then((gltf) => { this.model[name] = this._meshes(gltf, name); fn && fn(); }).catch((e) => console.warn('could not load', FILES[name], e))); };
+    const step = (name, fn, fail) => { q = q.then(() => loadGLB(FILES[name]).then((gltf) => { this.model[name] = this._meshes(gltf, name); fn && fn(); }).catch((e) => { console.warn('could not load', FILES[name], e); fail && fail(); })); };
+    step('bobber', () => g.vehicles.setBike(this.model.bobber));      // the bike you can ride comes first
+    step('rickshaw', () => this.autos(), () => { const P = g.props; if (P && P.autoMesh) P.autoMesh.visible = true; });
+    step('bobberLite', () => this.bikes(), () => { const P = g.props; if (P && P.bikeMesh) P.bikeMesh.visible = true; });
     step('rusty');
     step('police');
     step('flipped', () => { this.cars(); this.wrecks(); });
-    step('ambulance', () => this.autos());
     this.grass = this._scatter();
     step('dry', () => this._grassModel('dry'));
     step('blades', () => this._grassModel('blades'));
@@ -112,12 +118,20 @@ export class Swaps {
     V.wreckShell.visible = false;
   }
 
-  // ---------- the tempus ----------
+  // ---------- the rickshaws (the tempus) ----------
   autos() {
     const P = this.g.props;
-    if (!P || !P.autos || !P.autoMesh || !this.model.ambulance) return;
-    this._place('ambulance', P.autos.map((a) => ({ x: a.p[0], y: 0, z: a.p[2], yaw: a.yaw })));
+    if (!P || !P.autos || !P.autoMesh || !this.model.rickshaw) return;
+    this._place('rickshaw', P.autos.map((a) => ({ x: a.p[0], y: 0, z: a.p[2], yaw: a.yaw })));
     P.autoMesh.visible = false;
+  }
+
+  // ---------- the parked bikes: all of them the bobber, leaning on its stand (only the one in vehicles.js rides) ----------
+  bikes() {
+    const P = this.g.props;
+    if (!P || !P.bikes || !P.bikeMesh || !this.model.bobberLite) return;
+    this._place('bobberLite', P.bikes.map((b) => ({ x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.1 })));
+    P.bikeMesh.visible = false;
   }
 
   // ---------- grass: tufts along both kerbs, in the cracks and in small patches in the middle of the road ----------

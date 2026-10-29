@@ -1,6 +1,12 @@
-// Look-only scenery from uploaded models: two kinds of house that stand where the town used to put plain
-// box houses, and the Himalaya on the horizon. None of it can be entered: it is there to be looked at.
+// Look-only scenery from uploaded models: the Indian street (a department store, a pan kiosk, a bhelpuri cart and a
+// marble gazebo) and two odd houses, all standing where the town used to put plain box houses, and the Himalaya on the
+// horizon. None of it can be entered: it is there to be looked at.
 //
+//   models/scenery/shop2.glb      "Kirana King": a department-store front with its steps (photo-scanned front, plain beige
+//                                 sides). The house of the streets: it is scaled to each lot's width
+//   models/scenery/streetshop.glb a red tin pan-ki-dukaan kiosk on stilts, shutter down
+//   models/scenery/bhelpuri.glb   the Kailash Bhelpuri Center handcart
+//   models/scenery/gazebo.glb     a marble gazebo with four stairways, a rangoli and a golden dome (the back blocks)
 //   models/scenery/provence.glb   a photo-scanned stone cottage from Provence (the scan is its front wall;
 //                                 the game builds the stone body and the tiled roof behind it)
 //   models/scenery/seahouse.glb   "the house lost at sea": a tall gothic house with a tower, on its own
@@ -16,38 +22,63 @@ import { BOUNDS } from './layout.js';
 // In each model's own frame: metres, front faces -z with its front edge on z = 0, centred on x.
 //   foot [x0, z0, x1, z1]  the ground it covers   top  its height   solid [x0, z0, x1, z1]  the block you bump into
 export const SCENIC = {
+  // the new ones are built (scripts/scenery) with the front facing -z, standing on y = 0
+  shop2: { file: 'models/scenery/shop2.glb', foot: [-4.3, 0, 4.3, 7.41], top: 6, solid: [-4.2, 0.9, 4.2, 7.3], tint: 1.25, glow: 0.12, vcol: true, lit: 0.3, litAt: [0, 2.6, -1.4] },
+  streetshop: { file: 'models/scenery/streetshop.glb', foot: [-1.32, 0, 1.32, 4.55], top: 3.6, solid: [-1.25, 0.1, 1.25, 4.45], tint: 1.25, glow: 0.12, lit: 0.25, litAt: [0, 2.4, -1.0] },
+  bhelpuri: { file: 'models/scenery/bhelpuri.glb', foot: [-1.14, 0, 1.14, 1.65], top: 2.6, solid: [-1.1, 0.05, 1.1, 1.6], tint: 1.2, glow: 0.14, lit: 0.5, litAt: [0, 2.2, -0.8] },
+  gazebo: { file: 'models/scenery/gazebo.glb', foot: [-4.9, 0, 4.9, 9.79], top: 4.5, solid: [-4.7, 0.1, 4.7, 9.7], tint: 1.2, glow: 0.1 },
   provence: { file: 'models/scenery/provence.glb', foot: [-7.15, 0, 7.15, 9.9], top: 5.9, solid: [-7.0, 0.6, 7.0, 9.7] },
   // the sea house was made for unlit display (its walls' textures are lifted in the build); tint / glow lift it a
   // little more to match the town, and its grass, shrubs and lit windows are coloured per vertex (vcol)
   seahouse: { file: 'models/scenery/seahouse.glb', foot: [-6.2, 0, 6.2, 13.7], top: 11.8, solid: [-5.2, 1.0, 5.2, 12.6], tint: 1.4, glow: 0.1, vcol: true },
 };
 export const SCENIC_KINDS = Object.keys(SCENIC);
-// at most this many of each in town (the sea house is the heavier one to draw)
-const CAP = { provence: 50, seahouse: 24 };
+// at most this many of each in town (the sea house is the heavier one to draw; the Indian street fills the rest)
+const CAP = { shop2: 1e4, streetshop: 45, bhelpuri: 36, gazebo: 10, provence: 6, seahouse: 3 };
+// how often each is picked, by where it is going: a street row, the bazaar, or the blocks behind the streets
+const WEIGHT = {
+  street: { shop2: 1, streetshop: 0.3, bhelpuri: 0.25, provence: 0.08, seahouse: 0.04 },
+  bazaar: { shop2: 1, streetshop: 0.5, bhelpuri: 0.45 },
+  block: { shop2: 1, gazebo: 0.16, streetshop: 0.18, bhelpuri: 0.12, provence: 0.08, seahouse: 0.04 },
+};
+// a shop is scaled to fit its lot; the rest stay close to their own size
+const SCALE_RANGE = { shop2: [0.62, 1.22], streetshop: [1, 1.25], bhelpuri: [1, 1.25], gazebo: [0.9, 1.1], provence: [1, 1], seahouse: [1, 1] };
 
-export function scenicSize(kind) { const f = SCENIC[kind].foot; return { w: f[2] - f[0], d: f[3] - f[1] }; }
+export function scenicSize(kind, s = 1) { const f = SCENIC[kind].foot; return { w: (f[2] - f[0]) * s, d: (f[3] - f[1]) * s }; }
 
-// Kinds still under their cap, in a random order.
-export function pickScenic(W, r) {
-  const n = W.scenicCount || {};
-  return r.shuffle(SCENIC_KINDS.filter((k) => (n[k] || 0) < CAP[k]));
+// The scale for kind on a lot of width w (the lot's own width, or 0 for no preference).
+export function scenicScale(kind, w, r) {
+  const [lo, hi] = SCALE_RANGE[kind];
+  if (kind === 'shop2' && w) return Math.min(hi, Math.max(lo, w / 7.6));
+  return lo === hi ? lo : lo + r() * (hi - lo);
+}
+
+// Kinds still under their cap, in a random order (heavier weights first more often). where: 'street' | 'bazaar' | 'block'
+export function pickScenic(W, r, where = 'street') {
+  const n = W.scenicCount || {}, wt = WEIGHT[where];
+  return Object.keys(wt).filter((k) => (n[k] || 0) < CAP[k]).map((k) => [k, -Math.log(1 - r() * 0.999) / wt[k]]).sort((a, b) => a[1] - b[1]).map((a) => a[0]);
 }
 
 const STONE = [0.74, 0.69, 0.6], STONE_DARK = [0.6, 0.56, 0.5], ROOF = [0.78, 0.46, 0.34];
 
-// Build one. F is the lot's frame (Frame from interiors.js): front edge centre, facing the road.
-export function placeScenic(W, F, kind) {
+// Build one, scaled by k. F is the lot's frame (Frame from interiors.js): front edge centre, facing the road.
+export function placeScenic(W, F, kind, k = 1) {
   const D = SCENIC[kind], P = W.P;
-  const { w, d } = scenicSize(kind);
+  const { w, d } = scenicSize(kind, k);
   (W.scenicCount || (W.scenicCount = {}))[kind] = (W.scenicCount[kind] || 0) + 1;
   // one solid block: you walk round it, bullets stop on it, zombies path round it
-  const s = D.solid;
-  const [bx, bz] = F.p((s[0] + s[2]) / 2, (s[1] + s[3]) / 2);
-  P.add(bx, D.top / 2, bz, (s[2] - s[0]) / 2, D.top / 2, (s[3] - s[1]) / 2, F.yaw);
+  const s = D.solid, top = D.top * k;
+  const [bx, bz] = F.p((s[0] + s[2]) / 2 * k, (s[1] + s[3]) / 2 * k);
+  P.add(bx, top / 2, bz, (s[2] - s[0]) / 2 * k, top / 2, (s[3] - s[1]) / 2 * k, F.yaw);
   if (kind === 'provence') provenceBody(F);
-  W.buildings.push({ F, w, d, floors: Math.max(1, Math.round(D.top / 3.2)), solid: true, scenic: kind });
+  W.buildings.push({ F, w, d, floors: Math.max(1, Math.round(top / 3.2)), solid: true, scenic: kind });
   const [cx, cz] = F.p(0, d / 2);
-  (W.modelHouses || (W.modelHouses = [])).push({ kind, file: D.file, x: F.x, z: F.z, yaw: F.yaw, cx, cz, rad: Math.hypot(w, d) / 2 + 1, top: D.top + 1 });
+  (W.modelHouses || (W.modelHouses = [])).push({ kind, file: D.file, x: F.x, z: F.z, yaw: F.yaw, cx, cz, rad: Math.hypot(w, d) / 2 + 1, top: top + 1, k });
+  // the shops keep a lamp or two on after dark, like the box shops did
+  if (D.lit && W.rng.chance(D.lit)) {
+    const [lx, ly, lz] = F.world(D.litAt[0] * k, D.litAt[1] * k, D.litAt[2] * k);
+    W.lights.push({ x: lx, y: ly, z: lz, color: 0xffe0b0, intensity: 3, dist: 9, flicker: W.rng.chance(0.3) ? 1 : 0 });
+  }
 }
 
 // The scan is only the cottage's front wall (z 0 to 3.3; the garage on one end stands proud of it).
