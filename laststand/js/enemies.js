@@ -586,6 +586,12 @@ export class Enemies {
       if (cp) { best = cp[0]; bd = cp[1]; }
       if (best && this.canSee(e, best.pos.x, best.pos.y + 1.4, best.pos.z)) { e.prey = best; e.state = 'HUNT'; e.stateT = 0; }
     }
+    // a crawler can't stand, wander, feed or scream: it only drags itself after you, wherever you are
+    if (e.crawler && !P.dead && e.state !== 'ATTACK') {
+      if (e.roarT > 0) { e.roarT = 0; this.stopScream(e); }
+      e.roared = true; e.hold = false; e.state = 'CHASE'; e.lostT = 0;
+      e.lastSeen = { x: px, z: pz };
+    }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
     const speedK = e.speedK * (1 - e.limp * 0.5);
     switch (e.state) {
