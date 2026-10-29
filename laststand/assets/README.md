@@ -240,6 +240,24 @@ These are the uploaded Sketchfab files, converted once: node transforms baked in
 The burning cars are unchanged (`js/vehicles.js`). The uploaded `grass_06` file was cut off in transfer, so its blade
 texture was rebuilt from the part that survived; re-upload the file if you want the original texture.
 
+## Trees (`models/trees/*.glb`, placed by `js/trees.js`)
+```
+models/trees/pine.glb     a pine
+models/trees/leafy.glb    a broadleaf with red-pink leaves; every peepal is this tree, drawn bigger
+models/trees/dead.glb     a scanned bare, dead tree
+models/trees/fallen.glb   a scanned fallen trunk ("drevo"), lying in the belt of trees around the edge of town
+```
+Every tree in Jais, the hidden valleys and on the shrine islands is one of these. Which one stands at a spot is
+fixed by its position (`treeKind` in `js/trees.js`; change the mix there), and each is sized from the spot's old
+scale. The box-and-blob trees are only drawn until the models have loaded. Standing trees keep the old trunk
+collider; a fallen trunk gets a long, low one.
+
+Converted from the uploads by `scripts/scenery` (`node build.mjs pine` / `leafy` / `dead` / `fallen`): 1 m tall,
+centred on the trunk, webp textures, simplified to 2–6k triangles each (the dead tree was a 128k-triangle scan).
+Three uploads were cut off in transfer: the pine lost the last rows of a texture, the broadleaf its leaf normal map
+(not used) and the fallen trunk the end of its texture; the parts that arrived are used. The snow-covered ground
+the trunk was scanned on is cut away.
+
 ## The graves and the wrecks of Jais (`models/`, placed by `js/graves.js`)
 ```
 models/tombstone_bonaventure.glb   forty headstones in one straight line along the north side of the railway, by Jais City station
