@@ -347,8 +347,11 @@ function backHouse(W, x, z, r, only) {
 // They take the place of plain box buildings: the Indian street's shops (a department store scaled to its lot, pan kiosks,
 // the bhelpuri cart), the gazebo in the blocks behind, and a few odd houses. On a street row: the first kind that fits
 // here, for a lot w wide. Returns the width it takes.
+let lastScenic = '';          // the kind placed just before on this row (reset at the start of each row)
+const STALLS = ['streetshop', 'bhelpuri'];
 function tryScenic(W, road, t, side, setback, r, w0, where) {
   for (const kind of pickScenic(W, r, where)) {
+    if (STALLS.includes(kind) && STALLS.includes(lastScenic)) continue;     // never two stalls in a row: a row of carts is a gap, not a street
     const k = scenicScale(kind, w0, r);
     const { w, d } = scenicSize(kind, k);
     const F0 = frameOnRoad(road, t + w / 2, side, setback);
@@ -358,6 +361,7 @@ function tryScenic(W, road, t, side, setback, r, w0, where) {
     if (!insideTown(cx, cz, Math.max(w, d) / 2) || !W.free(rect)) continue;
     W.rects.push(rect);
     placeScenic(W, F, kind, k);
+    lastScenic = kind;
     return w;
   }
   return 0;
@@ -386,6 +390,7 @@ function fillLots(W) {
     const bazaar = name === 'WAHAB' || name === 'MAIN' || name === 'ALIA' || name === 'SE' || name === 'SW';
     for (const side of [1, -1]) {
       let t = 1;
+      lastScenic = '';
       while (t < i.len - 3) {
         const w = lane ? r.range(4.2, 8) : r.range(4.5, 9.5);
         const d = r.range(8, 13);
