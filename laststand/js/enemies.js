@@ -19,10 +19,11 @@ const ROAR_RANGE = 30;
 // someone eats them. You hear the eating this close (metres); at most this many feeding zombies at once.
 const FEED_HEAR = 15, FEED_LOOPS = 3;
 const FEED_LOOK = 14;                                   // how far an idle zombie looks for a body to eat
-const EDIBLE = new Set(['body1', 'body2', 'body3']);   // not the row of body bags, not the pumpkins
+const EDIBLE = new Set(['body1', 'body2', 'body3', 'deer', 'hazmat', 'people1', 'people2', 'people3']);   // not the row of body bags, not the pumpkins
 
-const MAX = 170;
+const MAX = 210;                                         // (the zombies eating the dead are seeded last, so they need room)
 // model: 'zombie' wears one of the four zombie models (creatures.js); roar: stops and screams when it first sees you
+export const FEEDERS = new Set(['deer', 'hazmat', 'people1', 'people2', 'people3']);   // the dead that are found with a zombie at them
 export const TYPES = {
   walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl', model: 'zombie' },
   runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream', model: 'zombie' },
@@ -369,25 +370,38 @@ export class Enemies {
   // crouch over a body at (cx, cz), on the side the zombie comes from
   _feed(e, cx, cz, until, prop, body) {
     const dx = e.pos.x - cx, dz = e.pos.z - cz, l = Math.hypot(dx, dz) || 1;
-    const off = prop ? 0.85 : 0.75;
+    const off = prop ? prop.feed || 0.85 : 0.75;
     e.meal = { x: cx + dx / l * off, z: cz + dz / l * off, cx, cz, until, c: prop || null, body: body || null };
     if (prop) prop.eater = e;
     e.state = 'FEED'; e.stateT = 0; e.eating = false; e.hold = false;
   }
-  canFeed(e) { return e.T.model === 'zombie' && !e.crawler && !e.dead && e.t > (e.nextFeed || 0); }
+  canFeed(e) { return e.T.model === 'zombie' && !e.dead && e.t > (e.nextFeed || 0); }
   // an idle zombie looks round for one of the town's dead nobody is eating yet
   feedOnProp(e) {
     const list = this.game.W && this.game.W.corpses;
-    if (!list || !this.canFeed(e) || e.hold || e.tunnel || e.pos.y > 0.6) return false;
+    if (!list || !this.canFeed(e) || e.hold || e.tunnel) return false;
     let best = null, bd = FEED_LOOK;
     for (const c of list) {
       if (!EDIBLE.has(c.k) || (c.eater && !c.eater.dead && c.eater.meal && c.eater.meal.c === c)) continue;
+      // a body in a house is for the zombies indoors; and on the same floor as the one that wants it
+      if (c.house ? !e.inside : false) continue;
+      if (Math.abs((c.y || 0) - e.pos.y) > 0.8) continue;
       const d = Math.hypot(c.x - e.pos.x, c.z - e.pos.z);
       if (d < bd) { bd = d; best = c; }
     }
     if (!best) return false;
     this._feed(e, best.x, best.z, 25 + Math.random() * 35, best, null);
     return true;
+  }
+  // a zombie (now and then a crawler) already crouched over one of the dead, as the town starts
+  seedFeeder(c, crawler, r) {
+    const e = this.spawn(r() < 0.12 ? 'runner' : 'walker', c.x, c.y || 0, c.z, { inside: !!c.house, frozen: true });
+    if (!e || e.T.model !== 'zombie') return null;
+    if (crawler) { e.crawler = true; e.limp = 0.75; }
+    this._feed(e, c.x, c.z, 60 + r() * 90, c, null);
+    e.pos.x = e.meal.x; e.pos.z = e.meal.z;
+    e.eating = true; e.yaw = Math.atan2(c.x - e.pos.x, c.z - e.pos.z);
+    return e;
   }
   endFeed(e) {
     const m = e.meal;
@@ -586,11 +600,14 @@ export class Enemies {
       if (cp) { best = cp[0]; bd = cp[1]; }
       if (best && this.canSee(e, best.pos.x, best.pos.y + 1.4, best.pos.z)) { e.prey = best; e.state = 'HUNT'; e.stateT = 0; }
     }
-    // a crawler can't stand, wander, feed or scream: it only drags itself after you, wherever you are
-    if (e.crawler && !P.dead && e.state !== 'ATTACK') {
+    // a crawler can't stand or wander, and it never screams: it drags itself after you, wherever you are. Only
+    // while it hasn't noticed you may it stop to eat one of the dead (the same feeding pose as the others)
+    if (e.crawler && (e.sees || e.alert >= 1)) e.hunted = true;
+    if (e.crawler && !P.dead && e.state !== 'ATTACK' && !(e.state === 'FEED' && !e.hunted)) {
       if (e.roarT > 0) { e.roarT = 0; this.stopScream(e); }
-      e.roared = true; e.hold = false; e.state = 'CHASE'; e.lostT = 0;
-      e.lastSeen = { x: px, z: pz };
+      e.roared = true; e.hold = false; e.lostT = 0;
+      if (!e.hunted && this.feedOnProp(e)) return;
+      e.state = 'CHASE'; e.lastSeen = { x: px, z: pz };
     }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
     const speedK = e.speedK * (1 - e.limp * 0.5);

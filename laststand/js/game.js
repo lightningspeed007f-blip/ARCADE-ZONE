@@ -9,7 +9,7 @@ import { Player } from './player.js';
 import { loadGLB, prepVampire, lambertize } from './models.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
-import { Enemies } from './enemies.js';
+import { Enemies, FEEDERS } from './enemies.js';
 import { Creatures } from './creatures.js';
 import { Loot, FOOD, AMMO_PICK, rollFood, rollAmmo, rollWeapon, containerLoot } from './loot.js';
 import { Audio } from './audio.js';
@@ -767,6 +767,11 @@ export class Game {
         const p = route[i % route.length];
         E.spawn('human', p[0] + r.range(-1, 1), 0, p[1] + r.range(-1, 1), { route: r.shuffle(route.slice()), gun: i === 0 && r.chance(0.5) ? 'rifle' : undefined });
       }
+    }
+    // (last, so they never crowd out the rest of the town's zombies) some of the deer, hazmat and covered bodies are being eaten already: a zombie crouched over them, a crawler now and then
+    for (const c of W.corpses || []) {
+      if (!FEEDERS.has(c.k) || Math.hypot(c.x - sp.x, c.z - sp.z) < 18 || !r.chance(c.house ? 0.55 : 0.65)) continue;
+      E.seedFeeder(c, r.chance(c.house ? 0.35 : 0.4), r);
     }
   }
 

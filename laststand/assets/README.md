@@ -239,7 +239,19 @@ town is ready.
 | `models/bodybags.glb` | Six Christmas body bags in a row (about 5.6 × 1.9 m). |
 | `models/pumpkin.glb` | A rotten pumpkin, scaled to about 0.6 m across. Its source was an unlit export with a black base colour, so it was made an ordinary lit material. |
 
-The uploads were cut short: their headers claim more data than the files hold, so the geometry is whole but the
+| `models/deer.glb` | A dead deer (about 2 × 1.9 m). |
+| `models/hazmat.glb` | A dead woman in a yellow hazmat suit, slumped (about 1 × 1.1 m). The upload came with a placeholder wall and window behind her (dropped) and as specular-glossiness, which the game's loader doesn't read (converted to metal-rough). |
+| `models/people1.glb`, `people2.glb`, `people3.glb` | A body under a cloth, three of them (cut out of one upload of three bodies on a ground slab; scaled to about 2 × 1.5 m in the game). |
+
+The deer, the hazmat woman and the covered bodies are scattered over the town (18, plus 4 in the bus adda's yard) and lie
+inside the walk-in houses: about 70% of the houses get one or two on their open floor, clear of the furniture and the
+loot, and the Hunter's Rest gets three. They are placed in a second pass with their own random numbers, so the older
+bodies stay where they were. Zombies eat all of them: when a run starts, about 60% of these bodies already have a
+zombie crouched over them and about a third of those are crawlers (a body in a house is eaten by the zombies indoors).
+A crawler that hasn't noticed you stops to eat (the same feeding pose) and goes for you the moment it does.
+Re-convert from the uploads with `scripts/zombies/bodies.mjs` (`node bodies.mjs <folder> <out>`).
+
+The older uploads were cut short: their headers claim more data than the files hold, so the geometry is whole but the
 bottom part of one texture in each file was missing. The missing rows were rebuilt by mirroring the part that arrived
 (body1 lost about half of its sheet texture, the others between 4 and 16 percent of theirs). Then they were compressed (meshopt
 geometry, WebP textures) and the heavy ones simplified. Re-export from the originals if you have them.

@@ -310,7 +310,7 @@ export class Creatures {
     }
     const sp = e.moveSpeed || 0;
     const attacking = e.state === 'ATTACK' || (e.state === 'HUNT' && e.huntAtk);
-    const feeding = e.state === 'FEED' && e.eating && !e.crawler;
+    const feeding = e.state === 'FEED' && e.eating;
     if (e.roarT > 0 && !e.crawler) {
       // the clip follows the roar's own clock, the same one that starts the scream sound
       const a = this._play(I, 'scream', 0.2, 1, true);
