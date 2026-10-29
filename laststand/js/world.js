@@ -7,7 +7,7 @@ import { ROADS, BOUNDS, roadInfo, frameOnRoad, KAMAKHYA } from './layout.js';
 import { Frame, Templates, FH } from './interiors.js';
 import { buildLandmarks } from './landmarks.js';
 import { houseSize, pickKinds, placeHouse } from './houses.js';
-import { scenicSize, scenicScale, pickScenic, placeScenic } from './scenery.js';
+import { scenicSize, scenicScale, pickScenic, placeScenic, INDIAN_SHOPS } from './scenery.js';
 
 const OUTER = [0xf1e3c6, 0xe8d0c0, 0xd8dccb, 0xf3eedd, 0xe6c79a, 0xc9d3dc, 0xe2b8a8, 0xd8c8e0, 0xc8e0d0, 0xf0c8c8, 0xe0e0e0, 0xb8c8e8].map(rgb);
 
@@ -344,13 +344,13 @@ function backHouse(W, x, z, r, only) {
 }
 
 // ---------- look-only model houses (scenery.js) ----------
-// They take the place of plain box buildings: the Indian street's shops (a department store scaled to its lot, pan kiosks,
-// the bhelpuri cart), the gazebo in the blocks behind, and a few odd houses. On a street row: the first kind that fits
-// here, for a lot w wide. Returns the width it takes.
+// They take the place of plain box buildings: the town's houses (the house pack, the farm buildings, the autumn house), the gazebo
+// in the blocks behind, a few odd houses, and four Indian shops (a department store scaled to its lot, a pan kiosk, the bhelpuri
+// cart). On a street row: the first kind that fits here, for a lot w wide. Returns the width it takes.
 let lastScenic = '';          // the kind placed just before on this row (reset at the start of each row)
 const STALLS = ['streetshop', 'bhelpuri'];
-function tryScenic(W, road, t, side, setback, r, w0, where) {
-  for (const kind of pickScenic(W, r, where)) {
+function tryScenic(W, road, t, side, setback, r, w0, where, only) {
+  for (const kind of only || pickScenic(W, r, where)) {
     if (STALLS.includes(kind) && STALLS.includes(lastScenic)) continue;     // never two stalls in a row: a row of carts is a gap, not a street
     const k = scenicScale(kind, w0, r);
     const { w, d } = scenicSize(kind, k);
@@ -366,10 +366,22 @@ function tryScenic(W, road, t, side, setback, r, w0, where) {
   }
   return 0;
 }
+// The Indian street's shops: four in town, each on a different road, somewhere along it (a street side and a distance picked
+// here, the first lot at or past it that has room gets the shop). Roads are listed so that no two are on the same street.
+const INDIAN_ROADS = ['WAHAB', 'MAIN', 'ALIA', 'SE', 'SW', 'STN', 'E1', 'E3', 'L2'];
+let indianPlan = {};
+function planIndianShops(W) {
+  const r = W.rng;
+  indianPlan = {};
+  r.shuffle(INDIAN_ROADS.slice()).slice(0, INDIAN_SHOPS.length).forEach((name, i) => {
+    indianPlan[name] = { kind: INDIAN_SHOPS[i], side: r.chance(0.5) ? 1 : -1, at: r.range(0.15, 0.8) * roadInfo(ROADS[name]).len, done: false };
+  });
+}
 // In the blocks behind the streets: centred on (x, z), front toward one of the four sides, for a plot w wide.
-function backScenic(W, x, z, r, w0) {
+// only: kinds to try instead of the usual pick (a shop that found no room on its road)
+function backScenic(W, x, z, r, w0, only) {
   const yaw = r.int(0, 3) * Math.PI / 2 + r.range(-0.08, 0.08);
-  for (const kind of pickScenic(W, r, 'block')) {
+  for (const kind of only || pickScenic(W, r, 'block')) {
     const k = scenicScale(kind, w0, r);
     const { w, d } = scenicSize(kind, k);
     const rect = { x, z, hx: w / 2 + 0.4, hz: d / 2 + 0.4, yaw };
@@ -384,6 +396,7 @@ function backScenic(W, x, z, r, w0) {
 // ---------- fill streets with facade buildings ----------
 function fillLots(W) {
   const r = W.rng;
+  planIndianShops(W);
   for (const [name, road] of Object.entries(ROADS)) {
     const i = roadInfo(road);
     const lane = road.s === 'lane';
@@ -397,12 +410,18 @@ function fillLots(W) {
         const floors = r.chance(0.28) ? 1 : r.chance(0.65) ? 2 : 3;
         const setback = (lane ? 0.3 : 0.95) + r() * (lane ? 0.5 : 0.9);
         const shops = bazaar && r.chance(0.8) || (lane && r.chance(0.15));
+        // one of the four Indian shops, if this road has one and this is where it goes
+        const due = indianPlan[name];
+        if (due && !due.done && due.side === side && t >= due.at) {
+          const placed = tryScenic(W, road, t, side, setback, r, w, 'street', [due.kind]);
+          if (placed) { due.done = true; t += placed + r.range(0.4, 1.8); continue; }
+        }
         // homes: one of the walk-in model houses, if one fits here
         if (!shops && r.chance(0.3)) {
           const placed = tryHouse(W, road, t, side, setback, r);
           if (placed) { t += placed + r.range(0.4, 1.6); continue; }
         }
-        // or the Indian street's look-only shops and kiosks, instead of a plain box building (a box is the last resort)
+        // or one of the look-only houses (scenery.js), instead of a plain box building (a box is the last resort)
         {
           const placed = tryScenic(W, road, t, side, setback, r, w, shops ? 'bazaar' : 'street');
           if (placed) { t += placed + r.range(0.4, 1.8); continue; }
@@ -427,6 +446,8 @@ function backfill(W) {
   const r = W.rng;
   // the big house with the wraparound porch first, while the blocks are still empty
   for (let k = 0; k < 40 && ((W.houseCount || {}).horror || 0) < 2; k++) backHouse(W, r.range(-170, 170), r.range(-140, 150), r, ['horror']);
+  // an Indian shop that found no room on its road goes in the blocks, so there are always four
+  for (const due of Object.values(indianPlan)) if (!due.done) for (let k = 0; k < 60 && !due.done; k++) due.done = backScenic(W, r.range(-170, 170), r.range(-140, 150), r, 8, [due.kind]);
   for (let x = -185; x < 190; x += 10.5) for (let z = -150; z < 168; z += 10.5) {
     const w = r.range(7, 10), d = r.range(7, 10);
     const px = x + r.range(-1.5, 1.5), pz = z + r.range(-1.5, 1.5);
@@ -435,7 +456,7 @@ function backfill(W) {
     if (Math.hypot(px - KAMAKHYA.well.x, pz - KAMAKHYA.well.z) < 9) continue;
     // mostly walk-in model houses, turned any way round (their door faces wherever the alley is)
     if (r.chance(0.2) && backHouse(W, px, pz, r)) continue;
-    // then the look-only shops and the gazebo (scenery.js), in place of plain boxes
+    // then the look-only houses and the gazebo (scenery.js), in place of plain boxes
     if (backScenic(W, px, pz, r, Math.min(w, d) * 0.75)) continue;
     if (!W.free(rect)) continue;
     W.rects.push(rect);

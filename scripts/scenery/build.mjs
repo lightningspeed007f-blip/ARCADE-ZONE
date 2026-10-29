@@ -1,6 +1,6 @@
 // Upload -> game-ready scenery model (look-only: no doors, no collision bake).
 // Final frame: metres, Y up, ground on y = 0, centred on x; houses face -z with their front edge on z = 0.
-// usage: UPLOADS=/path/to/uploads node build.mjs <name>   -> out/<name>.glb   (node build.mjs all: every one)
+// usage: UPLOADS=/path/to/uploads node build.mjs <name>   -> out/<name>.glb   (node build.mjs all: every one; node build.mjs homes: the new houses)
 // then copy out/*.glb to laststand/assets/models/scenery/ (see laststand/assets/README.md, "Look-only scenery")
 import fs from 'fs';
 import sharp from 'sharp';
@@ -9,17 +9,20 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { metalRough, flatten, join, dedup, weld, prune, textureCompress, meshopt, clearNodeTransform, simplify } from '@gltf-transform/functions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import { CONFIG } from './config.mjs';
+import { fbxToGLB } from './fbx.mjs';
 import { MeshoptSimplifier as Sloppy } from 'meshoptimizer-sloppy';   // a newer meshoptimizer, only for simplifySloppy
 await MeshoptEncoder.ready; await MeshoptDecoder.ready; await MeshoptSimplifier.ready; await Sloppy.ready;
 const OUT = process.env.OUT || './out';
 fs.mkdirSync(OUT, { recursive: true });
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder });
 
-const names = process.argv[2] === 'all' ? Object.keys(CONFIG) : [process.argv[2]];
+// all: everything   homes: the new houses (the FBX packs and the autumn house)
+const names = process.argv[2] === 'all' ? Object.keys(CONFIG) : process.argv[2] === 'homes' ? Object.keys(CONFIG).filter((n) => CONFIG[n].fbx || n === 'autumn') : [process.argv[2]];
 for (const name of names) await build(name, CONFIG[name]);
 
 async function build(name, C) {
-  let raw = fs.readFileSync(C.src);
+  // C.fbx { file, geo, tex }: one geometry of an FBX upload (fbx.mjs), standing in for the .glb
+  let raw = C.fbx ? await fbxToGLB(C.fbx.file, C.fbx.geo, C.fbx.tex) : fs.readFileSync(C.src);
   const declared = raw.readUInt32LE(8);
   if (raw.length < declared) raw = Buffer.concat([raw, Buffer.alloc(declared - raw.length)]);   // cut off in upload
   const doc = await io.readBinary(new Uint8Array(raw));
@@ -31,6 +34,9 @@ async function build(name, C) {
     if (C.texFix) png = (await C.texFix(sharp, png)) || png;
     t.setImage(new Uint8Array(png)).setMimeType('image/png');
   }
+  // C.palette: a colour-palette texture (every face's UV sits on one swatch): bake it into vertex colours and drop the texture and UVs.
+  // No seams between swatches then, so the mesh welds and simplifies, no mip-map bleeding between swatches, and nothing to download.
+  if (C.palette) await bakePalette(root, doc);
   // C.bakeSkin: a rigged upload stood still. The vertices go to where the skeleton holds them (glTF: the sum of weight x joint x
   // inverse bind x vertex), the mesh node's own transform is ignored for a skinned mesh, so it is cleared here
   if (C.bakeSkin) {
@@ -156,6 +162,8 @@ async function build(name, C) {
   await doc.transform(prune(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [C.tex || 1024, C.tex || 1024], quality: C.q || 80 }));
   await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   await io.write(`${OUT}/${name}.glb`, doc);
+  // its ground footprint [x0, z0, x1, z1] and height, for the game (homes.mjs bakes them into js/homes.js)
+  fs.writeFileSync(`${OUT}/${name}.json`, JSON.stringify({ foot: [mn[0] - ref[0], mn[2] - ref[2], mx[0] - ref[0], mx[2] - ref[2]].map((v) => +v.toFixed(2)), top: +(mx[1] - ref[1]).toFixed(2) }));
   console.log(name, 'tris', tris, 'size', fs.statSync(`${OUT}/${name}.glb`).size, 'bounds', mn.map((v, k) => (v - ref[k]).toFixed(2)).join(' '), '|', mx.map((v, k) => (v - ref[k]).toFixed(2)).join(' '));
 }
 
@@ -199,4 +207,26 @@ function bakeSkins(root) {
     n.setSkin(null);
     n.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   }
+}
+
+// Sample each vertex's base-colour texel (nearest, UV wrapped) into COLOR_0 (linear), then drop TEXCOORD_0 and the texture.
+async function bakePalette(root, doc) {
+  const tex = new Map();
+  for (const m of root.listMaterials()) {
+    const t = m.getBaseColorTexture(); if (!t) continue;
+    if (!tex.has(t)) { const { data, info } = await sharp(Buffer.from(t.getImage())).removeAlpha().raw().toBuffer({ resolveWithObject: true }); tex.set(t, { data, w: info.width, h: info.height }); }
+  }
+  const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  for (const me of root.listMeshes()) for (const p of me.listPrimitives()) {
+    const t = p.getMaterial()?.getBaseColorTexture(), uv = p.getAttribute('TEXCOORD_0'); if (!t || !uv) continue;
+    const { data, w, h } = tex.get(t), n = uv.getCount(), col = new Float32Array(n * 4), e = [];
+    for (let i = 0; i < n; i++) {
+      uv.getElement(i, e);
+      const x = Math.min(w - 1, Math.floor((e[0] - Math.floor(e[0])) * w)), y = Math.min(h - 1, Math.floor((e[1] - Math.floor(e[1])) * h)), o = (y * w + x) * 3;
+      col.set([lin(data[o]), lin(data[o + 1]), lin(data[o + 2]), 1], i * 4);
+    }
+    p.setAttribute('COLOR_0', doc.createAccessor().setType('VEC4').setArray(col).setBuffer(root.listBuffers()[0]));
+    p.setAttribute('TEXCOORD_0', null);
+  }
+  for (const m of root.listMaterials()) m.setBaseColorTexture(null);
 }

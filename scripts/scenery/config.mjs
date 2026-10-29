@@ -66,3 +66,21 @@ export const CONFIG = {
   bobber: { src: U + '240be6c0-bobber_indian.glb', yaw: -Math.PI / 2, centre: true, fitXZ: 2.2, tex: 1024, q: 80, simplify: 14000, sloppy: true },
   bobber_lite: { src: U + '240be6c0-bobber_indian.glb', yaw: -Math.PI / 2, centre: true, fitXZ: 2.2, tex: 512, q: 72, simplify: 6500, sloppy: true },
 };
+
+
+// ---- the new houses (js/scenery.js, "homes"): look-only, they replace most of the Indian shops. The two FBX packs came cut
+// off in transfer (fbx.mjs reads what is there: nearly every house survived, but not the node transforms); the buildings
+// of both share one colour-palette texture. Front to -z: yaw 0 for the ones that already face it, PI for those with the door on +z.
+const HOUSE_PACK = U + 'c6219efa-LowPoly_House_20_Pack_fbx.fbx', FARM_PACK = U + '6d3e3f0f-LowPoly_Farm_02_FBX.fbx', PALETTE = U + 'textures/color_512x512.jpg';
+// [name, geometry in the FBX, yaw]
+const PACK_HOUSES = [['h001', 'Cube.001', 0], ['h002', 'Cube.002', 0], ['h024', 'Cube.024', 0], ['h042', 'Cube.042', Math.PI], ['h050', 'Cube.050', 0], ['h054', 'Cube.054', 0], ['h056', 'Cube.056', Math.PI],
+  ['h072', 'Cube.072', 0], ['h076', 'Cube.076', 0], ['h092', 'Cube.092', 0], ['h098', 'Cube.098', Math.PI], ['h123', 'Cube.123', Math.PI], ['h180', 'Cube.180', 0]];
+const FARM_BUILDINGS = [['fc013', 'Cube.013', Math.PI], ['fc546', 'Cube.546', Math.PI], ['fp005', 'Plane.005', Math.PI], ['fp014', 'Plane.014', Math.PI], ['fc909', 'Cube.909', Math.PI], ['fc963', 'Cube.963', Math.PI],
+  ['fc1139', 'Cube.1139', Math.PI], ['fp002', 'Plane.002', Math.PI], ['fp003', 'Plane.003', Math.PI],
+  ['barn1', 'Cube.1313', Math.PI], ['barn2', 'Plane.219', Math.PI], ['barn3', 'Cube.1332', Math.PI], ['barn4', 'Cube.1338', Math.PI]];
+for (const [name, geo, yaw] of PACK_HOUSES) CONFIG[name] = { fbx: { file: HOUSE_PACK, geo, tex: PALETTE }, scale: 0.75, yaw, palette: true, vcol: true, simplify: 4500, sloppy: true };
+for (const [name, geo, yaw] of FARM_BUILDINGS) CONFIG[name] = { fbx: { file: FARM_PACK, geo, tex: PALETTE }, scale: 0.72, yaw, palette: true, vcol: true, simplify: 5000, sloppy: true };
+// "autumn house": a diorama (a round hill with a road, a car and trees); only the house itself is kept
+CONFIG.autumn = { src: U + '6a2ab94a-autumn_house.glb', scale: 0.45, yaw: Math.PI / 2, crop: [-15, 1.2, 3, 15, 40, 21].map((v) => v * 0.45),     // the house's own box, turned with it (yaw PI/2: x' = z, z' = -x)
+  // the lawn and its leaf piles (flat, low) round the house go too: the town has its own ground
+  drop: (vs, c) => Math.abs(normal(vs)[1]) > 0.85 && c[1] < 2.6 * 0.45, tex: 1024, q: 80, simplify: 9000, simpErr: 0.01 };
