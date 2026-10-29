@@ -55,4 +55,14 @@ export const CONFIG = {
   // "drevo": a scanned fallen trunk; the snow-covered ground sheet it was scanned on is cut away
   fallen: { src: U + '9b60d394-drevo.glb', pre: true, centre: true, tex: 1024, texFix: fillCutRows, simplify: 2000, simpErr: 0.02, minPart: 300,
     drop: (vs, c) => c[1] < 0.4 && Math.abs(normal(vs)[1]) > 0.45 },
+  // ---- the Indian street (js/scenery.js, swaps.js, vehicles.js). Look-only shops: front to -z, height set by fitH ----
+  // the street shop, the other shop, the bhelpuri stall and the gazebo; the rickshaw and the bobber are vehicles (fitXZ: their length)
+  streetshop: { src: U + '99bf9b3c-indian_street_shop_2.glb', yaw: Math.PI / 2, fitH: 3.6, tex: 1024, q: 78 },
+  shop2: { src: U + '231a6ec9-indian_shop_2.glb', yaw: Math.PI / 2, fitH: 6, sideTint: [0.86, 0.72, 0.52], tex: 1024, q: 78 },
+  bhelpuri: { src: U + '376f5247-bhelpuri_shop_by_ajay_indian_local_shop.glb', yaw: Math.PI, bakeSkin: true, fitH: 2.6, tex: 1024, q: 78, texFix: fillCutRows, simplify: 6000, simpErr: 0.2 },
+  gazebo: { src: U + 'cb1d2f6f-indian_gazebo_2.glb', yaw: 0, fitH: 4.5, tex: 1024, q: 76, simplify: 10000, sloppy: true },
+  rickshaw: { src: U + '20d83032-indian_ricksha.glb', yaw: 0, centre: true, fitXZ: 2.75, tex: 512, q: 80, simplify: 26000, sloppy: true },
+  // the bobber faces +x in the upload: turned to face +z, centred on its wheelbase. bobber is the one you ride, bobber_lite the parked ones
+  bobber: { src: U + '240be6c0-bobber_indian.glb', yaw: -Math.PI / 2, centre: true, fitXZ: 2.2, tex: 1024, q: 80, simplify: 14000, sloppy: true },
+  bobber_lite: { src: U + '240be6c0-bobber_indian.glb', yaw: -Math.PI / 2, centre: true, fitXZ: 2.2, tex: 512, q: 72, simplify: 6500, sloppy: true },
 };

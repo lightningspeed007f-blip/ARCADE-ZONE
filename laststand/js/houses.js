@@ -123,7 +123,7 @@ export class ModelHouses {
     this.byKind = {};
     for (const h of this.list) {
       (this.byKind[h.kind] || (this.byKind[h.kind] = [])).push(h);
-      h.m = new THREE.Matrix4().compose(_p.set(h.x, 0, h.z), _q.setFromAxisAngle(_up, h.yaw), _s);
+      h.m = new THREE.Matrix4().compose(_p.set(h.x, 0, h.z), _q.setFromAxisAngle(_up, h.yaw), _s.setScalar(h.k || 1));   // k: a shop scaled to its lot
     }
     this.parts = {};           // kind -> [InstancedMesh]
   }

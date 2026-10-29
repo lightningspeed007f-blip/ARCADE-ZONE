@@ -111,7 +111,7 @@ export class Game {
     W.quality = this.quality;
     this.props = buildProps(W, scene, mats, tex);
     this.vehicles = new Vehicles(this);
-    this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the jeep (before navigation and the light pool)
+    this.vehicles.buildStatic(W, scene, mats);        // wrecks, burning cars, the bike (before navigation and the light pool)
     Boss.buildLair(W);
     buildArena(W);                                    // the Joker's Playground, far from town (its model loads later)
     buildDesert(W);                                   // the Worm Desert, the last stop (its giants load during the Joker fight)
@@ -204,7 +204,7 @@ export class Game {
     this.enemies.creatures.loadZombies();             // the four zombie models: every zombie wears one of them
     this.boss.load();                                 // MAW, the creature asleep on the tracks
     this.swaps = new Swaps(this);
-    this.swaps.start();                               // the uploaded cars and ambulances, and grass breaking through the roads
+    this.swaps.start();                               // the uploaded cars, rickshaws and bikes, and grass breaking through the roads
     this.trees = new Trees(this);
     this.trees.start();                               // the uploaded tree models in place of the box trees
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
@@ -866,7 +866,7 @@ export class Game {
     const P = this.player;
     if (P.dead || this.state !== 'play') return;
     if (this.joker.shielded() || this.giants.busy()) return; // knocked out by the gas / waking up in the Playground / on the bus
-    if (this.vehicles.driving) dmg *= 0.5;                 // the jeep's body takes some of it
+    if (this.vehicles.driving) dmg *= 0.5;                 // the vehicle's body takes some of it
     P.damage(dmg, from);
     P.shake = Math.max(P.shake, 0.45);
     this.audio.play('flesh', { vol: 0.6 });
@@ -1261,7 +1261,7 @@ export class Game {
     const V = this.vehicles;
     if (I.consume('eat')) this.eat();
     if (V.driving) {
-      // ---- in the jeep: no shooting or looting, USE / G / EXIT gets out ----
+      // ---- in a vehicle: no shooting or looting, USE / G / EXIT gets out ----
       for (const k of ['reload', 'swap', 'melee', 'torch', 'bomb', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8']) I.consume(k);
       I.fire = false;
       if (I.consume('use') || I.consume('drive')) V.exit();
@@ -1278,7 +1278,7 @@ export class Game {
     if (I.consume('melee')) A.equip('lathi');
     for (let k = 1; k <= 8; k++) if (I.consume('w' + k) && A.owned[k - 1]) A.equip(A.owned[k - 1]);
     if (I.consume('torch')) { this.torchOn = !this.torchOn; this.audio.play('click', { vol: 0.4 }); }
-    // G: get in the jeep when standing next to it, otherwise throw a bomb
+    // G: get in a vehicle when standing next to it, otherwise throw a bomb
     if (I.consume('drive')) { if (V.near()) { V.enter(); return; } I.tap('bomb'); }
     if (I.consume('bomb')) this.throwBomb();
     const mv = P.update(dt, I, this, A);
@@ -1320,7 +1320,7 @@ export class Game {
     this.afterMove(dt);
   }
 
-  // everything that runs the same on foot and in the jeep
+  // everything that runs the same on foot and in a vehicle
   afterMove(dt) {
     const P = this.player;
     this.outlands.update(dt);                         // which place you are in, the roads and stairs between them

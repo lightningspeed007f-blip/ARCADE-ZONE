@@ -31,6 +31,14 @@ async function build(name, C) {
     if (C.texFix) png = (await C.texFix(sharp, png)) || png;
     t.setImage(new Uint8Array(png)).setMimeType('image/png');
   }
+  // C.bakeSkin: a rigged upload stood still. The vertices go to where the skeleton holds them (glTF: the sum of weight x joint x
+  // inverse bind x vertex), the mesh node's own transform is ignored for a skinned mesh, so it is cleared here
+  if (C.bakeSkin) {
+    bakeSkins(root);
+    // meshes that hang off the rig's joints (wheels, panels) are out of the scene's tree, which flatten() walks: bring them in as they stand
+    const scene = root.listScenes()[0], held = root.listNodes().filter((n) => n.getMesh()).map((n) => [n, n.getWorldMatrix()]);
+    for (const [n, w] of held) { scene.addChild(n); n.setMatrix(w); }
+  }
   await doc.transform(metalRough());
   await doc.transform(flatten());
   // drop the parts we don't want (sea, sky, mist, reflections...) before anything else
@@ -101,6 +109,8 @@ async function build(name, C) {
   if (C.minPart) for (const m of root.listMeshes()) for (const p of m.listPrimitives()) dropSpecks(p, C.minPart);
   let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
   const live = []; for (const m of root.listMeshes()) for (const p of m.listPrimitives()) live.push(p);
+  // a part that arrived without any triangles (a point or line primitive) is of no use
+  for (let k = live.length - 1; k >= 0; k--) if (!live[k].getIndices()) { console.log(name, 'dropped a part without triangles', live[k].getMode()); live[k].dispose(); live.splice(k, 1); }
   for (const p of live) { const P = p.getAttribute('POSITION').getArray(); for (const i of p.getIndices().getArray()) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], P[i * 3 + k]); mx[k] = Math.max(mx[k], P[i * 3 + k]); } }
   const ref = [(mn[0] + mx[0]) / 2, C.groundY ?? mn[1], C.front ?? mn[2]];
   // C.centre: centred on z too (x/z of the box centre)   C.trunk: centred on the trunk where it meets the ground
@@ -112,10 +122,22 @@ async function build(name, C) {
   }
   for (const p of live) { const P = p.getAttribute('POSITION'), a = P.getArray(); for (let i = 0; i < a.length; i += 3) { a[i] -= ref[0]; a[i + 1] -= ref[1]; a[i + 2] -= ref[2]; } P.setArray(a); }
   // C.fitH: scaled so it stands C.fitH tall (the game sizes each copy)
-  if (C.fitH) {
-    const k = C.fitH / (mx[1] - mn[1]);
+  // C.fitXZ: the same, by the longer of its width and depth (for the vehicles, whose size is their length)
+  if (C.fitH || C.fitXZ) {
+    const k = C.fitH ? C.fitH / (mx[1] - mn[1]) : C.fitXZ / Math.max(mx[0] - mn[0], mx[2] - mn[2]);
     for (const p of live) { const P = p.getAttribute('POSITION'), a = P.getArray(); for (let i = 0; i < a.length; i++) a[i] *= k; P.setArray(a); }
     for (let i = 0; i < 3; i++) { mn[i] = ref[i] + (mn[i] - ref[i]) * k; mx[i] = ref[i] + (mx[i] - ref[i]) * k; }
+  }
+  // C.sideTint: a flat-fronted shop has its photo on the front and plain white everywhere else: tint every face that does not look
+  // toward -z (the front) with this colour, per vertex (the game switches vertex colours on for it)
+  if (C.sideTint) for (const p of live) {
+    const N = p.getAttribute('NORMAL'), n = p.getAttribute('POSITION').getCount(), col = new Float32Array(n * 4), e = [];
+    for (let i = 0; i < n; i++) {
+      let front = false;
+      if (N) { N.getElement(i, e); front = e[2] < -0.5; }
+      col.set(front ? [1, 1, 1, 1] : [...C.sideTint, 1], i * 4);
+    }
+    p.setAttribute('COLOR_0', doc.createAccessor().setType('VEC4').setArray(col).setBuffer(root.listBuffers()[0]));
   }
   let tris = 0; for (const p of live) tris += p.getIndices().getCount() / 3;
   if (C.simplify && tris > C.simplify && C.sloppy) {
@@ -151,4 +173,30 @@ function dropSpecks(p, n) {
   const out = [];
   for (let t = 0; t < ia.length; t += 3) if (cnt.get(find(id[ia[t]])) >= n) out.push(ia[t], ia[t + 1], ia[t + 2]);
   I.setArray(new Uint32Array(out));
+}
+
+function bakeSkins(root) {
+  const mul = (a, b) => { const o = new Array(16).fill(0); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) o[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k]; return o; };
+  for (const n of root.listNodes()) {
+    const skin = n.getSkin(), mesh = n.getMesh();
+    if (!skin || !mesh) continue;
+    const joints = skin.listJoints(), ibm = skin.getInverseBindMatrices();
+    const M = joints.map((j, i) => { const m = [], e = []; ibm.getElement(i, m); return mul(j.getWorldMatrix(), m); });
+    for (const p of mesh.listPrimitives()) {
+      const P = p.getAttribute('POSITION'), N = p.getAttribute('NORMAL'), J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0');
+      if (!J || !W) continue;
+      const v = [], jj = [], ww = [], out = new Float32Array(P.getCount() * 3), nout = N ? new Float32Array(N.getCount() * 3) : null, nv = [];
+      for (let i = 0; i < P.getCount(); i++) {
+        P.getElement(i, v); J.getElement(i, jj); W.getElement(i, ww);
+        const acc = new Array(16).fill(0); let t = 0;
+        for (let k = 0; k < 4; k++) if (ww[k] > 0) { t += ww[k]; for (let q = 0; q < 16; q++) acc[q] += M[jj[k]][q] * ww[k]; }
+        if (t === 0) acc.splice(0, 16, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        out.set([acc[0] * v[0] + acc[4] * v[1] + acc[8] * v[2] + acc[12], acc[1] * v[0] + acc[5] * v[1] + acc[9] * v[2] + acc[13], acc[2] * v[0] + acc[6] * v[1] + acc[10] * v[2] + acc[14]], i * 3);
+        if (N) { N.getElement(i, nv); const x = acc[0] * nv[0] + acc[4] * nv[1] + acc[8] * nv[2], y = acc[1] * nv[0] + acc[5] * nv[1] + acc[9] * nv[2], z = acc[2] * nv[0] + acc[6] * nv[1] + acc[10] * nv[2], l = Math.hypot(x, y, z) || 1; nout.set([x / l, y / l, z / l], i * 3); }
+      }
+      P.setArray(out); if (N) N.setArray(nout);
+    }
+    n.setSkin(null);
+    n.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+  }
 }

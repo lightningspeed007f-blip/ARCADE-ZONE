@@ -1,7 +1,7 @@
 // Keyboard + mouse (pointer lock) and touch controls (joystick, look pad, buttons).
 import { store } from './util.js';
 
-// touch buttons that act while held down (the jeep's pedals and steering)
+// touch buttons that act while held down (the vehicle's pedals and steering)
 const HOLD = new Set(['gas', 'brake', 'steerL', 'steerR']);
 
 export class Input {

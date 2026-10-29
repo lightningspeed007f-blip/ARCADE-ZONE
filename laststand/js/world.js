@@ -7,7 +7,7 @@ import { ROADS, BOUNDS, roadInfo, frameOnRoad, KAMAKHYA } from './layout.js';
 import { Frame, Templates, FH } from './interiors.js';
 import { buildLandmarks } from './landmarks.js';
 import { houseSize, pickKinds, placeHouse } from './houses.js';
-import { scenicSize, pickScenic, placeScenic } from './scenery.js';
+import { scenicSize, scenicScale, pickScenic, placeScenic } from './scenery.js';
 
 const OUTER = [0xf1e3c6, 0xe8d0c0, 0xd8dccb, 0xf3eedd, 0xe6c79a, 0xc9d3dc, 0xe2b8a8, 0xd8c8e0, 0xc8e0d0, 0xf0c8c8, 0xe0e0e0, 0xb8c8e8].map(rgb);
 
@@ -344,30 +344,38 @@ function backHouse(W, x, z, r, only) {
 }
 
 // ---------- look-only model houses (scenery.js) ----------
-// They take the place of plain box homes. On a street row: the first kind that fits here. Returns its width.
-function tryScenic(W, road, t, side, setback, r) {
-  for (const kind of pickScenic(W, r)) {
-    const { w, d } = scenicSize(kind);
+// They take the place of plain box buildings: the Indian street's shops (a department store scaled to its lot, pan kiosks,
+// the bhelpuri cart), the gazebo in the blocks behind, and a few odd houses. On a street row: the first kind that fits
+// here, for a lot w wide. Returns the width it takes.
+let lastScenic = '';          // the kind placed just before on this row (reset at the start of each row)
+const STALLS = ['streetshop', 'bhelpuri'];
+function tryScenic(W, road, t, side, setback, r, w0, where) {
+  for (const kind of pickScenic(W, r, where)) {
+    if (STALLS.includes(kind) && STALLS.includes(lastScenic)) continue;     // never two stalls in a row: a row of carts is a gap, not a street
+    const k = scenicScale(kind, w0, r);
+    const { w, d } = scenicSize(kind, k);
     const F0 = frameOnRoad(road, t + w / 2, side, setback);
     const F = new Frame(W, F0.x, F0.z, F0.yaw);
     const [cx, cz] = F.p(0, d / 2);
-    const rect = { x: cx, z: cz, hx: w / 2 + 0.15, hz: d / 2 + 0.1, yaw: F.yaw };
+    const rect = { x: cx, z: cz, hx: w / 2 - 0.05, hz: d / 2 - 0.05, yaw: F.yaw };        // as snug as a box building's, so shops can stand shoulder to shoulder
     if (!insideTown(cx, cz, Math.max(w, d) / 2) || !W.free(rect)) continue;
     W.rects.push(rect);
-    placeScenic(W, F, kind);
+    placeScenic(W, F, kind, k);
+    lastScenic = kind;
     return w;
   }
   return 0;
 }
-// In the blocks behind the streets: centred on (x, z), front toward one of the four sides.
-function backScenic(W, x, z, r) {
+// In the blocks behind the streets: centred on (x, z), front toward one of the four sides, for a plot w wide.
+function backScenic(W, x, z, r, w0) {
   const yaw = r.int(0, 3) * Math.PI / 2 + r.range(-0.08, 0.08);
-  for (const kind of pickScenic(W, r)) {
-    const { w, d } = scenicSize(kind);
-    const rect = { x, z, hx: w / 2 + 0.6, hz: d / 2 + 0.6, yaw };
+  for (const kind of pickScenic(W, r, 'block')) {
+    const k = scenicScale(kind, w0, r);
+    const { w, d } = scenicSize(kind, k);
+    const rect = { x, z, hx: w / 2 + 0.4, hz: d / 2 + 0.4, yaw };
     if (!insideTown(x, z, Math.max(w, d) / 2) || !W.free(rect)) continue;
     W.rects.push(rect);
-    placeScenic(W, new Frame(W, x - Math.sin(yaw) * d / 2, z - Math.cos(yaw) * d / 2, yaw), kind);
+    placeScenic(W, new Frame(W, x - Math.sin(yaw) * d / 2, z - Math.cos(yaw) * d / 2, yaw), kind, k);
     return true;
   }
   return false;
@@ -382,6 +390,7 @@ function fillLots(W) {
     const bazaar = name === 'WAHAB' || name === 'MAIN' || name === 'ALIA' || name === 'SE' || name === 'SW';
     for (const side of [1, -1]) {
       let t = 1;
+      lastScenic = '';
       while (t < i.len - 3) {
         const w = lane ? r.range(4.2, 8) : r.range(4.5, 9.5);
         const d = r.range(8, 13);
@@ -393,10 +402,10 @@ function fillLots(W) {
           const placed = tryHouse(W, road, t, side, setback, r);
           if (placed) { t += placed + r.range(0.4, 1.6); continue; }
         }
-        // or one of the look-only model houses, instead of a plain box home
-        if (!shops) {
-          const placed = tryScenic(W, road, t, side, setback, r);
-          if (placed) { t += placed + r.range(0.6, 2); continue; }
+        // or the Indian street's look-only shops and kiosks, instead of a plain box building (a box is the last resort)
+        {
+          const placed = tryScenic(W, road, t, side, setback, r, w, shops ? 'bazaar' : 'street');
+          if (placed) { t += placed + r.range(0.4, 1.8); continue; }
         }
         const F0 = frameOnRoad(road, t + w / 2, side, setback);
         const F = new Frame(W, F0.x, F0.z, F0.yaw);
@@ -426,8 +435,8 @@ function backfill(W) {
     if (Math.hypot(px - KAMAKHYA.well.x, pz - KAMAKHYA.well.z) < 9) continue;
     // mostly walk-in model houses, turned any way round (their door faces wherever the alley is)
     if (r.chance(0.2) && backHouse(W, px, pz, r)) continue;
-    // then the look-only model houses (scenery.js), in place of plain box homes
-    if (r.chance(0.6) && backScenic(W, px, pz, r)) continue;
+    // then the look-only shops and the gazebo (scenery.js), in place of plain boxes
+    if (backScenic(W, px, pz, r, Math.min(w, d) * 0.75)) continue;
     if (!W.free(rect)) continue;
     W.rects.push(rect);
     const F = new Frame(W, px - Math.sin(yaw) * d / 2, pz - Math.cos(yaw) * d / 2, yaw);

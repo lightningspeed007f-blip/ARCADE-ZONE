@@ -1,5 +1,5 @@
 // Cars of the night: abandoned wrecks along the roads, a few still burning,
-// an old army-green jeep and a zombie pickup that actually drive.
+// an Indian bobber motorbike and a zombie pickup that actually drive.
 //
 // Wrecks and burning shells are merged into two static meshes (two draw
 // calls for all of them) with ordinary box colliders, placed before the
@@ -32,7 +32,7 @@ const BURNING = [
   { road: 'STN', t: 60, off: 2.0, dyaw: -0.25 },
   { road: 'WAHAB', t: 122, off: -1.9, dyaw: 0.3 },
 ];
-const JEEP_AT = { road: 'MAIN', t: 182, off: 3.3, dyaw: Math.PI };   // just south of the Wahabganj junction, facing north
+const BIKE_AT = { road: 'MAIN', t: 182, off: 3.3, dyaw: Math.PI };   // just south of the Wahabganj junction, facing north: where the jeep used to stand
 
 const shade = (hex, k) => { const c = rgb(hex); return (Math.round(c[0] * k * 255) << 16) | (Math.round(c[1] * k * 255) << 8) | Math.round(c[2] * k * 255); };
 
@@ -91,52 +91,26 @@ function debris(x, z, R, n) {
   return p;
 }
 
-// ---------- the jeep ----------
-function jeepBody() {
-  const OL = 0x4b5a34, OLd = 0x3a4628, BK = 0x161616, ST = 0x6a6a68, SEAT = 0x3a2c22;
-  const p = [];
-  p.push(part(Bx(1.66, 0.62, 3.2), OL, 0, 0.78, -0.15));                  // tub
-  p.push(part(Bx(1.56, 0.34, 1.05), OL, 0, 0.92, 1.42));                  // bonnet
-  p.push(part(Bx(1.5, 0.5, 0.08), BK, 0, 0.82, 1.96));                    // grille
-  for (let i = -3; i <= 3; i++) p.push(part(Bx(0.05, 0.42, 0.03), 0x2a2a2a, i * 0.17, 0.82, 2.0));
-  p.push(part(Bx(1.78, 0.14, 0.18), BK, 0, 0.5, 2.06));                   // front bumper
-  p.push(part(Bx(1.78, 0.14, 0.16), BK, 0, 0.52, -1.82));                 // rear bumper
-  for (const s of [-1, 1]) {
-    p.push(part(Bx(0.18, 0.08, 0.9), BK, s * 0.88, 1.0, 1.28));           // front fender flares
-    p.push(part(Bx(0.18, 0.08, 0.9), BK, s * 0.88, 1.0, -1.18));
-    p.push(part(Bx(0.06, 0.05, 1.4), OLd, s * 0.84, 1.1, -0.35));         // tub rim
-  }
-  // windscreen frame (folded up), roll bar, seats, spare wheel, jerrycan
-  p.push(part(Bx(1.56, 0.06, 0.06), OLd, 0, 1.12, 0.86), part(Bx(1.56, 0.06, 0.06), OLd, 0, 1.68, 0.78));
-  for (const s of [-1, 1]) p.push(part(Bx(0.06, 0.58, 0.06), OLd, s * 0.75, 1.4, 0.82, -0.14, 0, 0));
-  for (const s of [-1, 1]) p.push(part(Bx(0.07, 0.8, 0.07), ST, s * 0.76, 1.48, -0.85));
-  p.push(part(Bx(1.58, 0.07, 0.07), ST, 0, 1.86, -0.85));
-  for (const s of [-1, 1]) p.push(part(Bx(0.5, 0.14, 0.5), SEAT, s * 0.38, 1.02, -0.05), part(Bx(0.5, 0.55, 0.12), SEAT, s * 0.38, 1.3, -0.33, -0.12, 0, 0));
-  p.push(part(Bx(1.3, 0.14, 0.55), SEAT, 0, 1.02, -1.2));
-  p.push(part(Cy(0.36, 0.36, 0.22, 12), 0x121212, 0, 1.02, -1.98, Math.PI / 2, 0, 0), part(Cy(0.18, 0.18, 0.24, 10), OLd, 0, 1.02, -1.98, Math.PI / 2, 0, 0));
-  p.push(part(Bx(0.18, 0.42, 0.3), 0x5a6a3a, 0.62, 1.2, -1.7));
-  p.push(part(Cy(0.17, 0.17, 0.04, 14), BK, -0.38, 1.36, 0.5, 1.1, 0, 0));  // steering wheel
-  p.push(part(Bx(1.4, 0.3, 0.3), 0x262626, 0, 1.08, 0.62));              // dashboard
-  // lamps (lit glow sprites sit in front of them while driving)
-  for (const s of [-1, 1]) p.push(part(Cy(0.11, 0.11, 0.05, 12), 0xd8d8c8, s * 0.6, 0.98, 1.99, Math.PI / 2, 0, 0), part(Bx(0.14, 0.1, 0.04), 0x8a0a0a, s * 0.7, 0.8, -1.9));
-  p.push(part(Bx(1.0, 0.18, 0.02), 0xe8e8e0, 0, 0.62, 2.16));             // number plate
-  return merge(p);
-}
-function wheelGeo() { return merge([part(WHEEL(0.38, 0.26), 0x111111, 0, 0, 0, 0, 0, Math.PI / 2), part(WHEEL(0.2, 0.27), 0x4b5a34, 0, 0, 0, 0, 0, Math.PI / 2)]); }
-function driverGeo() {
+// ---------- the bike ----------
+// The bobber itself is models/bobber.glb (it arrives through swaps.js -> setBike). Its rider is built from boxes: a man in a
+// dark jacket and helmet, leaning to the bars. Only drawn while you ride.
+function riderGeo() {
+  const JK = 0x1c1e22, JN = 0x161a22, SK = 0x8a5a3c, HL = 0x0c0c10;   // dark on purpose: the town's day light lifts vertex colours a long way
   return merge([
-    part(Bx(0.42, 0.55, 0.26), 0x3c4148, 0, 1.45, -0.1), part(Bx(0.24, 0.27, 0.25), 0xa8714c, 0, 1.86, -0.08),
-    part(Bx(0.26, 0.08, 0.27), 0x222222, 0, 2.0, -0.08),
-    part(Bx(0.1, 0.1, 0.48), 0x3c4148, -0.2, 1.48, 0.18, -0.3, 0, 0), part(Bx(0.1, 0.1, 0.48), 0x3c4148, 0.2, 1.48, 0.18, -0.3, 0, 0),
+    part(Bx(0.36, 0.5, 0.22), JK, 0, 1.2, -0.12, 0.4, 0, 0),                                          // torso, leaning forward
+    part(Bx(0.22, 0.24, 0.24), SK, 0, 1.6, 0.06), part(Bx(0.27, 0.15, 0.28), HL, 0, 1.7, 0.05),      // head and helmet
+    part(Bx(0.09, 0.09, 0.58), JK, 0.21, 1.17, 0.2, 0.5, 0, 0), part(Bx(0.09, 0.09, 0.58), JK, -0.21, 1.17, 0.2, 0.5, 0, 0),   // arms to the bars
+    part(Bx(0.15, 0.15, 0.52), JN, 0.2, 0.9, -0.12, -0.25, 0, 0), part(Bx(0.15, 0.15, 0.52), JN, -0.2, 0.9, -0.12, -0.25, 0, 0), // thighs
+    part(Bx(0.13, 0.5, 0.13), JN, 0.22, 0.58, 0.14), part(Bx(0.13, 0.5, 0.13), JN, -0.22, 0.58, 0.14),                          // shins
   ]);
 }
 
-// Two cars drive: the old army jeep (built from boxes, below) and the zombie pickup
+// Two vehicles drive: the bobber (models/bobber.glb: quick and light, you feel every shove) and the zombie pickup
 // (models/truck.glb, loaded in the background: it shows up on the Amethi road once its file is in).
 // Each has its own size, pace and punch; everything else (enter, exit, steering, ramming) is shared.
 export const CARS = {
-  jeep: { name: 'जीप', en: 'JEEP', max: 17, rev: 6, acc: [9, 5.5], hx: 0.88, hy: 0.75, hz: 1.92, cy: 0.8, probe: [-1.22, 0, 1.22], r: 0.9, wb: 2.3, wheelR: 0.38, cam: [7.4, 3.0], ram: 9, push: 1.25, reach: [1.2, 2.3], side: 1.75, back: 3.0, front: 3.1, engine: 0.75 },
-  // heavier and faster: a bull bar and armour plates. Shrugs off a brute where the jeep bounces.
+  bike: { name: 'बाइक', en: 'BIKE', max: 25, rev: 3.5, acc: [10.5, 7], hx: 0.42, hy: 0.6, hz: 1.1, cy: 0.62, probe: [-0.6, 0, 0.6], r: 0.55, wb: 1.5, wheelR: 0.33, cam: [5.6, 2.3], ram: 7, push: 0.9, reach: [0.65, 1.3], side: 1.15, back: 2.1, front: 2.2, engine: 1.0, leanK: 0.034 },
+  // heavier and faster: a bull bar and armour plates. Shrugs off a brute where the bike bounces.
   truck: { name: 'पिकअप', en: 'PICKUP', max: 20, rev: 6.5, acc: [8, 5.2], hx: 1.1, hy: 0.85, hz: 2.45, cy: 0.9, probe: [-1.6, 0, 1.6], r: 1.08, wb: 2.98, wheelR: 0.433, cam: [8.6, 3.6], ram: 12, push: 1.45, reach: [1.4, 2.8], side: 2.05, back: 3.6, front: 3.7, engine: 0.62, tough: true },
 };
 const TRUCK_AT = { road: 'SE', t: 126, off: -2.4, dyaw: 0 };   // on the Amethi road, nose toward the highway out of town
@@ -222,11 +196,12 @@ export class Vehicles {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(13, 13).rotateX(-Math.PI / 2), glowMat);
       m.position.set(b.x, 0.07, b.z); m.renderOrder = 2; scene.add(m);
     }
-    // the jeep (its collider is added per run, after the navigation grid exists)
-    const ja = this._place(JEEP_AT, P, 2.3) || { x: 3.3, z: -16, yaw: Math.PI };
-    W.reserve(ja.x, ja.z, 1.1, 2.2, ja.yaw);
-    this.jeep = this._car('jeep', ja);
-    this.buildJeep(scene, mats, this.jeep);
+    // the bike (its collider is added per run, after the navigation grid exists; its model drops in when it has loaded)
+    const ba = this._place(BIKE_AT, P, 1.4) || { x: 3.3, z: -16, yaw: Math.PI };
+    W.reserve(ba.x, ba.z, 0.8, 1.4, ba.yaw);
+    this.bike = this._car('bike', ba);
+    const bg = this.bike.mesh = new THREE.Group(); bg.rotation.order = 'YXZ'; bg.visible = false; scene.add(bg);
+    this.bike.driver = new THREE.Mesh(riderGeo(), mats.vcol); this.bike.driver.visible = false; bg.add(this.bike.driver);
     // the pickup: its spot is kept clear now, the model drops in when it has loaded
     const ta = this._place(TRUCK_AT, P, 2.8) || { x: 118, z: 152, yaw: Math.atan2(160, 86) };
     W.reserve(ta.x, ta.z, 1.4, 2.8, ta.yaw);
@@ -234,22 +209,18 @@ export class Vehicles {
     const tg = this.truck.mesh = new THREE.Group(); tg.rotation.order = 'YXZ'; tg.visible = false; scene.add(tg);
   }
 
-  buildJeep(scene, mats, c) {
-    const g = new THREE.Group();
-    g.rotation.order = 'YXZ';
-    const bodyM = new THREE.Mesh(jeepBody(), mats.vcol); g.add(bodyM);
-    const wg = wheelGeo();
-    for (const [x, z] of [[0.82, 1.15], [-0.82, 1.15], [0.82, -1.15], [-0.82, -1.15]]) {
-      const pivot = new THREE.Group(); pivot.position.set(x, 0.38, z);
-      const w = new THREE.Mesh(wg, mats.vcol); pivot.add(w); g.add(pivot);
-      c.wheels.push({ pivot, w, front: z > 0 });
-    }
-    c.driver = new THREE.Mesh(driverGeo(), mats.vcol); c.driver.position.x = -0.38; c.driver.visible = false; g.add(c.driver);
-    c.lamps = [this._lamp(g, 0.6, 0.98, 2.1, 0xfff2c8, 1.3), this._lamp(g, -0.6, 0.98, 2.1, 0xfff2c8, 1.3), this._lamp(g, 0.7, 0.8, -1.98, 0xff2010, 0.55), this._lamp(g, -0.7, 0.8, -1.98, 0xff2010, 0.55)];
-    scene.add(g);
-    c.mesh = g; c.ready = true;
-  }
   _lamp(g, x, y, z, col, s) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.g.tex.glow, color: col, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); sp.position.set(x, y, z); sp.scale.setScalar(s); sp.visible = false; g.add(sp); return sp; }
+
+  // The bobber's model has arrived (swaps.js): [{ geo, mat }] per mesh, standing on y = 0 and facing +z.
+  setBike(parts) {
+    const c = this.bike;
+    if (!c || c.ready || !parts) return;
+    const g = c.mesh;
+    for (const { geo, mat } of parts) { const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; g.add(m); }
+    c.lamps = [this._lamp(g, 0, 0.92, 1.12, 0xfff2c8, 1.2), this._lamp(g, 0, 0.78, -1.08, 0xff2010, 0.5)];
+    c.ready = true;
+    if (this.g.state === 'play' || this.g.state === 'pause') this._resetCar(c);
+  }
 
   // The pickup's model has arrived (models.js -> outlands.js): wheels spin and steer on their axles.
   setTruck(m) {
@@ -462,7 +433,7 @@ export class Vehicles {
     const hr = Ph.groundAt(c.x + rx * S.hx, c.z + rz * S.hx, 0.3, c.y + 0.9), hl = Ph.groundAt(c.x - rx * S.hx, c.z - rz * S.hx, 0.3, c.y + 0.9);
     const slopeP = clamp(Math.atan2(hb - hf, S.wb), -0.45, 0.45), slopeR = clamp(Math.atan2(hl - hr, S.hx * 2), -0.3, 0.3);
     const acc = (c.speed - (this._lastSpeed ?? c.speed)) / Math.max(dt, 1e-3); this._lastSpeed = c.speed;
-    c.lean = lerp(c.lean, slopeR - c.steer * c.speed * 0.012, 1 - Math.exp(-dt * 6));
+    c.lean = lerp(c.lean, slopeR - c.steer * c.speed * (S.leanK || 0.012), 1 - Math.exp(-dt * 6));
     c.pitch = lerp(c.pitch, slopeP + clamp(-acc * 0.006, -0.05, 0.05), 1 - Math.exp(-dt * 6));
     c.spin += c.speed * dt / S.wheelR;
     for (const w of c.wheels) { w.w.rotation.x = c.spin; if (w.front) w.pivot.rotation.y = c.steer; }
