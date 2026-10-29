@@ -182,12 +182,16 @@ models/zombies/zombiegirl.glb   the zombie girl                  (Scary_Zombie_P
 models/zombies/parasite.glb     the parasite (most brutes)       (Scary_Zombie_Pack_3)
 models/maw.glb                  MAW, asleep on the tracks        (Creature_NPC_Pack)
 ```
-- **Zombies** use idle, walk, run, attack, scream (the ghouls, when they spot you), death / dying and the two
-  crawls: a zombie whose legs are shot to pieces may drop and crawl after you. The stride is matched to how fast
-  each one really moves. The nearest few of each kind (7 on a computer, 4 on a phone) get a fully animated body;
-  the hordes further off are drawn as a low-poly copy of the same model posed in a few frames of its walk, run or
-  crawl, so hundreds cost only a handful of draw calls. Until a model has downloaded (about 3.2 MB for all four),
-  its zombies are drawn the old way.
+- **Zombies** use every clip in the packs. Each one gets a personality when it appears: about half the walkers
+  are shamblers that walk even when they chase you (the rest run), about one in seven drags itself along the
+  ground (crawl, and the running crawl when it's after you), about one in five is kneeling over a body eating
+  (two different feeding clips) and gets up when it notices you, and about a third scream when they spot you
+  (now and then one screams at nothing). They attack with a claw swipe or a lunge for your neck; one that kills a
+  thief or a looter kneels down and eats him. A zombie shot through the legs may also drop and crawl. They die
+  with one of two falls. The stride is matched to how fast each one really moves. The nearest few of each kind
+  (7 on a computer, 4 on a phone) get a fully animated body; the hordes further off are drawn as a low-poly copy
+  of the same model posed in a few frames of its walk, run, crawl or feeding, so hundreds cost only a handful of
+  draw calls. Until a model has downloaded (about 4 MB for all four), its zombies are drawn the old way.
 - **MAW** sleeps where he fell (the last frame of his death clip), gets up by playing that fall backwards, flexes
   and roars, then walks, runs, swipes, leaps and slams (the ground-pound lands on the frame he comes down) and
   throws chunks of concrete with his right hand. His fight is the same as before; the Joker still steps in when

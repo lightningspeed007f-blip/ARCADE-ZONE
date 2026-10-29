@@ -35,7 +35,7 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 
 // the zombie packs all carry the same twelve Mixamo clips; these are the ones the game uses
 const ZOMBIE_CLIPS = {
-  idle: 'zombie idle', walk: 'zombie walk', run: 'zombie run', attack: 'zombie attack',
+  idle: 'zombie idle', walk: 'zombie walk', run: 'zombie run', attack: 'zombie attack', bite: 'zombie biting', bite2: 'zombie biting (2)', neckBite: 'zombie neck bite',
   scream: 'zombie scream', death: 'zombie death', dying: 'zombie dying', crawl: 'zombie crawl', crawlRun: 'running crawl',
 };
 const CONFIG = {

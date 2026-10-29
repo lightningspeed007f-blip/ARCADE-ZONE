@@ -9,7 +9,10 @@
 //       The nearest few of each kind get a real animated body; the rest (the hordes further off) are drawn
 //       as a low-poly copy of the same model, posed once per frame of its walk, run or crawl when it loads and
 //       instanced: hundreds cost a handful of draw calls.
-//       A zombie shot through the legs may drop and crawl after you.
+//       What they do: some shamble and some run; some drag themselves along the ground from the start, and
+//       one shot through the legs may drop and crawl after you; some kneel over a body eating it and get up
+//       when they notice you; some scream when they spot you (and now and then for no reason); they claw at
+//       you or lunge for your neck; and one that kills a thief or a looter kneels down to eat him.
 //   THE HOUND (models/hound.glb): a zombie dog. Its one clip is a howl (it howls when it spots you, and
 //       the pack comes). Its first frame is the standing pose; the gallop, the lunge and the fall are posed
 //       in code.
@@ -29,14 +32,15 @@ const SKIN = { prisoner: { head: 1.64 }, girlscout: { head: 1.46 }, zombiegirl: 
 const HUMAN_HS = [['Head', 0.16, 'head', 0.06], ['Spine2', 0.24, 'body'], ['Spine', 0.22, 'body'], ['Hips', 0.2, 'body'],
   ['LeftUpLeg', 0.13, 'leg', 0.2], ['RightUpLeg', 0.13, 'leg', 0.2], ['LeftLeg', 0.11, 'leg'], ['RightLeg', 0.11, 'leg'],
   ['LeftForeArm', 0.09, 'arm'], ['RightForeArm', 0.09, 'arm'], ['LeftArm', 0.1, 'arm'], ['RightArm', 0.1, 'arm']];
-// the zombie attack clip: the claws land this far into it
-const ATTACK_HIT = 0.39;
+// the two attacks, and how far into each clip the blow lands: a claw swipe, and a lunge for the neck
+const ATTACK_HIT = { attack: 0.39, neckBite: 0.32 };
 // the frames the far-away copies are posed in: clip, and where in it (0..1)
 const FAR = {
   idle: ['idle', [0.3]],
   walk: ['walk', [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6]],
   run: ['run', [0, 0.25, 0.5, 0.75]],
   crawl: ['crawl', [0, 0.25, 0.5, 0.75]],
+  feed: ['bite2', [0.2, 0.6]],
   dead: ['death', [1]],
 };
 
@@ -118,6 +122,11 @@ export class Creatures {
     scene.traverse((o) => { if (o.isBone) bones[clean(o.name)] = o; });
     const clips = {};
     for (const a of gltf.animations) clips[a.name] = a;
+    // the long biting clip is three in one: it kneels over a body, eats, and gets up again
+    if (clips.bite) {
+      const d = clips.bite.duration, sub = (n, a, b) => THREE.AnimationUtils.subclip(clips.bite, n, Math.round(a * d * 30), Math.round(b * d * 30), 30);
+      clips.kneel = sub('kneel', 0, 0.22); clips.feed = sub('feed', 0.22, 0.68); clips.rise = sub('rise', 0.68, 1);
+    }
     const speeds = Object.assign({ walk: 0.37, run: 3.3, crawl: 0.47, crawlRun: 2.4 }, scene.userData.speeds || {});
     const holder = new THREE.Group(), off = new THREE.Group();
     off.add(scene); holder.add(off);
@@ -273,8 +282,9 @@ export class Creatures {
   _gait(e, T, sp) {
     const S = T.speeds, sc = T.scale * e.scale;
     if (e.crawler) return sp > 1.0 ? ['crawlRun', clamp(sp / (S.crawlRun * sc), 0.6, 1.8)] : ['crawl', sp > 0.1 ? clamp(sp / (S.crawl * sc), 0.6, 2.6) : 0.25];
-    if (sp > 1.0) return ['run', clamp(sp / (S.run * sc), 0.55, 1.7)];
-    if (sp > 0.12) return ['walk', clamp(sp / (S.walk * sc), 0.6, 2.6)];
+    // walking covers a shambling chase too; only the quick ones break into a run
+    if (sp > 1.15) return ['run', clamp(sp / (S.run * sc), 0.55, 1.7)];
+    if (sp > 0.12) return ['walk', clamp(sp / (S.walk * sc), 0.6, 3.6)];
     return ['idle', 1];
   }
 
@@ -294,13 +304,25 @@ export class Creatures {
     }
     const sp = e.moveSpeed || 0;
     const attacking = e.state === 'ATTACK' || (e.state === 'HUNT' && e.huntAtk);
-    if (e.roarT > 0) this._play(I, 'scream', 0.25, 1.1, true);
+    if (!attacking) I.lastAtkT = 0;
+    if (e.riseT > 0) {
+      // disturbed while feeding: it gets up (from the long feed: its own rise; from the short one: up screaming)
+      if (e.feedClip === 'bite2' || !I.acts.rise) this._play(I, 'scream', 0.5, 1.15, true);
+      else { const a = this._play(I, 'rise', 0.25, 1, true); if (a) a.timeScale = a.getClip().duration / Math.max(0.6, e.riseLen || 1.4); }
+    } else if (e.feeding > 0 && !e.crawler) {
+      // kneeling over a body, eating
+      if (e.kneelT > 0 && I.acts.kneel) this._play(I, 'kneel', 0.3, 1, true);
+      else this._play(I, e.feedClip === 'bite2' || !I.acts.feed ? 'bite2' : 'feed', 0.4, 0.9 + (e.speedK - 0.85), false, !I.cur);
+    } else if (e.roarT > 0 || e.idleScream > 0) this._play(I, 'scream', 0.25, 1.1, true);
     else if (attacking && !e.crawler) {
-      // the wind-up runs the clip up to the moment the claws land, exactly as the bite lands (enemies.js)
-      const a = this._play(I, 'attack', 0.15, 1, true);
-      if (a) { a.paused = true; a.time = clamp(1 - Math.max(0, e.attackT) / e.T.wind, 0, 1) * ATTACK_HIT * a.getClip().duration; }
-      I.follow = 0.45;
-    } else if (I.follow > 0 && I.cur === I.acts.attack && !e.crawler) {
+      // a new attack: a claw swipe, or a lunge for the neck (mostly the neck, on a person it is hunting)
+      if (!I.atk || e.attackT > I.lastAtkT + 0.05) I.atk = I.acts.neckBite && Math.random() < (e.state === 'HUNT' ? 0.7 : 0.4) ? 'neckBite' : 'attack';
+      I.lastAtkT = Math.max(0, e.attackT);
+      // the wind-up runs the clip up to the moment the blow lands, exactly as it lands (enemies.js)
+      const a = this._play(I, I.atk, 0.15, 1, true);
+      if (a) { a.paused = true; a.time = clamp(1 - Math.max(0, e.attackT) / e.T.wind, 0, 1) * ATTACK_HIT[I.atk] * a.getClip().duration; }
+      I.follow = I.atk === 'neckBite' ? 0.7 : 0.45;
+    } else if (I.follow > 0 && I.cur && I.cur === I.acts[I.atk] && !e.crawler) {
       // the follow-through after the strike
       I.follow -= dt; I.cur.paused = false; I.cur.timeScale = 1.4;
     } else if (e.state === 'BANG') this._play(I, 'attack', 0.2, 1.25);
@@ -318,6 +340,7 @@ export class Creatures {
     const F = T.far;
     let key, ts = 1;
     if (e.dead) key = 'dead';
+    else if ((e.feeding > 0 || e.riseT > 0) && !e.crawler) key = 'feed';
     else { const g = this._gait(e, T, e.moveSpeed || 0); key = g[0] === 'crawlRun' ? 'crawl' : g[0]; ts = g[1]; }
     const set = F.frames[key] || F.frames.idle;
     const clip = T.clips[FAR[key] ? FAR[key][0] : 'idle'];

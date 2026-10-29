@@ -271,6 +271,17 @@ export class Enemies {
     if (T.model === 'zombie') {
       e.skin = o.skin || ((type === 'brute' || type === 'ghoul') && r() < 0.6 ? 'parasite' : pick(ZOMBIE_SKINS));
       e.mkind = 'z:' + e.skin;
+      // a personality, so a horde doesn't all move alike: shamblers walk even when they chase you, some drag
+      // themselves along the ground, some are kneeling over a body eating, some scream when they spot you
+      if (type !== 'ghoul') {
+        if (type !== 'brute' && r() < (type === 'runner' ? 0.1 : 0.15)) e.crawler = true;
+        else if (type === 'walker' && r() < 0.45) e.shambler = true;
+        e.screamer = r() < (type === 'runner' ? 0.5 : 0.35);
+        if (!e.crawler && e.state === 'IDLE' && !o.noFeed && r() < 0.22) {
+          e.feeding = 1e9; e.feedClip = r() < 0.5 ? 'bite2' : 'feed';
+          if (this.game.fx && !e.inside) this.game.fx.bloodPool(x + Math.sin(e.yaw) * 0.9, y, z + Math.cos(e.yaw) * 0.9, 1.3 + r() * 0.6);
+        }
+      }
     } else e.mkind = T.model || null;
     if (!human) e.colors.fa = e.colors.skin;
     else if (!thief) e.colors.fa = e.colors.skin;
@@ -514,7 +525,7 @@ export class Enemies {
       const close = d < 2.5 || d < hearing;
       const facing = Math.abs(angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z))) < 1.5;
       e.sees = (close || (d < sight && (facing || d < sight * 0.4))) && this.canSee(e, px, peye, pz);
-      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if (T.roar && !e.roared) this.roar(e); } }
+      if (e.sees) { e.lastSeen = { x: px, z: pz }; e.lostT = 0; e.prey = null; if (e.state !== 'CHASE' && e.state !== 'ATTACK') { e.state = 'CHASE'; e.hold = false; if (e.zone || Math.random() < 0.35) this.alertZone(e); if (e.type === 'runner') this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.9 }); if ((T.roar || e.screamer) && !e.roared && !e.feeding) this.roar(e); } }
     }
     // no player in sight: a living person close by is food too (thieves and looters get torn into)
     if (looked && !e.sees && !e.hold && (e.state === 'IDLE' || e.state === 'ALERT')) {
@@ -529,9 +540,23 @@ export class Enemies {
       if (best && this.canSee(e, best.pos.x, best.pos.y + 1.4, best.pos.z)) { e.prey = best; e.state = 'HUNT'; e.stateT = 0; }
     }
     if (e.stagger > 0) { this.move(e, 0, 0, 0, dt); return; }
-    const speedK = e.speedK * (1 - e.limp * 0.5);
+    // feeding: anything but quiet (it noticed you, or a noise, or fresh prey) and it gets up off the body first
+    e.kneelT = Math.max(0, (e.kneelT || 0) - dt);
+    if (e.feeding > 0 && e.state !== 'IDLE') { e.feeding = 0; e.riseLen = 1.2 + Math.random() * 0.5; e.riseT = e.riseLen; }
+    if (e.riseT > 0) {
+      e.riseT -= dt; this.move(e, 0, 0, 0, dt);
+      if (e.state === 'CHASE') e.yaw += angleDiff(e.yaw, Math.atan2(px - e.pos.x, pz - e.pos.z)) * Math.min(1, dt * 2);
+      // up on its feet: a screamer screams now
+      if (e.riseT <= 0 && e.state === 'CHASE' && e.screamer && !e.roared && !e.dead) this.roar(e);
+      return;
+    }
+    // now and then one that is standing about screams at nothing
+    if (e.idleScream > 0) { e.idleScream -= dt; this.move(e, 0, 0, 0, dt); return; }
+    const speedK = e.speedK * (1 - e.limp * 0.5) * (e.shambler ? 0.62 : 1) * (e.crawler && !e.limp ? 0.7 : 1);
     switch (e.state) {
       case 'IDLE': {
+        if (e.feeding > 0) { e.feeding -= dt; this.move(e, 0, 0, 0, dt); break; }
+        if (!e.crawler && !e.hold && d < 30 && Math.random() < dt * 0.012) { e.idleScream = 2.6; this.zombieScream(e, { pos: [e.pos.x, e.pos.y + 1.6, e.pos.z], vol: 0.6 }); }
         if (e.stateT > 3 + Math.random() * 4) { e.stateT = 0; e.wanderYaw += (Math.random() - 0.5) * 2.5; e.idleWalk = Math.random() < 0.6; }
         if (e.hold) e.idleWalk = false;
         if (e.idleWalk && !e.hold) this.goTo(e, e.pos.x + Math.sin(e.wanderYaw) * 3, e.pos.z + Math.cos(e.wanderYaw) * 3, T.speed * 0.5 * speedK, dt, false);
@@ -592,7 +617,13 @@ export class Enemies {
           e.huntAtk = true;
           if (e.attackT <= 0) {
             const dd = { x: (h.pos.x - e.pos.x) / (hd || 1), z: (h.pos.z - e.pos.z) / (hd || 1) };
-            if (crew) g.crew.hurt(h, T.dmg); else this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie');
+            if (crew) g.crew.hurt(h, T.dmg);
+            else if (this.damage(h, T.dmg * 1.5, 'body', dd, 'zombie') && !e.crawler) {
+              // it got him: down on its knees to eat
+              e.state = 'IDLE'; e.stateT = 0; e.prey = null; e.huntAtk = false;
+              e.feeding = 12 + Math.random() * 14; e.feedClip = 'feed'; e.kneelT = 1.4;
+              break;
+            }
             g.audio.play('flesh', { pos: [h.pos.x, h.pos.y + 1.2, h.pos.z], vol: 0.6 });
             e.attackT = T.wind + 0.6;
           }
