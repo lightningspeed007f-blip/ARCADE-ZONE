@@ -1,5 +1,6 @@
 // THE CREW — four fighters hiding in the houses of Jais. Each run they sit waiting in four different
-// houses (picked at random, near the start); walk in and press USE and they join you, follow you and
+// houses: one of them (any of the four) always in the Hunter's Rest, the castle-door house across the lane from
+// the start, the others picked at random near the start. Walk in and press USE and they join you, follow you and
 // fight the dead beside you. USE again: "hold here" / "follow me". If one goes down, USE revives them.
 //
 //   models/viking.glb    Ragnar, the viking: a bearded axe-man with a round shield. Slow, heavy chops that
@@ -126,6 +127,9 @@ export class Companions {
       .map((b) => ({ b, d: Math.hypot(b.F.world(0, 0, b.d / 2)[0] - sp[0], b.F.world(0, 0, b.d / 2)[2] - sp[2]) }))
       .sort((a, b) => a.d - b.d).slice(0, 8).map((x) => x.b);
     const picks = r.shuffle(near.slice()).slice(0, 4);
+    // one of the four always waits in the Hunter's Rest (which of them changes from run to run)
+    const hr = W.special.hunters;
+    if (hr) { picks.length = Math.min(picks.length, 3); picks.splice(r.int(0, picks.length), 0, hr); }
     this.list.forEach((c, i) => {
       c.state = 'wait'; c.hp = c.maxHp; c.home = picks[i % picks.length]; c.target = null; c.atkT = 0; c.cool = 0; c.ride = false; c.downT = 0; c.hurtAt = -99;
       c.ammo = c.S.gun ? c.S.gun.mag : 0; c.reloadT = 0; c.burstLeft = 0; c.stuckT = 0; c.sideT = 0; c.seen = false; c.kills = 0;
@@ -139,6 +143,11 @@ export class Companions {
   _seatSpot(c, r) {
     const b = c.home, nav = this.g.townNav;
     let spot = null;
+    // a house with its own seats (the Hunter's Rest: on the hall floor, facing the way in)
+    if (b.seats) {
+      for (const p of r.shuffle(b.seats.slice())) if (nav.free(p[0], p[2]) && nav.free(p[0], p[2] + 0.6) && nav.free(p[0] + 0.6, p[2]) && nav.free(p[0] - 0.6, p[2])) { spot = [p[0], p[2]]; break; }
+      if (spot) { c.seat = { x: spot[0], z: spot[1], yaw: b.F.yaw + Math.PI }; return; }
+    }
     for (let k = 0; k < 30 && !spot; k++) {
       const lx = (r() - 0.5) * Math.max(0.5, b.w - 2.4), lz = b.d * (0.55 + r() * 0.25);
       const [x, , z] = b.F.world(lx, 0, lz);

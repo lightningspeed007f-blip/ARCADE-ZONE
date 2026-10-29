@@ -291,6 +291,23 @@ function placeEnterables(W) {
   front(list.find((b) => b.name === 'eastHouse'), 3.0, -0.07, 3.0, 1.0, 3);
 }
 
+// ---------- THE HUNTER'S REST (houses.js) ----------
+// The castle-door house with the crypt hall: one only, on its own lot, across lane L1 from the start house,
+// its door facing the lane. Placed before the street rows and the back blocks, so they build round it.
+export const HUNTERS_LOT = { road: 'L1', t: 29, side: 1, setback: 1.2 };
+function placeHunters(W) {
+  const L = HUNTERS_LOT, { w, d } = houseSize('hunters');
+  const F0 = frameOnRoad(ROADS[L.road], L.t, L.side, L.setback);
+  const F = new Frame(W, F0.x, F0.z, F0.yaw);
+  const [cx, cz] = F.p(0, d / 2);
+  const rect = { x: cx, z: cz, hx: w / 2 + 0.4, hz: d / 2 + 0.4, yaw: F.yaw };
+  if (!W.free(rect)) console.warn("the Hunter's Rest overlaps something on its lot");
+  W.rects.push(rect);
+  const [fx, fz] = F.p(0, -0.8);
+  W.reserve(fx, fz, 2.4, 0.8, F.yaw);         // the step in front of the door stays clear
+  W.special.hunters = placeHouse(W, F0, 'hunters', 'hunters');
+}
+
 // ---------- walk-in model houses (houses.js) ----------
 let houseN = 0;
 const insideTown = (x, z, rad) => x - rad > BOUNDS.minX + 25 && x + rad < BOUNDS.maxX - 25 && z - rad > BOUNDS.minZ + 30 && z + rad < BOUNDS.maxZ - 20;
@@ -452,6 +469,7 @@ export function buildWorld(W) {
   buildRoads(W);
   buildLandmarks(W);
   placeEnterables(W);
+  placeHunters(W);
   fillLots(W);
   backfill(W);
   return W;

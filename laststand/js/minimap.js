@@ -18,6 +18,7 @@ export const LANDMARKS = [
   { hi: 'रेलवे फाटक', en: 'Crossing', x: 18, z: -168 },
   { hi: 'स्टेशन रोड', en: 'Station Road', x: 56, z: -134 },
   { hi: 'स्कूल', en: 'School', x: 45, z: -76 },
+  { hi: 'हंटर्स रेस्ट', en: "Hunter's Rest", x: -66, z: -33 },   // world.js HUNTERS_LOT
 ];
 
 export class TownMap {
@@ -68,7 +69,7 @@ export class TownMap {
     this.hidden = new Set(['abandoned2', 'e2house']);
     this.dots = [];
     for (const b of W.buildings) {
-      if (!b.tpl || b.tpl === 'model' || ['jaisCity', 'ggd', 'cabin'].includes(b.name)) continue;   // the many model houses get no dot
+      if (!b.tpl || (b.tpl === 'model' && b.name !== 'hunters') || ['jaisCity', 'ggd', 'cabin'].includes(b.name)) continue;   // the many model houses get no dot (the Hunter's Rest does)
       const [cx, cz] = b.F.p(0, b.d / 2);
       const dot = { name: b.name, x: cx, z: cz, shown: false };
       this.dots.push(dot);

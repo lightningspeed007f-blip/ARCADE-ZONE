@@ -10,6 +10,11 @@
 //   models/houses/old.glb         a low timber cottage with a veranda
 //   models/houses/test.glb        a small clapboard cabin with a brick chimney
 //   models/houses/horror.glb      a big two-storey house with a wraparound porch
+//   models/houses/hunters.glb     THE HUNTER'S REST: an arched castle door, a scanned stone corridor and a candle-lit
+//                                 crypt hall (three uploads put together, scripts/houses/hunters.mjs). Only one, on its
+//                                 own lot (world.js), and one of the crew always waits in it (companions.js). The game
+//                                 builds its outer walls and roof (the hall came as an open cut-away) and hangs the
+//                                 door's two leaves (models/houses/hunters_door.glb) so they swing.
 //
 // Everything that matters for play is fixed when the town is built (housedata.js, baked from the models):
 // the walls, floors and steps are colliders, the doorways carry the game's own doors (open, close, kick,
@@ -22,7 +27,12 @@ import { Frame, door } from './interiors.js';
 import { loadGLB, lambertize } from './models.js';
 import { SCENIC } from './scenery.js';
 
-export const HOUSE_KINDS = Object.keys(HOUSE_DATA);
+// the town's random houses (a special one has its own lot)
+export const HOUSE_KINDS = Object.keys(HOUSE_DATA).filter((k) => !HOUSE_DATA[k].special);
+// a dark model reads better with a little of its own colour as glow
+const GLOW = { hunters: 0.28 };
+// the outer walls the game builds round a model: dark stone
+const SHELL_COL = [0.3, 0.29, 0.31];
 // how often each kind is picked (the big ones are hard to fit anyway; the wooden one is the heaviest to draw)
 const WEIGHT = { american: 1, apocalypse: 1.2, abandoned: 0.9, wooden: 0.7, farm: 1.1, japan: 1, old: 1.3, test: 1.3, horror: 0.6 };
 // and at most this many of each in town (about 70 in all: every one is walk-in, and they cost more to draw than a box)
@@ -63,8 +73,25 @@ export function placeHouse(W, F0, kind, name) {
     // these shells are hollow to the roof: a plain ceiling over the room
     F.box('plaster', (x0 + x1) / 2 + ox, y + 2.85, (z0 + z1) / 2 + oz, x1 - x0, 0.06, z1 - z0, [0.78, 0.76, 0.72], { collide: false, skip: ['top'] });
   });
+  // walls and roof round a model that has none of its own (their colliders are in D.boxes, up to head height)
+  for (const [x0, z0, x1, z1, y0, y1] of D.shell || []) {
+    F.box('concrete', (x0 + x1) / 2 + ox, (y0 + y1) / 2, (z0 + z1) / 2 + oz, x1 - x0, y1 - y0, z1 - z0, SHELL_COL, { collide: false, uv: 3 });
+  }
+  for (const [x, y, z, color, intensity, dist] of D.lights || []) {
+    const p = F.world(x + ox, y, z + oz);
+    W.lights.push({ x: p[0], y: p[1], z: p[2], color, intensity, dist, flicker: 1, interior: true });
+  }
+  if (D.seat) b.seats = D.seat.map(([x, z]) => F.world(x + ox, 0, z + oz));
   for (const dd of D.doors) {
     if (dd.open) continue;
+    if (dd.leaves) {
+      // a double door: two leaves, hinged at the two sides, that open together (never locked: someone waits inside)
+      const hw = dd.w / 2, o = { w: hw, h: dd.h, label: 'दरवाज़ा', model: dd.leaves };
+      const a = door(F, 'x', dd.z + oz, dd.x + ox - hw / 2, dd.y, Object.assign({ leaf: 'L' }, o));
+      const c = door(F, 'x', dd.z + oz, dd.x + ox + hw / 2, dd.y, Object.assign({ leaf: 'R', flip: true }, o));
+      a.pair = c; c.pair = a;
+      continue;
+    }
     const r = W.rng, locked = r.chance(0.12);
     if (dd.along === 'x') door(F, 'x', dd.z + oz, dd.x + ox, dd.y, { w: dd.w, h: dd.h, locked, label: locked ? 'बंद दरवाज़ा' : 'दरवाज़ा' });
     else door(F, 'z', dd.x + ox, dd.z + oz, dd.y, { w: dd.w, h: dd.h, locked, label: locked ? 'बंद दरवाज़ा' : 'दरवाज़ा' });
@@ -114,7 +141,7 @@ export class ModelHouses {
 
   _build(kind, gltf) {
     const S = SCENIC[kind];
-    const root = lambertize(gltf.scene, false, S && S.glow != null ? S.glow : 0.05);
+    const root = lambertize(gltf.scene, false, S && S.glow != null ? S.glow : GLOW[kind] ?? 0.05);
     // a model drawn for unlit display has its light baked into its textures: brighten it so the town's light doesn't darken it twice
     // and one whose parts take their colour from the vertices needs that switched on
     if (S && (S.tint || S.vcol)) { const done = new Set(); root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (!done.has(m)) { done.add(m); if (S.tint) m.color.multiplyScalar(S.tint); if (S.vcol) m.vertexColors = true; } }); }
