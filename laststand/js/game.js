@@ -29,6 +29,7 @@ import { Giants, buildDesert } from './giants.js';
 import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
 import { Swaps } from './swaps.js';
+import { Trees } from './trees.js';
 import { Graves } from './graves.js';
 import { Atmosphere } from './atmosphere.js';
 import { Companions } from './companions.js';
@@ -200,6 +201,8 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
     this.swaps = new Swaps(this);
     this.swaps.start();                               // the uploaded cars and ambulances, and grass breaking through the roads
+    this.trees = new Trees(this);
+    this.trees.start();                               // the uploaded tree models in place of the box trees
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
     this.corpses.start();                             // the dead of Jais, in the background
     this.graves = new Graves(this);

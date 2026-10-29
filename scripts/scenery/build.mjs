@@ -103,7 +103,20 @@ async function build(name, C) {
   const live = []; for (const m of root.listMeshes()) for (const p of m.listPrimitives()) live.push(p);
   for (const p of live) { const P = p.getAttribute('POSITION').getArray(); for (const i of p.getIndices().getArray()) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], P[i * 3 + k]); mx[k] = Math.max(mx[k], P[i * 3 + k]); } }
   const ref = [(mn[0] + mx[0]) / 2, C.groundY ?? mn[1], C.front ?? mn[2]];
+  // C.centre: centred on z too (x/z of the box centre)   C.trunk: centred on the trunk where it meets the ground
+  if (C.centre || C.trunk) ref[2] = (mn[2] + mx[2]) / 2;
+  if (C.trunk) {
+    const lo = mn[1] + (mx[1] - mn[1]) * 0.04, a = [0, 0, 0];
+    for (const p of live) { const P = p.getAttribute('POSITION').getArray(); for (let i = 0; i < P.length; i += 3) if (P[i + 1] < lo) { a[0] += P[i]; a[1] += P[i + 2]; a[2]++; } }
+    if (a[2]) { ref[0] = a[0] / a[2]; ref[2] = a[1] / a[2]; }
+  }
   for (const p of live) { const P = p.getAttribute('POSITION'), a = P.getArray(); for (let i = 0; i < a.length; i += 3) { a[i] -= ref[0]; a[i + 1] -= ref[1]; a[i + 2] -= ref[2]; } P.setArray(a); }
+  // C.fitH: scaled so it stands C.fitH tall (the game sizes each copy)
+  if (C.fitH) {
+    const k = C.fitH / (mx[1] - mn[1]);
+    for (const p of live) { const P = p.getAttribute('POSITION'), a = P.getArray(); for (let i = 0; i < a.length; i++) a[i] *= k; P.setArray(a); }
+    for (let i = 0; i < 3; i++) { mn[i] = ref[i] + (mn[i] - ref[i]) * k; mx[i] = ref[i] + (mx[i] - ref[i]) * k; }
+  }
   let tris = 0; for (const p of live) tris += p.getIndices().getCount() / 3;
   if (C.simplify && tris > C.simplify && C.sloppy) {
     // a scan has a UV seam on nearly every edge: the normal simplifier can't collapse those, the sloppy one can

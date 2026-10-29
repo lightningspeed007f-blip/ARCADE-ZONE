@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { ROADS, roadInfo } from './layout.js';
 import { rgb } from './util.js';
+import { treeKind, treeYaw, fallenBox } from './trees.js';
 
 // ---------- tiny geometry kit: merge coloured primitives ----------
 function part(geo, color, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
@@ -239,9 +240,15 @@ export function buildProps(W, scene, mats, tex) {
     if (!broken) W.lights.push({ baseY: p.p[1], x: hx, y: hy - 0.3, z: hz, color, intensity: p.major ? 9 : 6, dist: p.major ? 22 : 17, flicker: flicker ? 1 : 0, street: true, pool: true, glow: true });
     out.lampHeads.push({ x: hx, y: hy, z: hz, on: !broken, color, major: !!p.major, baseY: p.p[1] });
   }
-  // trees: trunk + three canopy blobs
+  // trees: trunk + three canopy blobs. These are the fallback: trees.js hides them once the uploaded tree models have
+  // loaded. The colliders are for the models: a post for a standing tree, a long low box for a fallen trunk
   const trees = pr.trees;
-  instanced(scene, GEO.tree(), vc, trees, (t) => { P.add(t.p[0], t.p[1] + 1.5, t.p[2], 0.25, 1.5, 0.25); return { x: t.p[0], y: t.p[1], z: t.p[2], s: t.s * (t.type === 'peepal' ? 1.3 : 1), yaw: t.p[0] * 3.1 }; });
+  for (const t of trees) {
+    if (treeKind(t) === 'fallen') { const [cy, hx, hy, hz] = fallenBox(t); P.add(t.p[0], cy, t.p[2], hx, hy, hz, treeYaw(t)); }
+    else P.add(t.p[0], t.p[1] + 1.5, t.p[2], 0.25, 1.5, 0.25);
+  }
+  out.trees = trees;
+  out.treeMeshes = [instanced(scene, GEO.tree(), vc, trees, (t) => ({ x: t.p[0], y: t.p[1], z: t.p[2], s: t.s * (t.type === 'peepal' ? 1.3 : 1), yaw: t.p[0] * 3.1 }))];
   const blobs = [];
   for (const t of trees) {
     const k = t.s * (t.type === 'peepal' ? 1.45 : 1);
@@ -253,7 +260,7 @@ export function buildProps(W, scene, mats, tex) {
       blobs.push({ x: t.p[0] + Math.cos(a) * rad, y: t.p[1] + (3.6 + (b === 0 ? 1.2 : 0.3 * b)) * k, z: t.p[2] + Math.sin(a) * rad, s: (b === 0 ? 2.2 : 1.6) * k, color: greens[(b + Math.floor(seed)) % greens.length], yaw: a });
     }
   }
-  instanced(scene, GEO.canopy(W.lowPoly ? 0 : 1), mats.leaves, blobs, (b) => ({ x: b.x, y: b.y, z: b.z, sv: [b.s, b.s * 0.72, b.s], yaw: b.yaw, color: b.color }));
+  out.treeMeshes.push(instanced(scene, GEO.canopy(W.lowPoly ? 0 : 1), mats.leaves, blobs, (b) => ({ x: b.x, y: b.y, z: b.z, sv: [b.s, b.s * 0.72, b.s], yaw: b.yaw, color: b.color })));
 
   const BIKE_C = [0x1a1a1a, 0xb01010, 0x1040a0, 0x202020, 0xe0e0e0, 0x404040];
   const CAR_C = [0xf0f0f0, 0xb8bcc0, 0x8a1010, 0x2a2a2e, 0x1a4a8a, 0xd8d0b8];

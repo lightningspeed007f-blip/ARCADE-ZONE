@@ -44,4 +44,15 @@ export const CONFIG = {
   // Mount Everest and the peaks around it (a terrain tile, about 12.8 km across): the far backdrop
   himalaya: { src: U + '1fd83abe-mount_everest_and_mountains__tibet__nepal.glb', scale: 1, yaw: 0,
     texFix: fillCutRows, tex: 1024, q: 82, simplify: 4200, simpErr: 0.01 },
+  // ---- trees (js/trees.js): every tree in Jais, the valleys and the shrine islands. Each is 1 m tall here (the
+  // game sizes each copy), stood on y = 0 and centred on its trunk. Three uploads were cut off in transfer: only
+  // the pine's last texture rows and the broadleaf's leaf normal map (not used) were lost ----
+  pine: { src: U + '4da865ca-pine_tree.glb', trunk: true, fitH: 1, tex: 512, texFix: fillCutRows },
+  // the broadleaf with red-pink leaves (its leaves are cards: simplified gently so they keep their shape)
+  leafy: { src: U + '4c307003-tree_2.glb', trunk: true, fitH: 1, tex: 1024, simplify: 3000, simpErr: 0.04 },
+  // a scanned bare, dead tree
+  dead: { src: U + 'a318deab-tree.glb', trunk: true, fitH: 1, tex: 1024, simplify: 6000, sloppy: true, minPart: 60 },
+  // "drevo": a scanned fallen trunk; the snow-covered ground sheet it was scanned on is cut away
+  fallen: { src: U + '9b60d394-drevo.glb', pre: true, centre: true, tex: 1024, texFix: fillCutRows, simplify: 2000, simpErr: 0.02, minPart: 300,
+    drop: (vs, c) => c[1] < 0.4 && Math.abs(normal(vs)[1]) > 0.45 },
 };
