@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import { HOUSE_DATA } from './housedata.js';
 import { Frame, door } from './interiors.js';
 import { loadGLB, lambertize } from './models.js';
+import { SCENIC } from './scenery.js';
 
 export const HOUSE_KINDS = Object.keys(HOUSE_DATA);
 // how often each kind is picked (the big ones are hard to fit anyway; the wooden one is the heaviest to draw)
@@ -27,6 +28,7 @@ const WEIGHT = { american: 1, apocalypse: 1.2, abandoned: 0.9, wooden: 0.7, farm
 // and at most this many of each in town (about 70 in all: every one is walk-in, and they cost more to draw than a box)
 const CAP = { american: 7, apocalypse: 9, abandoned: 8, wooden: 5, farm: 8, japan: 9, old: 10, test: 10, horror: 2 };
 const VIEW = 175;            // camera far plane is 170 m
+const SCENIC_VIEW = 140;     // the look-only houses: past this they are lost in the haze anyway, so they aren't drawn
 
 export function houseSize(kind) {
   const f = HOUSE_DATA[kind].foot;
@@ -80,6 +82,9 @@ export function placeHouse(W, F0, kind, name) {
   return b;
 }
 
+// a look-only house as one collider-style box [cx, cz, hx, hz, y0, y1]
+const scenicBox = (S) => [(S.solid[0] + S.solid[2]) / 2, (S.solid[1] + S.solid[3]) / 2, (S.solid[2] - S.solid[0]) / 2, (S.solid[3] - S.solid[1]) / 2, 0, S.top];
+
 // ---------- drawing ----------
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _up = new THREE.Vector3(0, 1, 0);
 const _sph = new THREE.Sphere(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4();
@@ -100,13 +105,19 @@ export class ModelHouses {
   load(onProgress) {
     const kinds = Object.keys(this.byKind), got = {};
     const tell = () => onProgress && onProgress(kinds.reduce((s, k) => s + (got[k] || 0), 0) / Math.max(1, kinds.length));
-    return Promise.all(kinds.map((k) => loadGLB('models/houses/' + k + '.glb', (p) => { got[k] = p; tell(); })
+    // the walk-in houses, and the look-only ones from scenery.js
+    const file = (k) => (SCENIC[k] ? SCENIC[k].file : 'models/houses/' + k + '.glb');
+    return Promise.all(kinds.map((k) => loadGLB(file(k), (p) => { got[k] = p; tell(); })
       .then((gltf) => { got[k] = 1; tell(); this._build(k, gltf); })
       .catch((e) => { got[k] = 1; console.warn('could not load house', k, e); this._standIn(k); })));
   }
 
   _build(kind, gltf) {
-    const root = lambertize(gltf.scene, false, 0.05);
+    const S = SCENIC[kind];
+    const root = lambertize(gltf.scene, false, S && S.glow != null ? S.glow : 0.05);
+    // a model drawn for unlit display has its light baked into its textures: brighten it so the town's light doesn't darken it twice
+    // and one whose parts take their colour from the vertices needs that switched on
+    if (S && (S.tint || S.vcol)) { const done = new Set(); root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (!done.has(m)) { done.add(m); if (S.tint) m.color.multiplyScalar(S.tint); if (S.vcol) m.vertexColors = true; } }); }
     root.updateMatrixWorld(true);
     const n = this.byKind[kind].length, out = [];
     root.traverse((o) => {
@@ -134,7 +145,8 @@ export class ModelHouses {
   // a model that failed to download: draw its colliders as plain plaster blocks, so the walls are not invisible
   _standIn(kind) {
     const geos = [];
-    for (const q of HOUSE_DATA[kind].boxes) {
+    const boxes = HOUSE_DATA[kind] ? HOUSE_DATA[kind].boxes : [scenicBox(SCENIC[kind])];
+    for (const q of boxes) {
       if (q[6] || q[5] - q[4] < 0.3) continue;
       const g = new THREE.BoxGeometry(q[2] * 2, q[5] - q[4], q[3] * 2);
       g.translate(q[0], (q[4] + q[5]) / 2, q[1]);
@@ -160,10 +172,11 @@ export class ModelHouses {
     const cp = camera.getWorldPosition(_p);
     for (const kind in this.parts) {
       const parts = this.parts[kind];
+      const far = SCENIC[kind] ? SCENIC_VIEW : VIEW;
       let n = 0;
       for (const h of this.byKind[kind]) {
         const dx = h.cx - cp.x, dz = h.cz - cp.z;
-        if (dx * dx + dz * dz > (VIEW + h.rad) * (VIEW + h.rad)) continue;
+        if (dx * dx + dz * dz > (far + h.rad) * (far + h.rad)) continue;
         _sph.center.set(h.cx, h.top / 2, h.cz); _sph.radius = h.rad + h.top / 2;
         if (!_fr.intersectsSphere(_sph)) continue;
         for (const im of parts) im.setMatrixAt(n, h.m);

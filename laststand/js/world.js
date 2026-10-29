@@ -7,6 +7,7 @@ import { ROADS, BOUNDS, roadInfo, frameOnRoad, KAMAKHYA } from './layout.js';
 import { Frame, Templates, FH } from './interiors.js';
 import { buildLandmarks } from './landmarks.js';
 import { houseSize, pickKinds, placeHouse } from './houses.js';
+import { scenicSize, pickScenic, placeScenic } from './scenery.js';
 
 const OUTER = [0xf1e3c6, 0xe8d0c0, 0xd8dccb, 0xf3eedd, 0xe6c79a, 0xc9d3dc, 0xe2b8a8, 0xd8c8e0, 0xc8e0d0, 0xf0c8c8, 0xe0e0e0, 0xb8c8e8].map(rgb);
 
@@ -178,7 +179,7 @@ export function facadeBuilding(W, F, w, d, floors, o = {}) {
       F.box('glow', 0, 2.45, -0.12, 0.9, 0.05, 0.05, [1, 1, 0.95], { collide: false });
     }
   }
-  W.buildings.push({ F, w, d, floors, solid: true });
+  W.buildings.push({ F, w, d, floors, solid: true, shops });
   return tint;
 }
 
@@ -325,6 +326,36 @@ function backHouse(W, x, z, r, only) {
   return false;
 }
 
+// ---------- look-only model houses (scenery.js) ----------
+// They take the place of plain box homes. On a street row: the first kind that fits here. Returns its width.
+function tryScenic(W, road, t, side, setback, r) {
+  for (const kind of pickScenic(W, r)) {
+    const { w, d } = scenicSize(kind);
+    const F0 = frameOnRoad(road, t + w / 2, side, setback);
+    const F = new Frame(W, F0.x, F0.z, F0.yaw);
+    const [cx, cz] = F.p(0, d / 2);
+    const rect = { x: cx, z: cz, hx: w / 2 + 0.15, hz: d / 2 + 0.1, yaw: F.yaw };
+    if (!insideTown(cx, cz, Math.max(w, d) / 2) || !W.free(rect)) continue;
+    W.rects.push(rect);
+    placeScenic(W, F, kind);
+    return w;
+  }
+  return 0;
+}
+// In the blocks behind the streets: centred on (x, z), front toward one of the four sides.
+function backScenic(W, x, z, r) {
+  const yaw = r.int(0, 3) * Math.PI / 2 + r.range(-0.08, 0.08);
+  for (const kind of pickScenic(W, r)) {
+    const { w, d } = scenicSize(kind);
+    const rect = { x, z, hx: w / 2 + 0.6, hz: d / 2 + 0.6, yaw };
+    if (!insideTown(x, z, Math.max(w, d) / 2) || !W.free(rect)) continue;
+    W.rects.push(rect);
+    placeScenic(W, new Frame(W, x - Math.sin(yaw) * d / 2, z - Math.cos(yaw) * d / 2, yaw), kind);
+    return true;
+  }
+  return false;
+}
+
 // ---------- fill streets with facade buildings ----------
 function fillLots(W) {
   const r = W.rng;
@@ -344,6 +375,11 @@ function fillLots(W) {
         if (!shops && r.chance(0.3)) {
           const placed = tryHouse(W, road, t, side, setback, r);
           if (placed) { t += placed + r.range(0.4, 1.6); continue; }
+        }
+        // or one of the look-only model houses, instead of a plain box home
+        if (!shops) {
+          const placed = tryScenic(W, road, t, side, setback, r);
+          if (placed) { t += placed + r.range(0.6, 2); continue; }
         }
         const F0 = frameOnRoad(road, t + w / 2, side, setback);
         const F = new Frame(W, F0.x, F0.z, F0.yaw);
@@ -373,6 +409,8 @@ function backfill(W) {
     if (Math.hypot(px - KAMAKHYA.well.x, pz - KAMAKHYA.well.z) < 9) continue;
     // mostly walk-in model houses, turned any way round (their door faces wherever the alley is)
     if (r.chance(0.2) && backHouse(W, px, pz, r)) continue;
+    // then the look-only model houses (scenery.js), in place of plain box homes
+    if (r.chance(0.6) && backScenic(W, px, pz, r)) continue;
     if (!W.free(rect)) continue;
     W.rects.push(rect);
     const F = new Frame(W, px - Math.sin(yaw) * d / 2, pz - Math.cos(yaw) * d / 2, yaw);

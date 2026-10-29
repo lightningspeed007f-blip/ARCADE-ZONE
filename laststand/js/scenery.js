@@ -1,0 +1,191 @@
+// Look-only scenery from uploaded models: two kinds of house that stand where the town used to put plain
+// box houses, and the Himalaya on the horizon. None of it can be entered: it is there to be looked at.
+//
+//   models/scenery/provence.glb   a photo-scanned stone cottage from Provence (the scan is its front wall;
+//                                 the game builds the stone body and the tiled roof behind it)
+//   models/scenery/seahouse.glb   "the house lost at sea": a tall gothic house with a tower, on its own
+//                                 grassy mound with a dead tree, its windows lit
+//   models/scenery/himalaya.glb   Mount Everest and the peaks around it, ringed round the far horizon
+//
+// The houses draw through ModelHouses (houses.js), like the walk-in houses: one InstancedMesh per part,
+// only the ones in view. Each is one solid block for collisions, so you walk round it, not into it.
+import * as THREE from 'three';
+import { loadGLB, lambertize } from './models.js';
+import { BOUNDS } from './layout.js';
+
+// In each model's own frame: metres, front faces -z with its front edge on z = 0, centred on x.
+//   foot [x0, z0, x1, z1]  the ground it covers   top  its height   solid [x0, z0, x1, z1]  the block you bump into
+export const SCENIC = {
+  provence: { file: 'models/scenery/provence.glb', foot: [-7.15, 0, 7.15, 9.9], top: 5.9, solid: [-7.0, 0.6, 7.0, 9.7] },
+  // the sea house was made for unlit display (its walls' textures are lifted in the build); tint / glow lift it a
+  // little more to match the town, and its grass, shrubs and lit windows are coloured per vertex (vcol)
+  seahouse: { file: 'models/scenery/seahouse.glb', foot: [-6.2, 0, 6.2, 13.7], top: 11.8, solid: [-5.2, 1.0, 5.2, 12.6], tint: 1.4, glow: 0.1, vcol: true },
+};
+export const SCENIC_KINDS = Object.keys(SCENIC);
+// at most this many of each in town (the sea house is the heavier one to draw)
+const CAP = { provence: 50, seahouse: 24 };
+
+export function scenicSize(kind) { const f = SCENIC[kind].foot; return { w: f[2] - f[0], d: f[3] - f[1] }; }
+
+// Kinds still under their cap, in a random order.
+export function pickScenic(W, r) {
+  const n = W.scenicCount || {};
+  return r.shuffle(SCENIC_KINDS.filter((k) => (n[k] || 0) < CAP[k]));
+}
+
+const STONE = [0.74, 0.69, 0.6], STONE_DARK = [0.6, 0.56, 0.5], ROOF = [0.78, 0.46, 0.34];
+
+// Build one. F is the lot's frame (Frame from interiors.js): front edge centre, facing the road.
+export function placeScenic(W, F, kind) {
+  const D = SCENIC[kind], P = W.P;
+  const { w, d } = scenicSize(kind);
+  (W.scenicCount || (W.scenicCount = {}))[kind] = (W.scenicCount[kind] || 0) + 1;
+  // one solid block: you walk round it, bullets stop on it, zombies path round it
+  const s = D.solid;
+  const [bx, bz] = F.p((s[0] + s[2]) / 2, (s[1] + s[3]) / 2);
+  P.add(bx, D.top / 2, bz, (s[2] - s[0]) / 2, D.top / 2, (s[3] - s[1]) / 2, F.yaw);
+  if (kind === 'provence') provenceBody(F);
+  W.buildings.push({ F, w, d, floors: Math.max(1, Math.round(D.top / 3.2)), solid: true, scenic: kind });
+  const [cx, cz] = F.p(0, d / 2);
+  (W.modelHouses || (W.modelHouses = [])).push({ kind, file: D.file, x: F.x, z: F.z, yaw: F.yaw, cx, cz, rad: Math.hypot(w, d) / 2 + 1, top: D.top + 1 });
+}
+
+// The scan is only the cottage's front wall (z 0 to 3.3; the garage on one end stands proud of it).
+// Behind it: stone walls, a low plinth and a Provençal roof of terracotta tiles, from the town's own materials.
+function provenceBody(F) {
+  const z0 = 3.3, z1 = 9.6, hw = 6.95, wallH = 3.75, ridge = 5.75, eave = 0.45;
+  const o = { collide: false };
+  F.box('plaster', 0, wallH / 2, (z0 + z1) / 2, hw * 2, wallH, z1 - z0, STONE, Object.assign({ uv: 2.5 }, o));
+  F.box('concrete', 0, 0.22, z1 + 0.05, hw * 2 + 0.1, 0.44, 0.2, STONE_DARK, o);           // plinth along the back
+  // gable ends (plaster triangles) and the two roof slopes (tiles), ridge along the frontage
+  const zm = (z0 + z1) / 2 - 0.6;
+  const W = F.W, B = W.B;
+  for (const sx of [-1, 1]) {
+    const a = F.world(sx * hw, wallH, z0 - 0.2), b = F.world(sx * hw, wallH, z1), c = F.world(sx * hw, ridge, zm);
+    const n = [sx * F.c, 0, -sx * F.s];
+    B.quad('plaster', a, b, c, c, n, [[0, 0], [3, 0], [1.5, 0.8], [1.5, 0.8]], STONE, [F.x, F.z]);
+  }
+  // one roof slope, from its eave (at local z = za) up to the ridge
+  const slope = (za) => {
+    const ya = wallH - 0.25, ext = hw + eave;
+    const p0 = F.world(-ext, ya, za), p1 = F.world(ext, ya, za), p2 = F.world(ext, ridge, zm), p3 = F.world(-ext, ridge, zm);
+    const dz = zm - za, dy = ridge - ya, len = Math.hypot(dz, dy);
+    const ny = Math.abs(dz) / len, nz = -Math.sign(dz) * dy / len;                     // local normal: up, and out over the eave
+    const n = [nz * F.s, ny, nz * F.c];
+    B.quad('tile', p0, p1, p2, p3, n, [[0, 0], [ext * 2 / 1.5, 0], [ext * 2 / 1.5, len / 1.5], [0, len / 1.5]], ROOF, [F.x, F.z]);
+    // the underside, so the eaves are not see-through from below
+    B.quad('plaster', p0, p1, p2, p3, [-n[0], -n[1], -n[2]], [[0, 0], [1, 0], [1, 1], [0, 1]], STONE_DARK, [F.x, F.z]);
+  };
+  slope(z0 - 0.75); slope(z1 + 0.55);
+  // a ridge cap and a chimney
+  F.box('tile', 0, ridge + 0.06, zm, hw * 2 + eave * 2, 0.16, 0.34, ROOF.map((v) => v * 0.85), o);
+  F.box('plaster', hw * 0.45, ridge + 0.2, zm + 1.2, 0.7, 1.6, 0.7, STONE, o);
+  F.box('concrete', hw * 0.45, ridge + 1.05, zm + 1.2, 0.85, 0.12, 0.85, STONE_DARK, o);
+}
+
+// ---------- the Himalaya ----------
+// Six copies of the Everest tile stand in a ring round the camera, past everything you can reach (it moves
+// with the camera, so it stays on the horizon wherever you go). Each copy shows a different face of the
+// range, and their sizes differ, so the skyline doesn't repeat. They are lit by the town's own moon or sun
+// and fill light. From the middle of town they are a faint shape behind the haze; in the direction of the
+// town's edge they come out clear, so at the end of the map the whole range stands over the fields.
+const RING = 112;                    // metres from the camera to the near edge (the far plane is 170: the far corners stay inside it)
+const BASE = -16;                    // the foot of the range, well below the eye (it sinks into the haze)
+const COPIES = [
+  // [angle (deg, 0 = north), face (deg: which side of the tile looks at you), width m, height m, mirror]
+  [0, 180, 190, 58, false],
+  [62, 90, 165, 46, false],
+  [118, 0, 180, 42, true],
+  [180, 270, 170, 50, false],
+  [240, 180, 185, 44, true],
+  [300, 0, 175, 54, false],
+];
+
+export class Mountains {
+  constructor(g) {
+    this.g = g;
+    this.group = new THREE.Group();
+    this.group.visible = false;
+    this.ready = false;
+    this.uni = { hazeColor: { value: new THREE.Color() }, camXZ: { value: new THREE.Vector2() }, bMin: { value: new THREE.Vector2(BOUNDS.minX, BOUNDS.minZ) }, bMax: { value: new THREE.Vector2(BOUNDS.maxX, BOUNDS.maxZ) } };
+    g.scene.add(this.group);
+  }
+
+  load() {
+    return loadGLB('models/scenery/himalaya.glb').then((gltf) => this._build(gltf)).catch((e) => console.warn('could not load the mountains', e));
+  }
+
+  _build(gltf) {
+    let src = null;
+    gltf.scene.updateMatrixWorld(true);
+    gltf.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
+    if (!src) return;
+    lambertize(gltf.scene);
+    // dequantise and bake the node transform, then centre the tile: x and z on 0, the lowest point on y = 0
+    const geo = src.geometry.clone();
+    for (const k of ['position', 'normal']) {
+      const a = geo.attributes[k]; if (!a || a.array instanceof Float32Array) continue;
+      const f = new Float32Array(a.count * 3);
+      for (let i = 0; i < a.count; i++) { f[i * 3] = a.getX(i); f[i * 3 + 1] = a.getY(i); f[i * 3 + 2] = a.getZ(i); }
+      geo.setAttribute(k, new THREE.BufferAttribute(f, 3));
+    }
+    geo.applyMatrix4(src.matrixWorld);
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox, sz = bb.getSize(new THREE.Vector3());
+    geo.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
+    const mat = src.material;
+    mat.fog = false;
+    mat.side = THREE.DoubleSide;        // the mirrored copies turn their faces round
+    const U = this.uni;
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vMW; varying float vLY;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 lp = instanceMatrix * vec4(transformed, 1.0); vLY = lp.y; vMW = (modelMatrix * lp).xyz;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vMW; varying float vLY; uniform vec3 hazeColor; uniform vec2 camXZ; uniform vec2 bMin; uniform vec2 bMax;')
+        .replace('#include <fog_fragment>', `
+          // how far the town goes on in this direction: the nearer its edge, the clearer the range
+          vec2 dir = normalize(vMW.xz - camXZ + vec2(1e-4));
+          vec2 tx = (mix(bMin, bMax, step(0.0, dir)) - camXZ) / (abs(dir) + 1e-4) * sign(dir + 1e-6);
+          float edge = max(0.0, min(tx.x, tx.y));
+          float clear = 1.0 - smoothstep(25.0, 230.0, edge);
+          // and the foot of the range always melts into the haze
+          float foot = smoothstep(0.12, 0.62, (vLY - ${BASE.toFixed(1)}) / 50.0);
+          // still a long way off: even at the edge, some of the air between stays in front
+          float k = clamp((0.18 + 0.62 * clear) * foot, 0.0, 1.0);
+          gl_FragColor.rgb = mix(hazeColor, gl_FragColor.rgb, k);`);
+    };
+    mat.customProgramCacheKey = () => 'himalaya';
+    const im = new THREE.InstancedMesh(geo, mat, COPIES.length);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    COPIES.forEach(([ang, face, wid, hgt, mir], i) => {
+      const a = ang * Math.PI / 180;
+      // the face we want toward the centre: turn the tile so that side looks back at the camera
+      const f = face * Math.PI / 180;
+      const across = face % 180 === 0 ? sz.x : sz.z, deep = face % 180 === 0 ? sz.z : sz.x;
+      const kw = wid / across, kh = hgt / sz.y, kd = Math.min(kw, 22 / deep);
+      // scale in the tile's own axes, before turning it: x is along the face for faces 0/180, z for 90/270
+      if (face % 180 === 0) s.set(kw * (mir ? -1 : 1), kh, kd); else s.set(kd, kh, kw * (mir ? -1 : 1));
+      q.setFromAxisAngle(up, f - a - Math.PI);
+      p.set(Math.sin(a) * (RING + deep * kd * 0.5), BASE, -Math.cos(a) * (RING + deep * kd * 0.5));
+      im.setMatrixAt(i, m.compose(p, q, s));
+    });
+    im.frustumCulled = false;
+    im.renderOrder = -9;                 // just after the sky dome
+    this.group.add(im);
+    this.mesh = im;
+    this.ready = true;
+  }
+
+  // Every frame, after the day cycle has set the fog: follow the camera, show only over the town.
+  update(cam) {
+    const g = this.g;
+    const on = this.ready && !g.inValley();
+    this.group.visible = on;
+    if (!on) return;
+    this.group.position.set(cam.position.x, cam.position.y, cam.position.z);
+    this.uni.camXZ.value.set(cam.position.x, cam.position.z);
+    this.uni.hazeColor.value.copy(g.scene.fog.color);
+  }
+}
