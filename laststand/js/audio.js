@@ -462,6 +462,50 @@ export class Audio {
     return src;
   }
 
+  // A looped one-shot buffer placed in the world (e.g. a zombie feeding). It starts at a random point and
+  // fades in; h.stop() fades it out. h.at() is where in the buffer it is now playing (seconds).
+  loopAt(name, vol, pos, o = {}) {
+    if (!this.ctx || !this.b[name]) return null;
+    const ctx = this.ctx, buf = this.b[name][0];
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    // skip the mp3 encoder's silent padding at both ends, so the loop has no gap
+    src.loopStart = Math.min(0.05, buf.duration * 0.1); src.loopEnd = Math.max(src.loopStart + 0.1, buf.duration - 0.03);
+    const rate = src.playbackRate.value = o.rate || 1;
+    const g = ctx.createGain(), now = ctx.currentTime;
+    g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol, now + 0.4);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = this.muffled ? 2500 : 12000;
+    const p = ctx.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse';
+    p.refDistance = o.ref || 2; p.rolloffFactor = o.roll ?? 1.2; p.maxDistance = 1000;
+    p.positionX.value = pos[0]; p.positionY.value = pos[1]; p.positionZ.value = pos[2];
+    src.connect(g); g.connect(f); f.connect(p); p.connect(this.sfx);
+    if (o.verbAmt) { const v = ctx.createGain(); v.gain.value = o.verbAmt; p.connect(v); v.connect(this.verb); }
+    const off = src.loopStart + Math.random() * (src.loopEnd - src.loopStart);
+    src.start(now, off);
+    const len = src.loopEnd - src.loopStart;
+    return {
+      name,
+      at: () => src.loopStart + (((ctx.currentTime - now) * rate + off - src.loopStart) % len + len) % len,
+      stop: (sec = 0.35) => { const t = ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + sec); try { src.stop(t + sec + 0.05); } catch (e) { /* stopped */ } },
+    };
+  }
+
+  // How loud a buffer is over time, 0..1 in 50 ms steps (worked out once per sound)
+  envelope(name) {
+    this._env = this._env || {};
+    if (this._env[name]) return this._env[name];
+    if (!this.b[name]) return null;
+    const buf = this.b[name][0], d = buf.getChannelData(0), step = Math.round(buf.sampleRate * 0.05);
+    const out = new Float32Array(Math.ceil(d.length / step));
+    let peak = 1e-6;
+    for (let i = 0; i < out.length; i++) {
+      let sum = 0; const a = i * step, b = Math.min(d.length, a + step);
+      for (let j = a; j < b; j++) sum += d[j] * d[j];
+      out[i] = Math.sqrt(sum / Math.max(1, b - a)); peak = Math.max(peak, out[i]);
+    }
+    for (let i = 0; i < out.length; i++) out[i] /= peak;
+    return (this._env[name] = out);
+  }
+
   // Footstep recordings: call every frame while the player moves on foot. mode is 'walk' or 'run'.
   // The loop fades itself out ~0.2 s after the last call, so pausing or driving silences it.
   footLoop(mode, vol = 1) {
