@@ -262,9 +262,14 @@ export class Joker {
   fx(cls) { const el = document.getElementById('jokerFx'); if (el) el.className = cls; }
 
   // the screen tint during the gas / white-out
-  laugh(vol = 1, pos) {
+  laugh(vol = 1, pos, force) {
     const a = this.g.audio, p = pos || [this.pos.x, this.pos.y + 2, this.pos.z];
-    if (a.has('jokerLaugh')) a.play('jokerLaugh', { pos: p, vol: 1.4 * vol, ref: 8, max: 400, vary: 0.03 });
+    if (a.has('jokerLaugh')) {
+      // the recording runs about 4.5 s: let it finish rather than stack another cackle on top of it
+      if (!force && this.g.time < (this._laughEnd || 0)) return;
+      this._laughEnd = this.g.time + 4.4;
+      a.play('jokerLaugh', { pos: p, vol: 1.4 * vol, ref: 8, max: 400, vary: 0 });
+    }
     else a.play('laugh', { pos: p, vol: 1.2 * vol, ref: 8, max: 400, verbAmt: 0.9 });
   }
 
@@ -464,7 +469,7 @@ export class Joker {
     this.hp -= n; this.recent += n; this.flinch = Math.min(1, this.flinch + n / 80);
     // stung: he runs for it (see fight), honking and laughing
     if (this.cool.flee <= 0 && (this.recent > 45 || Math.random() < 0.4)) this.wantFlee = true;
-    if (Math.random() < 0.3) this.g.audio.play('laugh', { pos: [this.pos.x, 2, this.pos.z], vol: 0.5, rate: 1.4 + Math.random() * 0.3 });
+    if (Math.random() < 0.3 && !this.g.audio.has('jokerLaugh')) this.g.audio.play('laugh', { pos: [this.pos.x, 2, this.pos.z], vol: 0.5, rate: 1.4 + Math.random() * 0.3 });
     if (!this.summoned && this.hp < this.maxHp * 0.6 && this.hp > 0) this.summon();
     if (!this.enraged && this.hp < this.maxHp * 0.3 && this.hp > 0) {
       this.enraged = true; this.laugh(1.4);
@@ -490,7 +495,7 @@ export class Joker {
     this.to('DEAD'); this.dead = true;
     this.laser.visible = false; this.gun.visible = false;
     g.stats.kills++;
-    this.laugh(0.9);
+    this.laugh(1.1, null, true);
     if (this.cat.state !== 'OFF' && this.cat.state !== 'DEAD') this.cat.die();
   }
 

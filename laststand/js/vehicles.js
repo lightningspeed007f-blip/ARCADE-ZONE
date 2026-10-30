@@ -301,7 +301,7 @@ export class Vehicles {
     for (const l of c.lamps) l.visible = true;
     this.camYaw = 0; this.camPitch = 0;
     if (g.audio.b.carDoor) g.audio.play('carDoor', { vol: 0.9, vary: 0.02 }); else { g.audio.play('slam', { vol: 0.5, rate: c.kind === 'truck' ? 1.0 : 1.2 }); g.audio.play('clank', { vol: 0.3, delay: 0.25 }); }
-    if (g.audio.ctx) { this.engine = g.audio.loop('engine', 0.0, g.audio.sfx); this.engine.gain.gain.setTargetAtTime(0.32, g.audio.ctx.currentTime, 0.3); }
+    if (g.audio.ctx) { this.engine = g.audio.loop(c.kind === 'bike' && g.audio.has('bikeEngine') ? 'bikeEngine' : 'engine', 0.0, g.audio.sfx); this.engineBike = c.kind === 'bike' && g.audio.has('bikeEngine'); this.engine.gain.gain.setTargetAtTime(0.32, g.audio.ctx.currentTime, 0.3); }
     document.body.classList.add('driving');
     g.toast(c.S.name + ' चालू', g.input.touch ? 'Drive with the stick or ◀ ▶ GAS BRAKE · EXIT to get out' : 'W/S throttle · A/D steer · Space handbrake · G or E to get out');
   }
@@ -445,7 +445,12 @@ export class Vehicles {
     P.noise = 9 + Math.abs(c.speed) * 1.2;
     P.shake = Math.max(0, P.shake - dt * 2.5);
     // engine note follows speed and throttle (the pickup growls lower)
-    if (this.engine) { this.engine.playbackRate.value = S.engine + Math.abs(c.speed) / MAX * 1.25 + Math.max(0, thr) * 0.12; this.engine.gain.gain.value = 0.26 + Math.abs(thr) * 0.14; }
+    if (this.engine && this.engineBike) {
+      // the recorded bike: idles at its natural pitch, climbs about an octave at top speed, a little lift on throttle
+      const sp = Math.abs(c.speed) / MAX;
+      this.engine.playbackRate.value += (0.9 + sp * 0.75 + Math.max(0, thr) * 0.1 - this.engine.playbackRate.value) * Math.min(1, dt * 6);
+      this.engine.gain.gain.value = 0.42 + sp * 0.2 + Math.abs(thr) * 0.12;
+    } else if (this.engine) { this.engine.playbackRate.value = S.engine + Math.abs(c.speed) / MAX * 1.25 + Math.max(0, thr) * 0.12; this.engine.gain.gain.value = 0.26 + Math.abs(thr) * 0.14; }
     this.followCam(dt, I);
   }
 

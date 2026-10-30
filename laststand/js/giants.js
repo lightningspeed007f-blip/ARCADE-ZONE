@@ -319,7 +319,7 @@ class Warrior {
   constructor(game, G) {
     this.g = game; this.G = G;
     this.pos = { x: 0, y: 0, z: 0 }; this.st = { vy: 0, peak: 0, fall: 0 }; this.vel = { x: 0, z: 0 };
-    this.hs = []; this.bodyR = 1.2; this.yaw = 0; this.t = 0;
+    this.hs = []; this.feet = []; this.bodyR = 1.2; this.yaw = 0; this.t = 0;
     this.rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75, 0), new THREE.MeshLambertMaterial({ color: 0x7a5a3a, flatShading: true }));
     this.rock.visible = false; game.scene.add(this.rock);
     this.reset();
@@ -342,6 +342,8 @@ class Warrior {
     const sp = (re, r, part, oy = 0) => { const b = findBone(scene, re); if (b) this.hs.push({ b, r, part, oy, p: new THREE.Vector3() }); };
     sp(/^spine_?01/, 0.75, 'body'); sp(/^spine003/, 0.85, 'body'); sp(/^spine006/, 0.5, 'head', 0.25);
     for (const s of ['L', 'R']) { sp(new RegExp('^thigh' + s), 0.42, 'leg'); sp(new RegExp('^shin' + s), 0.36, 'leg'); sp(new RegExp('^upper_?arm' + s), 0.35, 'arm'); sp(new RegExp('^hand' + s), 0.55, 'arm'); }
+    // the feet: a footfall sounds the moment one comes down in the walk, so the stomps stay in step with his legs
+    this.feet = ['L', 'R'].map((side) => { const b = findBone(scene, new RegExp('^foot' + side)); return b ? { b, lo: Infinity, hi: -Infinity, up: false, last: -9 } : null; }).filter(Boolean);
     if (this.hs.length < 3) { this.hs = []; for (const [y, r, part] of [[1.4, 0.8, 'leg'], [2.8, 1.0, 'body'], [3.9, 1.0, 'body'], [5.0, 0.55, 'head']]) this.hs.push({ b: null, y, r, part, oy: 0, p: new THREE.Vector3() }); }
   }
   reset() {
@@ -353,7 +355,15 @@ class Warrior {
   }
   hide() { if (this.root) this.root.visible = false; this.rock.visible = false; }
   place(p, yaw) { this.pos.x = p[0]; this.pos.z = p[1]; this.pos.y = 0; this.yaw = yaw; }
-  wake() { this.state = 'FIGHT'; this.stateT = 0; this.act = 'WALK'; this.actT = 0; this.g.audio.play('roar', { pos: [this.pos.x, 5, this.pos.z], vol: 1.6, rate: 0.7, max: 400 }); }
+  wake() {
+    this.state = 'FIGHT'; this.stateT = 0; this.act = 'WALK'; this.actT = 0;
+    const a = this.g.audio, at = [this.pos.x, 5, this.pos.z];
+    if (a.has('giantWake')) {
+      a.play('giantWake', { pos: at, vol: 1.7, ref: 12, max: 400, vary: 0 });
+      // the ground shakes with the sound: it swells in over the first second and rumbles until about 3.5 s
+      for (const [t, k] of [[0.3, 0.12], [0.7, 0.25], [1.2, 0.35], [2, 0.3], [2.8, 0.2], [3.6, 0.12]]) setTimeout(() => { if (this.state === 'FIGHT') this.G.shake(k); }, t * 1000);
+    } else a.play('roar', { pos: at, vol: 1.6, rate: 0.7, max: 400 });
+  }
   solid() { return this.state === 'FIGHT' && !this.dead; }
 
   hitTest(o, d, maxT) {
@@ -498,7 +508,7 @@ class Warrior {
     // keep you out of his legs
     if (!this.dead && d < 1.6 && d > 1e-3) g.physics.moveCharacter(P.pos, dx / d * (1.6 - d), dz / d * (1.6 - d), 0, 0.016, P.radius, 1.75, 0.45, P.state);
     // footsteps you feel
-    if (this.moveSpeed > 1 && this.state === 'FIGHT') { this.stepT = (this.stepT || 0) - dt * this.moveSpeed / 2.7; if (this.stepT <= 0) { this.stepT = 0.55; g.audio.play('slam', { pos: [this.pos.x, 0.2, this.pos.z], vol: 0.6, rate: 0.35 }); if (d < 14) this.G.shake(0.12); } }
+    if (!this.feet.length && this.moveSpeed > 1 && this.state === 'FIGHT') { this.stepT = (this.stepT || 0) - dt * this.moveSpeed / 2.7; if (this.stepT <= 0) { this.stepT = 0.55; g.audio.play('slam', { pos: [this.pos.x, 0.2, this.pos.z], vol: 0.6, rate: 0.35 }); if (d < 14) this.G.shake(0.12); } }
     this.pose(dt, anim);
   }
   done(cool, key, k) { this.act = 'WALK'; this.actT = 0; this.cool.act = cool; this.cool[key] = k + Math.random() * 2; }
@@ -514,6 +524,31 @@ class Warrior {
     if (this.state === 'DEAD') { R.rotation.x = Math.min(this.lean, 1.5); R.position.y = -Math.max(0, this.stateT - 3) * 0.4; if (this.stateT > 12) R.visible = false; }
     R.updateMatrixWorld(true);
     for (const h of this.hs) { if (h.b) { h.b.getWorldPosition(h.p); h.p.y += h.oy; } else h.p.set(this.pos.x, this.pos.y + h.y, this.pos.z); }
+    if (this.feet.length && walking && this.state === 'FIGHT' && this.moveSpeed > 1) this.footfalls();
+    else for (const f of this.feet) f.up = false;
+  }
+
+  // one stomp per planted foot: a foot counts as planted when it drops into the lowest quarter of its own
+  // travel after having been lifted into the upper half, so the sound lands with the animation at any walk speed
+  footfalls() {
+    const g = this.g, _p = _v;
+    for (const f of this.feet) {
+      f.b.getWorldPosition(_p);
+      const y = _p.y;
+      f.lo = Math.min(f.lo, y); f.hi = Math.max(f.hi, y);
+      const range = f.hi - f.lo;
+      if (range < 0.25) continue;
+      if (y > f.lo + range * 0.55) f.up = true;
+      else if (f.up && y < f.lo + range * 0.25 && g.time - f.last > 0.25) {
+        f.up = false; f.last = g.time;
+        const d = Math.hypot(g.player.pos.x - _p.x, g.player.pos.z - _p.z);
+        const k = 1 + (this.act === 'CHARGE' ? 0.25 : 0);
+        const n = 1 + (Math.random() * 4 | 0);
+        if (g.audio.has('giantStep' + n)) g.audio.play('giantStep' + n, { pos: [_p.x, 0.2, _p.z], vol: 1.5 * k, ref: 10, max: 300, vary: 0.04 });
+        else g.audio.play('slam', { pos: [_p.x, 0.2, _p.z], vol: 0.6, rate: 0.35 });
+        if (d < 18) this.G.shake(0.14 * k * (1 - d / 24));
+      }
+    }
   }
 }
 

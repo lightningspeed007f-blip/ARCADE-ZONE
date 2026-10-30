@@ -31,6 +31,12 @@ export const MANIFEST = {
     runLoop:      { dirs: ['sounds/'], names: ['run'], loop: false },    // sprinting (looped while you move)
     zombieRoar:   { dirs: ['sounds/'], names: ['zombie_roar'] },   // the scream a zombie lets out with its scream animation (trimmed to the clip's scream, see enemies.js ROAR)
     zombieEat:    { dirs: ['sounds/'], names: ['zombie_eat'] },    // a zombie feeding on a body (looped; its loudness drives the chewing in creatures.js)
+    giantWake:    { dirs: ['sounds/'], names: ['giant_wake'] },    // the giant warrior waking up (his roar as the desert shakes)
+    giantStep1:   { dirs: ['sounds/'], names: ['giant_step1'] },   // one giant footfall each (cut from the stomp recording); a random one plays on every plant of his foot
+    giantStep2:   { dirs: ['sounds/'], names: ['giant_step2'] },
+    giantStep3:   { dirs: ['sounds/'], names: ['giant_step3'] },
+    giantStep4:   { dirs: ['sounds/'], names: ['giant_step4'] },
+    bikeEngine:   { dirs: ['sounds/'], names: ['bike_engine'] },   // the Indian bike's engine (a seamless loop; pitch follows speed)
     grenadeBlast: { dirs: ['sounds/'], names: ['grenade_blast'] }, // a grenade YOU throw going off (trimmed to start right at the bang)
     // the Joker's five silly sounds in the Playground (built-in versions otherwise)
     jkHonk:       { dirs: ['music/'], names: ['joker1'] },   // clown horn: he honks as he runs off after being hit
