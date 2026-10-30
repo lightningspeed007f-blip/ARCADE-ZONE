@@ -65,6 +65,8 @@ const KINDS = {
       ['Bone_WH_Calf_L', 0.1, 'leg'], ['Bone_WH_Calf_R', 0.1, 'leg']],
   },
 };
+// the crawler's body (models/zombies/fuzz.glb: its clips are the crawl, and the sleep clip held still for its death)
+KINDS['z:fuzz'] = { zombie: true, skin: 'fuzz', pool: 6, head: 1.62, glow: 0.07, hs: HUMAN_HS, deathHold: 1.0 };
 for (const s of ZOMBIE_SKINS) KINDS['z:' + s] = { zombie: true, skin: s, pool: 7, head: SKIN[s].head, glow: 0.07, hs: HUMAN_HS };
 // strip the "mixamorig:" prefix and the exporter's _123 suffix
 const clean = (n) => n.replace(/^mixamorig\d*:?/, '').replace(/_\d+$/, '');
@@ -88,6 +90,7 @@ export class Creatures {
       KINDS['z:' + s].pool = pool;
       q = q.then(() => loadGLB('models/zombies/' + s + '.glb')).then((m) => this.add('z:' + s, m)).catch((e) => console.warn('could not load zombie', s, e));
     }
+    q = q.then(() => loadGLB('models/zombies/fuzz.glb')).then((m) => this.add('z:fuzz', m)).catch((e) => console.warn('could not load the crawler', e));
   }
 
   // ---------- templates ----------
@@ -288,7 +291,7 @@ export class Creatures {
   // which loop a zombie is in, and how fast it plays (the stride matched to its real speed)
   _gait(e, T, sp) {
     const S = T.speeds, sc = T.scale * e.scale;
-    if (e.crawler) return sp > 1.0 ? ['crawlRun', clamp(sp / (S.crawlRun * sc), 0.6, 1.8)] : ['crawl', sp > 0.1 ? clamp(sp / (S.crawl * sc), 0.6, 2.6) : 0.25];
+    if (e.crawler) return sp > 1.0 ? ['crawlRun', clamp(sp / (S.crawlRun * sc), 0.6, 3.6)] : ['crawl', sp > 0.1 ? clamp(sp / (S.crawl * sc), 0.6, 2.6) : 0.25];
     if (sp > 1.0) return ['run', clamp(sp / (S.run * sc), 0.55, 1.7)];
     if (sp > 0.12) return ['walk', clamp(sp / (S.walk * sc), 0.6, 2.6)];
     return ['idle', 1];
@@ -303,6 +306,7 @@ export class Creatures {
         I.deadPose = true;
         const a = this._play(I, e.dieClip || 'death', 0.12, 1, true);
         if (a) a.time = Math.min(e.deathT, a.getClip().duration - 0.01);
+        if (a && T.K.deathHold != null) { a.time = T.K.deathHold; a.paused = true; }   // lies still where it dropped
       }
       I.mixer.update(dt);
       I.root.position.y = e.pos.y - Math.max(0, e.deathT - 30) * 0.06;

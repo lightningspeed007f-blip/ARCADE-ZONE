@@ -43,6 +43,10 @@ const CONFIG = {
   girlscout:  { dir: 'Scary_Zombie_Pack_1', body: 'Girlscout T Masuyama.fbx',   clips: ZOMBIE_CLIPS, tris: 9000, far: 1400, tex: 1024 },
   zombiegirl: { dir: 'Scary_Zombie_Pack_2', body: 'Zombiegirl W Kurniawan.fbx', clips: ZOMBIE_CLIPS, tris: 9000, far: 1400, tex: 1024 },
   parasite:   { dir: 'Scary_Zombie_Pack_3', body: 'Parasite L Starkie.fbx',     clips: ZOMBIE_CLIPS, tris: 9000, far: 1400, tex: 1024 },
+  // the crawler and the feast: one new zombie (crawling, and lying asleep), and the survivor who bites it
+  // (the clips are named after the FBX files: crawl.fbx, sleep.fbx, bite.fbx in UPLOADS/Feast)
+  fuzz: { dir: 'Feast', body: 'crawl.fbx', clips: { crawl: 'crawl', crawlRun: 'crawl', death: 'sleep', sleep: 'sleep' }, tris: 9000, far: 0, tex: 1024 },
+  survivor: { dir: 'Feast', body: 'bite.fbx', clips: { bite: 'bite' }, tris: 9000, far: 0, tex: 1024 },
   // the Creature NPC pack: MAW, the railyard giant (js/boss.js)
   maw: {
     dir: 'Creature_NPC_Pack', body: 'Maw J Laygo.fbx', tris: 14000, far: 0, tex: 2048,
