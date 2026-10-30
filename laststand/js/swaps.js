@@ -130,7 +130,8 @@ export class Swaps {
   bikes() {
     const P = this.g.props;
     if (!P || !P.bikes || !P.bikeMesh || !this.model.bobberLite) return;
-    this._place('bobberLite', P.bikes.map((b) => ({ x: b.p[0], y: 0, z: b.p[2], yaw: b.yaw, rz: 0.1 })));
+    const Ph = this.g.physics;
+    this._place('bobberLite', P.bikes.map((b) => ({ x: b.p[0], y: Math.max(0.09, Ph.groundAt(b.p[0], b.p[2], 0.3, 50)), z: b.p[2], yaw: b.yaw, rz: 0.1 })));
     P.bikeMesh.visible = false;
   }
 

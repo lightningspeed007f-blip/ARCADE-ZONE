@@ -254,7 +254,7 @@ export class Vehicles {
 
   _resetCar(c) {
     const A = c.home;
-    Object.assign(c, { x: A.x, y: 0, z: A.z, yaw: A.yaw, speed: 0, steer: 0, spin: 0, lean: 0, pitch: 0, crashT: 0 });
+    Object.assign(c, { x: A.x, y: Math.max(0, this.g.physics.groundAt(A.x, A.z, c.S.r, 50)), z: A.z, yaw: A.yaw, speed: 0, steer: 0, spin: 0, lean: 0, pitch: 0, crashT: 0 });
     if (!c.ready) return;
     c.mesh.visible = true;
     if (!c.box) c.box = this.g.physics.add(A.x, c.S.cy, A.z, c.S.hx, c.S.hy, c.S.hz, A.yaw, 'vehicle');
