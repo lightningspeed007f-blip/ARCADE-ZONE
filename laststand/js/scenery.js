@@ -1,7 +1,11 @@
-// Look-only scenery from uploaded models: the Indian street (a department store, a pan kiosk, a bhelpuri cart and a
-// marble gazebo) and two odd houses, all standing where the town used to put plain box houses, and the Himalaya on the
-// horizon. None of it can be entered: it is there to be looked at.
+// Look-only scenery from uploaded models: the town's houses (a pack of 13 houses, 13 farm buildings and an autumn house, all
+// in the list HOMES below), four Indian shops (a department store twice, a pan kiosk, a bhelpuri cart; they used to fill
+// every street, now there are just four, on four different roads), a marble gazebo and two odd houses, all standing where
+// the town used to put plain box houses, and the Himalaya on the horizon. None of it can be entered: it is there to be looked at.
 //
+//   models/scenery/h*.glb         the house pack (low-poly, 2 storeys, garages and porches; colours baked per vertex)
+//   models/scenery/fc*.glb fp*.glb  half-timbered farm houses  barn*.glb  farm barns
+//   models/scenery/autumn.glb     a clapboard house with a blue roof and a garage (leaf piles on the roof)
 //   models/scenery/shop2.glb      "Kirana King": a department-store front with its steps (photo-scanned front, plain beige
 //                                 sides). The house of the streets: it is scaled to each lot's width
 //   models/scenery/streetshop.glb a red tin pan-ki-dukaan kiosk on stilts, shutter down
@@ -18,6 +22,7 @@
 import * as THREE from 'three';
 import { loadGLB, lambertize } from './models.js';
 import { BOUNDS } from './layout.js';
+import { HOMES } from './homes.js';
 
 // In each model's own frame: metres, front faces -z with its front edge on z = 0, centred on x.
 //   foot [x0, z0, x1, z1]  the ground it covers   top  its height   solid [x0, z0, x1, z1]  the block you bump into
@@ -32,17 +37,29 @@ export const SCENIC = {
   // little more to match the town, and its grass, shrubs and lit windows are coloured per vertex (vcol)
   seahouse: { file: 'models/scenery/seahouse.glb', foot: [-6.2, 0, 6.2, 13.7], top: 11.8, solid: [-5.2, 1.0, 5.2, 12.6], tint: 1.4, glow: 0.1, vcol: true },
 };
+// the houses: built by scripts/scenery (the FBX packs' palette colours are per vertex; the autumn house has its own texture)
+const HOME_KINDS = Object.keys(HOMES), BARNS = HOME_KINDS.filter((k) => k.startsWith('barn'));
+for (const k of HOME_KINDS) {
+  const f = HOMES[k].foot;
+  SCENIC[k] = { file: 'models/scenery/' + k + '.glb', foot: f, top: HOMES[k].top, solid: [f[0] + 0.15, f[1] + 0.15, f[2] - 0.15, f[3] - 0.15], glow: 0.06, tint: k === 'autumn' ? 1 : 1.15, vcol: k !== 'autumn', lit: 0.2, litAt: [0, 2.4, -0.8] };
+}
 export const SCENIC_KINDS = Object.keys(SCENIC);
-// at most this many of each in town (the sea house is the heavier one to draw; the Indian street fills the rest)
-const CAP = { shop2: 1e4, streetshop: 45, bhelpuri: 36, gazebo: 10, provence: 6, seahouse: 3 };
-// how often each is picked, by where it is going: a street row, the bazaar, or the blocks behind the streets
+// The Indian street's shops are rare now: four in all, each on a road of its own (world.js plans where)
+export const INDIAN_SHOPS = ['shop2', 'shop2', 'streetshop', 'bhelpuri'];
+// at most this many of each in town (the Indian shops: just the four above; the sea house is the heavier one to draw)
+const CAP = { shop2: 2, streetshop: 1, bhelpuri: 1, gazebo: 10, provence: 6, seahouse: 3 };
+for (const k of HOME_KINDS) CAP[k] = BARNS.includes(k) ? 7 : k === 'autumn' ? 14 : 20;
+// how often each is picked, by where it is going: a street row, the bazaar, or the blocks behind the streets (the Indian shops are
+// never picked at random: they are placed by INDIAN_SHOPS)
+const homeWeights = (barn, autumn) => Object.fromEntries(HOME_KINDS.map((k) => [k, BARNS.includes(k) ? barn : k === 'autumn' ? autumn : 1]));
 const WEIGHT = {
-  street: { shop2: 1, streetshop: 0.3, bhelpuri: 0.25, provence: 0.08, seahouse: 0.04 },
-  bazaar: { shop2: 1, streetshop: 0.5, bhelpuri: 0.45 },
-  block: { shop2: 1, gazebo: 0.16, streetshop: 0.18, bhelpuri: 0.12, provence: 0.08, seahouse: 0.04 },
+  street: { ...homeWeights(0.12, 0.9), provence: 0.3, seahouse: 0.15 },
+  bazaar: { ...homeWeights(0.06, 0.9) },
+  block: { ...homeWeights(0.45, 0.9), gazebo: 0.6, provence: 0.3, seahouse: 0.15 },
 };
-// a shop is scaled to fit its lot; the rest stay close to their own size
+// a shop is scaled to fit its lot; the houses and the rest stay close to their own size
 const SCALE_RANGE = { shop2: [0.62, 1.22], streetshop: [1, 1.25], bhelpuri: [1, 1.25], gazebo: [0.9, 1.1], provence: [1, 1], seahouse: [1, 1] };
+for (const k of HOME_KINDS) SCALE_RANGE[k] = [0.9, 1.12];
 
 export function scenicSize(kind, s = 1) { const f = SCENIC[kind].foot; return { w: (f[2] - f[0]) * s, d: (f[3] - f[1]) * s }; }
 

@@ -11,6 +11,9 @@ To change one, edit `scripts/scenery/config.mjs` and rebuild:
 cd scripts/scenery && npm install
 UPLOADS=/folder/with/the/original/uploads node build.mjs all    # or one name: shop2, streetshop, bhelpuri, gazebo, rickshaw, bobber, bobber_lite, provence, seahouse, himalaya
 cp out/shop2.glb out/streetshop.glb out/bhelpuri.glb out/gazebo.glb ../../laststand/assets/models/scenery/
+# the houses (the packs' palette texture is in textures/ next to the FBX files in UPLOADS):
+node build.mjs homes && node homes.mjs     # all the houses (and rewrites js/homes.js)
+cp out/h*.glb out/fc*.glb out/fp*.glb out/barn*.glb out/autumn.glb ../../laststand/assets/models/scenery/
 cp out/rickshaw.glb out/bobber.glb out/bobber_lite.glb ../../laststand/assets/models/
 ```
 # JAIS: LAST STAND — your images and music
@@ -406,13 +409,29 @@ models/scenery/provence.glb     a photo-scanned stone cottage from Provence, vin
 models/scenery/seahouse.glb     "the house lost at sea": a tall gothic house with a tower, on its grassy mound
 models/scenery/himalaya.glb     Mount Everest and the peaks around it
 ```
-**The Indian street** replaces the plain box buildings: every ordinary building on the street rows (shops and
-homes alike) and in the blocks behind them is now one of these (`placeScenic` in `js/scenery.js`; the choice per lot
-is in `tryScenic` / `backScenic` in `js/world.js`). The department store is the building of the streets: it is
-scaled to fit each lot (62% to 122% of its size), so rows are not all the same width. Pan kiosks and bhelpuri carts
-stand in the bazaar and the lanes (at most 45 and 36 in town), and the gazebo in the blocks behind (at most 10).
-The two odd houses are rare now (at most 6 Provence cottages and 3 sea houses; the weights are in `WEIGHT`).
-A few of the shops keep a lamp on after dark. A plain box building is only built where none of them fits.
+**The houses** replace the plain box buildings: every ordinary building on the street rows and in the blocks behind
+them is now one of 27 look-only houses (`placeScenic` in `js/scenery.js`; the choice per lot is in `tryScenic` /
+`backScenic` in `js/world.js`; each one's footprint and height are in `js/homes.js`, baked by `scripts/scenery/homes.mjs`):
+```
+models/scenery/h001 … h180.glb   13 two-storey low-poly houses of the "LowPoly House 20 Pack" (garages, porches, bay windows)
+models/scenery/fc*.glb fp*.glb   9 half-timbered farm houses of "LowPoly Farm 02" (decks, dormers, one red-and-white)
+models/scenery/barn1 … barn4.glb 4 farm barns of the same pack (rare on the streets, commoner in the blocks behind)
+models/scenery/autumn.glb        the clapboard house with the blue roof and garage from "autumn_house" (the diorama's hill, road,
+                                 car and trees are cut away; the leaf piles on its roof stay)
+```
+At most 20 of each house, 14 autumn houses and 7 of each barn are in town (`CAP`), picked at random by weight (`WEIGHT`), each scaled
+90% to 112%. The two FBX uploads were cut off in transfer: the houses and barns survived whole, but not their node transforms
+or materials, so `scripts/scenery/fbx.mjs` reads what is there (left out: the house pack's six `Plane.*` townhouse stacks, which
+come in another orientation and one of them cut off, and the farm's fences, bridges, trees and rocks). The buildings of both packs share one colour-palette texture; it is
+baked into vertex colours (`palette: true`), so the models have no texture at all (25 to 35 KB each, about 4,500 triangles).
+Their doors face -z; `yaw` in `scripts/scenery/config.mjs` is PI for the ones the pack drew facing +z.
+
+**The Indian street's shops are rare now**: only four in town (they used to fill every street): the department store twice,
+one pan kiosk, one bhelpuri cart (`INDIAN_SHOPS` in `js/scenery.js`). `planIndianShops` in `js/world.js` gives each of
+them a different road and a spot along it; the first lot past that spot with room takes it (a shop with no room on its
+road goes in the blocks behind, so there are always four). The gazebo stands in the blocks behind (at most 10), and
+the two odd houses are rare (at most 6 Provence cottages and 3 sea houses; the weights are in `WEIGHT`).
+A few of the houses and shops keep a lamp on after dark. A plain box building is only built where none of them fits.
 The walk-in houses, the named shops and houses (Gupta General Store, the electrical shop, the school…) and the
 Hunter's Rest are not touched.
 
