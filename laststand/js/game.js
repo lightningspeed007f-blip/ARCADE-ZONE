@@ -27,6 +27,7 @@ import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { Joker, buildArena } from './joker.js';
 import { Giants, buildDesert } from './giants.js';
+import { Feasts } from './feast.js';
 import { Spider } from './spider.js';
 import { Outlands } from './outlands.js';
 import { Swaps } from './swaps.js';
@@ -209,6 +210,8 @@ export class Game {
     this.trees.start();                               // the uploaded tree models in place of the box trees
     this.outlands.start();                            // the pickup, the ghouls and hounds, then the forest, the city and the metro
     this.corpses.start();                             // the dead of Jais, in the background
+    this.feasts = new Feasts(this);
+    this.feasts.start();                              // the sleeping zombies and the survivors biting them
     this.graves = new Graves(this);
     this.graves.start();                              // the headstones by the station and MAW, and the wrecks
     this.atmos = new Atmosphere(this);                // night mist over the graves and the rail, lightning and thunder
@@ -647,7 +650,8 @@ export class Game {
       const p = this.freeSpot(cx, cz, rad, 30);
       if (!p) continue;
       const roll = r();
-      this.enemies.spawn(roll < (extra.runners ?? 0.12) ? 'runner' : roll < (extra.runners ?? 0.12) + (extra.brutes ?? 0.08) ? 'brute' : 'walker', p[0], 0, p[1], { zone, hold: true });
+      const ru = extra.runners ?? 0.12, br = extra.brutes ?? 0.08;
+      this.enemies.spawn(roll < ru ? 'runner' : roll < ru + br ? 'brute' : roll < ru + br + 0.08 ? 'crawler' : 'walker', p[0], 0, p[1], { zone, hold: true });
       made++;
     }
     return made;
@@ -751,6 +755,7 @@ export class Game {
     }
     this.spawnThieves(r);
     this.spawnTunnelEnemies();
+    this.spawnFeasts(r, lite ? 2 : 4);
     // human looter groups at a few landmarks
     const sites = r.shuffle([
       { c: [134, -140], route: [[118, -138], [150, -138], [150, -128], [118, -130]] },          // GGD forecourt
@@ -770,6 +775,24 @@ export class Game {
     }
   }
 
+  // sleeping zombies with a survivor biting each: on open road, well away from where you start
+  spawnFeasts(r, n) {
+    this.feasts.clear();
+    const roads = Object.values(ROADS);
+    for (let made = 0, tries = 0; made < n && tries < 80; tries++) {
+      const road = r.pick(roads), i = roadInfo(road);
+      const t = r() * i.len, off = (r() - 0.5) * road.w * 0.5;
+      const x = road.a[0] + i.ux * t + i.nx * off, z = road.a[1] + i.uz * t + i.nz * off;
+      if (Math.hypot(x - this.player.pos.x, z - this.player.pos.z) < 45 || this.inSanctuary(x, z)) continue;
+      // the pair takes about 3 x 3 m: all of it must be walkable ground
+      let ok = true;
+      for (const [dx, dz] of [[0, 0], [1.4, 0], [-1.4, 0], [0, -1.2], [0, 1.2], [1.4, -1.2]]) if (!this.nav.free(x + dx, z + dz)) { ok = false; break; }
+      if (!ok || this.feasts.sites.some((s) => Math.hypot(s.x - x, s.z - z) < 40)) continue;
+      this.feasts.place(x, z, Math.atan2(i.ux, i.uz) + (r() < 0.5 ? 0 : Math.PI));
+      made++;
+    }
+  }
+
   spawnStreetZombie(r, minDist, maxDist = 1e9) {
     const roads = Object.values(ROADS);
     for (let k = 0; k < 12; k++) {
@@ -779,7 +802,7 @@ export class Game {
       const d = Math.hypot(x - this.player.pos.x, z - this.player.pos.z);
       if (d < minDist || d > maxDist || !this.nav.free(x, z) || this.inSanctuary(x, z)) continue;
       const roll = r();
-      return this.enemies.spawn(roll < 0.16 ? 'runner' : roll < 0.24 ? 'brute' : 'walker', x, 0, z);
+      return this.enemies.spawn(roll < 0.16 ? 'runner' : roll < 0.24 ? 'brute' : roll < 0.31 ? 'crawler' : 'walker', x, 0, z);
     }
     return null;
   }
@@ -857,7 +880,8 @@ export class Game {
 
   // the nearest of the big ones on a ray: MAW, the Joker or his cat, the desert giants
   bigHit(o, d, maxT) {
-    const a = this.boss.hitTest(o, d, maxT);
+    const f = this.feasts.hitTest(o, d, maxT);
+    const a = this.boss.hitTest(o, d, f ? f.t : maxT) || f;
     const b = this.joker.hitTest(o, d, a ? a.t : maxT) || a;
     return this.giants.hitTest(o, d, b ? b.t : maxT) || b;
   }
@@ -1335,6 +1359,7 @@ export class Game {
     this.boss.update(dt);
     this.joker.update(dt);
     this.giants.update(dt);
+    this.feasts.update(dt);
     this.spider.update(dt);
     this.explosives.update(dt);
     this.vehicles.update(dt);

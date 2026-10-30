@@ -26,6 +26,8 @@ const MAX = 170;
 export const TYPES = {
   walker: { hp: 70, speed: 1.15, chase: 1.55, dmg: 12, reach: 1.45, wind: 0.55, sight: 17, scale: 1, growl: 'growl', model: 'zombie' },
   runner: { hp: 50, speed: 1.4, chase: 4.6, dmg: 9, reach: 1.4, wind: 0.35, sight: 24, scale: 0.96, growl: 'scream', model: 'zombie' },
+  // a zombie that drags itself along the ground and attacks as it crawls (the 'fuzz' body, creatures.js)
+  crawler: { hp: 60, speed: 0.75, chase: 1.5, dmg: 14, reach: 1.5, wind: 0.5, sight: 20, scale: 1, growl: 'growl', model: 'zombie' },
   brute:  { hp: 260, speed: 1.0, chase: 1.9, dmg: 30, reach: 1.7, wind: 0.8, sight: 15, scale: 1.25, growl: 'growlBig', model: 'zombie' },
   human:  { hp: 95, speed: 1.6, chase: 3.6, dmg: 0, reach: 0, wind: 0, sight: 34, scale: 1, growl: null },
   // chor: a masked knife thief. Fast, melee, grabs food from the bag and bolts.
@@ -276,7 +278,8 @@ export class Enemies {
     if (type === 'brute') { e.colors.top = 0x3a2a20; e.colors.legs = 0x2a2620; }
     // which body it wears: one of the four zombies (the big ones lean to the parasite), or its own model
     if (T.model === 'zombie') {
-      e.skin = o.skin || ((type === 'brute' || type === 'ghoul') && r() < 0.6 ? 'parasite' : pick(ZOMBIE_SKINS));
+      e.skin = o.skin || (type === 'crawler' ? 'fuzz' : (type === 'brute' || type === 'ghoul') && r() < 0.6 ? 'parasite' : pick(ZOMBIE_SKINS));
+      if (type === 'crawler') { e.crawler = true; e.limp = 0; e.limpArm = -1; }
       e.mkind = 'z:' + e.skin;
     } else e.mkind = T.model || null;
     if (!human) e.colors.fa = e.colors.skin;
