@@ -37,6 +37,8 @@ export class Nav {
     // flow field window
     this.F = 280; this.dist = new Uint16Array(this.F * this.F); this.queue = new Int32Array(this.F * this.F);
     this.fx0 = 0; this.fz0 = 0; this.valid = false;
+    // the next field is grown a slice per frame in a second buffer and swapped in when finished (see request/step)
+    this.back = new Uint16Array(this.F * this.F); this.job = null; this.lastX = 1e9; this.lastZ = 1e9; this.age = 0;
   }
 
   cell(x, z) { return [Math.floor((x - this.x0) / this.cs), Math.floor((z - this.z0) / this.cs)]; }
@@ -46,31 +48,68 @@ export class Nav {
     return this.grid[gz * this.w + gx] !== 1;
   }
 
-  // BFS from target over a window centred on it.
+  // BFS from target over a window centred on it, all at once (a place's first field, so nobody stands without one).
   build(tx, tz) {
+    this.job = null;
+    this._begin(tx, tz, this.dist);
+    this._run(this.job, Infinity);
+    this._finish();
+  }
+
+  // Ask for a fresh field around (tx, tz). The BFS is the one big recurring cost of the AI (tens of thousands of
+  // cells), so it is spread over several frames instead of landing on one: step() advances it a little each frame.
+  // Not rebuilt while the player stands still (the grid never changes).
+  request(tx, tz, dt) {
+    this.age += dt;
+    if (!this.valid) return this.build(tx, tz);
+    if (this.job) return;
+    if (Math.abs(tx - this.lastX) + Math.abs(tz - this.lastZ) < 0.7 && this.age < 4) return;
+    this.age = 0; this.lastX = tx; this.lastZ = tz;
+    this._begin(tx, tz, this.back);
+  }
+  step(budget = 5000) {
+    const j = this.job;
+    if (!j || j.out !== this.back) return;
+    if (this._run(j, budget)) this._finish();
+  }
+
+  _begin(tx, tz, out) {
     const F = this.F, half = F >> 1;
     const [cx, cz] = this.cell(tx, tz);
-    this.fx0 = cx - half; this.fz0 = cz - half;
-    this.dist.fill(65535);
-    let head = 0, tail = 0;
-    const push = (lx, lz, d) => { const i = lz * F + lx; if (this.dist[i] <= d) return; this.dist[i] = d; this.queue[tail++] = i; };
-    push(half, half, 0);
-    while (head < tail) {
-      const i = this.queue[head++];
-      const lx = i % F, lz = (i / F) | 0, d = this.dist[i];
+    out.fill(65535);
+    this.job = { out, fx0: cx - half, fz0: cz - half, head: 0, tail: 0 };
+    const j = this.job, i = half * F + half;
+    out[i] = 0; this.queue[j.tail++] = i;
+  }
+
+  // advance the BFS by up to `budget` cells; true when it has finished
+  _run(j, budget) {
+    const F = this.F, dist = j.out, queue = this.queue, grid = this.grid, W = this.w, H = this.h, fx0 = j.fx0, fz0 = j.fz0;
+    let head = j.head, tail = j.tail, n = 0;
+    while (head < tail && n++ < budget) {
+      const i = queue[head++];
+      const lx = i % F, lz = (i / F) | 0, d = dist[i];
       for (let k = 0; k < 4; k++) {
         const nx = lx + (k === 0 ? 1 : k === 1 ? -1 : 0), nz = lz + (k === 2 ? 1 : k === 3 ? -1 : 0);
         if (nx < 0 || nz < 0 || nx >= F || nz >= F) continue;
-        const gx = this.fx0 + nx, gz = this.fz0 + nz;
-        if (gx < 0 || gz < 0 || gx >= this.w || gz >= this.h) continue;
-        const g = this.grid[gz * this.w + gx];
+        const gx = fx0 + nx, gz = fz0 + nz;
+        if (gx < 0 || gz < 0 || gx >= W || gz >= H) continue;
+        const g = grid[gz * W + gx];
         if (g === 1) continue;
         const ni = nz * F + nx;
-        if (this.dist[ni] !== 65535) continue;
-        this.dist[ni] = d + (g === 2 ? 3 : 1);
-        this.queue[tail++] = ni;
+        if (dist[ni] !== 65535) continue;
+        dist[ni] = d + (g === 2 ? 3 : 1);
+        queue[tail++] = ni;
       }
     }
+    j.head = head; j.tail = tail;
+    return head >= tail;
+  }
+
+  _finish() {
+    const j = this.job; this.job = null;
+    if (j.out === this.back) { this.back = this.dist; this.dist = j.out; }
+    this.fx0 = j.fx0; this.fz0 = j.fz0;
     this.valid = true;
   }
 

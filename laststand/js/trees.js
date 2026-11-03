@@ -17,6 +17,13 @@ const FILES = { pine: 'models/trees/pine.glb', leafy: 'models/trees/leafy.glb', 
 // height of a standing tree at s = 1 (the old box tree was about 6.5 m), and the fallen trunk's size
 const H = { pine: 7.6, leafy: 6.8, dead: 6.6, peepal: 9.2 };
 const FALLEN = { k: 1.9, hx: 1.32, hy: 0.5, hz: 0.42 };   // file units -> metres at s = 1; collider half sizes in file units
+// far trees are drawn from a lighter copy of the model; the tall ones are still seen through the haze at the far plane
+const TREE_LOD = {
+  pine: { far: 172, tiers: [{ d: 48, ratio: 0.45 }, { d: 105, ratio: 0.2 }] },
+  leafy: { far: 172, tiers: [{ d: 48, ratio: 0.45 }, { d: 105, ratio: 0.2 }] },
+  dead: { far: 172, tiers: [{ d: 48, ratio: 0.45 }, { d: 105, ratio: 0.2 }] },
+  fallen: { far: 140, tiers: [{ d: 36, ratio: 0.3 }, { d: 80, ratio: 0.1 }] },
+};
 const CELL = 120;                                          // instances are split into cells this wide, so off-screen ones are culled
 
 const hash = (x, z) => { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); };
@@ -91,6 +98,7 @@ export class Trees {
       im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true;
       im.computeBoundingSphere();
       this.g.scene.add(im);
+      this.g.lod.add(im, TREE_LOD[kind]);
       this.meshes.push(im);
     }
     for (const m of P.treeMeshes) if (m) m.visible = false;

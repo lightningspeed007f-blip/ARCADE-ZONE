@@ -6,7 +6,7 @@ import { createWorldContext, buildWorld } from './world.js';
 import { buildProps, part, merge, Bx, Cy, WHEEL } from './props.js';
 import { Nav } from './nav.js';
 import { Player } from './player.js';
-import { loadGLB, prepVampire, lambertize } from './models.js';
+import { loadGLB, prepVampire, lambertize, texCap, shrink } from './models.js';
 import { Input } from './input.js';
 import { Arsenal, WEAPONS, AMMO } from './weapons.js';
 import { Enemies } from './enemies.js';
@@ -39,6 +39,7 @@ import { placeCorpses, Corpses } from './corpses.js';
 import { DayCycle } from './daytime.js';
 import { ModelHouses } from './houses.js';
 import { Mountains } from './scenery.js';
+import { InstanceLOD, updateLodMeshes, lodReady } from './lod.js';
 
 const $ = (id) => document.getElementById(id);
 const HEMI_OUT = 0.92; // outdoor sky fill (the old flat blue wash was 1.05 of a stronger blue)
@@ -75,14 +76,21 @@ export class Game {
     this.mobile = touch && Math.min(screen.width, screen.height) < 900;
     const saved = store('jls_settings') || {};
     this.quality = saved.quality && saved.quality !== 'auto' ? saved.quality : this.mobile ? 'med' : 'high';
+    // a budget phone (4 GB of RAM or less): same picture, but a lighter start: smaller model textures, fewer real lights
+    // and a lower top resolution (the adaptive scaler below still moves within that)
+    this.weak = this.mobile && this.quality !== 'high' && (navigator.deviceMemory || 8) <= 4;
+    if (this.weak) texCap.max = 512;
     const R = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: this.quality === 'high', powerPreference: 'high-performance', stencil: true });
-    this.maxDpr = this.quality === 'high' ? Math.min(devicePixelRatio, 1.75) : this.quality === 'med' ? Math.min(devicePixelRatio, 1.4) : 1;
+    this.maxDpr = this.quality === 'high' ? Math.min(devicePixelRatio, 1.75) : this.quality === 'med' ? Math.min(devicePixelRatio, this.weak ? 1.15 : 1.4) : 1;
     this.dpr = this.maxDpr;
     R.setPixelRatio(this.dpr);
     R.setSize(innerWidth, innerHeight);
     R.outputColorSpace = THREE.SRGBColorSpace;
     R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.15;
     R.autoClear = false; R.info.autoReset = false;
+    await lodReady();                                   // the mesh simplifier (wasm) for the far-away models
+    this.lod = new InstanceLOD();                        // per-copy culling + distance LOD for every many-copy model (lod.js)
+    this.lodMeshes = [];                                 // single static meshes with a distance LOD
     const scene = this.scene = new THREE.Scene();
     this.wscene = new THREE.Scene(); // view-model scene
     const cam = this.camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 170);
@@ -94,7 +102,9 @@ export class Game {
     try { await document.fonts.load('bold 40px "Noto Sans Devanagari"'); } catch (e) { /* system font */ }
     await tick();
     const maxAniso = R.capabilities.getMaxAnisotropy();
-    const tex = this.tex = buildTextures({ aniso: Math.min(maxAniso, this.quality === 'high' ? 8 : this.quality === 'med' ? 4 : 2) });
+    const tex = this.tex = buildTextures({ aniso: Math.min(maxAniso, this.quality === 'high' ? 8 : this.quality === 'med' && !this.weak ? 4 : 2) });
+    // the two 2048 px window atlases are 22 MB each on the GPU: half size on a budget phone (the sign atlas, with its text, stays)
+    if (this.weak) { shrink(tex.facade, 1024); shrink(tex.facadeEmissive, 1024); }
     progress(0.18, 'जायस बन रहा है… building the town');
     await tick();
     const W = this.W = createWorldContext();
@@ -145,7 +155,7 @@ export class Game {
     this.hemiK = 0;
     scene.add(this.hemi);
     const moon = this.moonLight = new THREE.DirectionalLight(0xb0c2ff, 0.95); moon.position.set(-60, 120, -40); scene.add(moon);
-    this.lightPool = new LightPool(scene, W.lights, this.quality === 'high' ? 8 : this.quality === 'med' ? 5 : 3);
+    this.lightPool = new LightPool(scene, W.lights, this.quality === 'high' ? 8 : this.quality === 'med' ? (this.weak ? 4 : 5) : 3);
     this.torch = new THREE.SpotLight(0xfff1dc, 0, 32, 0.42, 0.55, 1.2);
     cam.add(this.torch); this.torch.position.set(0.15, -0.1, 0); cam.add(this.torch.target); this.torch.target.position.set(0, 0, -5);
     this.torchOn = false;
@@ -193,7 +203,7 @@ export class Game {
     this.secret.build();
     this.kaali = new Kaali(this);
     this.kaali.build();
-    this.corpses = new Corpses(scene, W.corpses);     // the bodies (their models load in the background)
+    this.corpses = new Corpses(scene, W.corpses, this.lod);     // the bodies (their models load in the background)
     // cached lists
     this.enterables = W.buildings.filter((b) => b.tpl);
     this.stairs = this.collectStairs();
@@ -1352,7 +1362,8 @@ export class Game {
     if (P.noise > 0) { this._nT = (this._nT || 0) - dt; if (this._nT <= 0) { this._nT = 0.5; this.noise(P.pos, P.noise, 'step'); } }
     // flow field toward the player
     this.flowT -= dt;
-    if (this.flowT <= 0) { this.flowT = 0.35; this.nav.build(P.pos.x, P.pos.z); }
+    if (this.flowT <= 0) { this.flowT = 0.35; this.nav.request(P.pos.x, P.pos.z, 0.35); }
+    this.nav.step();                                  // the field is grown a slice a frame (nav.js), not in one frame-long spike
     this.enemies.update(dt, this.camera);
     this.crew.update(dt);
     if (this.bossWakeAt && this.time >= this.bossWakeAt) { this.bossWakeAt = 0; this.boss.wake('final'); }
@@ -1403,7 +1414,7 @@ export class Game {
       // visibility of the player to human eyes
       let lit = false;
       for (const l of this.W.lights) {
-        if (!l.on || l.interior && !inside) continue;
+        if (!l.on || l.fx || l.interior && !inside) continue;
         if (Math.abs(l.x - P.pos.x) > l.dist || Math.abs(l.z - P.pos.z) > l.dist) continue;
         if (Math.hypot(l.x - P.pos.x, l.z - P.pos.z) < l.dist * 0.5) { lit = true; break; }
       }
@@ -1630,6 +1641,9 @@ export class Game {
     if (onFoot) this.player.placeThirdPerson(this.tpCam);
     if (this.player.body) this.player.body.visible = onFoot;
     view.updateMatrixWorld();
+    this._pm = this._pm || new THREE.Matrix4(); this.viewFrustum = this.viewFrustum || new THREE.Frustum();
+    this.viewFrustum.setFromProjectionMatrix(this._pm.multiplyMatrices(view.projectionMatrix, view.matrixWorldInverse));   // what the creatures test themselves against
+    this.lod.update(view); updateLodMeshes(this.lodMeshes, view);
     if (this.houses) this.houses.update(view);
     if (this.mountains) this.mountains.update(view);
     R.info.reset(); R.clear();
@@ -1638,16 +1652,40 @@ export class Game {
     this.adaptResolution(dt);
   }
 
+  // Adaptive render resolution. Changing the pixel ratio re-allocates the canvas's framebuffer, which itself costs a
+  // visible hitch on a phone, so this changes it rarely and decisively instead of nudging it every couple of seconds:
+  //  * it watches the average frame time over a second (loading spikes and the first seconds of a run are ignored);
+  //  * clearly too slow (under ~45 fps) for 1.2 s  -> step the resolution down by 15 % (never below a floor);
+  //  * comfortably fast (60 fps) for a long stretch -> step back up 10 %, but each time a step up has to be undone
+  //    the wait before the next try doubles (8 s, 16 s, 32 s ... up to 2 min), so it settles instead of oscillating.
   adaptResolution(dt) {
-    this._fa = (this._fa || 0.016) * 0.95 + dt * 0.05;
-    this._rt = (this._rt || 0) + dt;
-    if (this._rt < 2) return;
-    this._rt = 0;
-    let d = this.dpr;
-    if (this._fa > 0.026 && d > 0.7) d = Math.max(0.7, d - 0.15);
-    else if (this._fa < 0.017 && d < this.maxDpr) d = Math.min(this.maxDpr, d + 0.1);
-    if (d !== this.dpr) { this.dpr = d; this.renderer.setPixelRatio(d); }
-    const fpsEl = $('fps'); if (fpsEl && !fpsEl.classList.contains('hidden')) fpsEl.textContent = Math.round(1 / this._fa) + ' fps · ' + d.toFixed(2) + 'x · ' + this.renderer.info.render.calls + ' calls';
+    const A = this._ad || (this._ad = { sum: 0, n: 0, slow: 0, fast: 0, hold: 3, wait: 8, lastUp: -1e9, upped: false, hudT: 0 });
+    const playing = this.state === 'play' || this.state === 'pause';
+    this._fa = (this._fa || 0.016) * 0.95 + Math.min(dt, 0.1) * 0.05;       // smoothed frame time for the fps readout
+    if (this.state !== 'play') { A.sum = 0; A.n = 0; A.hold = Math.max(A.hold, 1.5); }
+    else if (A.hold > 0) A.hold -= dt;
+    else { A.sum += Math.min(dt, 0.1); A.n++; }
+    if (A.n >= 60 || A.sum >= 1) {
+      const avg = A.sum / A.n; A.sum = 0; A.n = 0;
+      const lowest = this.mobile ? 0.6 : 0.75;
+      if (avg > 1 / 45) { A.slow += 1; A.fast = 0; } else if (avg < 1 / 57) { A.fast += 1; A.slow = 0; } else { A.slow = 0; A.fast = 0; }
+      let d = this.dpr;
+      if (A.slow >= 2 && d > lowest + 0.01) {
+        d = Math.max(lowest, Math.round(d * 0.85 * 20) / 20);
+        if (A.upped && this.time - A.lastUp < 25) A.wait = Math.min(120, A.wait * 2);   // that step up was too much
+        A.upped = false; A.slow = 0; A.hold = 2.5;                                      // let the new size settle before judging it
+      } else if (A.fast >= Math.ceil(A.wait) && d < this.maxDpr - 0.01) {
+        d = Math.min(this.maxDpr, Math.round(d * 1.1 * 20) / 20);
+        A.upped = true; A.lastUp = this.time; A.fast = 0; A.hold = 2.5;
+      }
+      if (d !== this.dpr) { this.dpr = d; this.renderer.setPixelRatio(d); }
+    }
+    A.hudT -= dt;
+    if (A.hudT <= 0) {
+      A.hudT = 0.5;
+      const fpsEl = $('fps');
+      if (fpsEl && !fpsEl.classList.contains('hidden')) { const r = this.renderer.info.render; fpsEl.textContent = Math.round(1 / this._fa) + ' fps · ' + this.dpr.toFixed(2) + 'x · ' + r.calls + ' calls · ' + Math.round(r.triangles / 1000) + 'k tris'; }
+    }
   }
 
   // ================= screens =================

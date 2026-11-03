@@ -25,6 +25,10 @@ const FILES = {
   rickshaw: 'models/rickshaw.glb', bobber: 'models/bobber.glb', bobberLite: 'models/bobber_lite.glb',
   dry: 'models/dry_grass.glb', blades: 'models/grass06.glb',
 };
+// how each model thins out with distance (see lod.js): beyond `far` metres it is not drawn at all (the fog has it)
+const VEHICLE_LOD = { far: 165, tiers: [{ d: 38, ratio: 0.35 }, { d: 85, ratio: 0.12 }] };
+const GRASS_LOD = { far: 80, tiers: [{ d: 24, ratio: 0.4 }] };
+const LODS = { rusty: VEHICLE_LOD, police: VEHICLE_LOD, flipped: VEHICLE_LOD, rickshaw: VEHICLE_LOD, bobberLite: { far: 140, tiers: [{ d: 32, ratio: 0.35 }, { d: 75, ratio: 0.12 }] }, dry: GRASS_LOD, blades: GRASS_LOD };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 
 export class Swaps {
@@ -79,6 +83,7 @@ export class Swaps {
       if (im.instanceColor) im.instanceColor.needsUpdate = true;
       im.computeBoundingSphere();
       this.g.scene.add(im);
+      if (LODS[name]) this.g.lod.add(im, LODS[name]);
       made.push(im);
     }
     return made;

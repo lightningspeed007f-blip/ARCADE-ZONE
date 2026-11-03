@@ -82,8 +82,9 @@ export function placeCorpses(W) {
 
 // Each model is one instanced mesh per primitive: the whole town costs a few draw calls.
 export class Corpses {
-  constructor(scene, list) {
+  constructor(scene, list, lod) {
     this.scene = scene;
+    this.lod = lod;
     this.list = list || [];
     this.started = false;
     this.meshes = [];
@@ -121,6 +122,7 @@ export class Corpses {
       });
       im.instanceMatrix.needsUpdate = true;
       this.scene.add(im);
+      this.lod.add(im, { far: 110, tiers: [{ d: 28, ratio: 0.35 }, { d: 65, ratio: 0.12 }] });
       this.meshes.push(im);
     }
   }

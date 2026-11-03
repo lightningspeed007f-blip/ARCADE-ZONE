@@ -212,7 +212,8 @@ class Effects {
     this.tracers = new THREE.LineSegments(tg, new THREE.LineBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.7 }));
     this.tracers.frustumCulled = false; this.trLife = new Float32Array(12); this.trI = 0;
     scene.add(this.tracers);
-    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._v = new THREE.Vector3(); this._s = new THREE.Vector3(1, 1, 1);
+    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._v = new THREE.Vector3(); this._s = new THREE.Vector3(1, 1, 1); this._e = new THREE.Euler();
+    this.points.visible = this.cas.visible = this.tracers.visible = false;
   }
   hole(p, n) {
     const i = this.holeI++ % 120;
@@ -248,25 +249,32 @@ class Effects {
     this.trPos.set([...a, ...b], i * 6); this.trLife[i] = 0.06;
   }
   update(dt, physics, audio) {
+    let live = 0;
     for (let i = 0; i < this.pN; i++) {
       let l = this.pLife[i];
       if (l === 0) continue;
       const grav = l > 0;
       l = Math.abs(l) - dt;
-      if (l <= 0) { this.pLife[i] = 0; this.pPos[i * 3 + 1] = -100; continue; }
+      if (l <= 0) { this.pLife[i] = 0; this.pPos[i * 3 + 1] = -100; live++; continue; }   // (counts once more: the parked position is uploaded)
+      live++;
       this.pLife[i] = grav ? l : -l;
       if (grav) this.pVel[i * 3 + 1] -= 9.8 * dt;
       this.pPos[i * 3] += this.pVel[i * 3] * dt; this.pPos[i * 3 + 1] += this.pVel[i * 3 + 1] * dt; this.pPos[i * 3 + 2] += this.pVel[i * 3 + 2] * dt;
       const fade = Math.min(1, l * 3);
       this.pCol[i * 3] *= 0.99 + fade * 0.01;
     }
-    this.points.geometry.attributes.position.needsUpdate = true;
-    this.points.geometry.attributes.color.needsUpdate = true;
-    // casings with a bounce
-    let n = 0;
-    for (const c of this.casings) {
+    // nothing flying: no GPU upload and no draw call (this runs every frame, and most frames nothing is)
+    this.points.visible = live > 0 || this._pLive > 0;
+    if (live > 0) { this.points.geometry.attributes.position.needsUpdate = true; this.points.geometry.attributes.color.needsUpdate = true; }
+    this._pLive = live;
+    // casings with a bounce (kept in place: no new array every frame)
+    let n = 0, k = 0;
+    const cs = this.casings;
+    for (let j = 0; j < cs.length; j++) {
+      const c = cs[j];
       c.life -= dt;
       if (c.life <= 0) continue;
+      cs[k++] = c;
       if (!c.rest) {
         c.v[1] -= 9.8 * dt;
         c.p[0] += c.v[0] * dt; c.p[1] += c.v[1] * dt; c.p[2] += c.v[2] * dt; c.rot += dt * 20;
@@ -277,13 +285,16 @@ class Effects {
           else c.rest = true;
         }
       }
-      this._v.set(...c.p); this._q.setFromEuler(new THREE.Euler(c.rot, c.rot * 0.5, Math.PI / 2)); this._s.set(1, 1, 1);
+      this._v.set(c.p[0], c.p[1], c.p[2]); this._q.setFromEuler(this._e.set(c.rot, c.rot * 0.5, Math.PI / 2)); this._s.set(1, 1, 1);
       this._m.compose(this._v, this._q, this._s); this.cas.setMatrixAt(n++, this._m);
     }
-    this.casings = this.casings.filter((c) => c.life > 0);
-    this.cas.count = n; this.cas.instanceMatrix.needsUpdate = true;
-    for (let i = 0; i < 12; i++) if (this.trLife[i] > 0) { this.trLife[i] -= dt; if (this.trLife[i] <= 0) this.trPos.fill(0, i * 6, i * 6 + 6); }
-    this.tracers.geometry.attributes.position.needsUpdate = true;
+    cs.length = k;
+    this.cas.count = n; this.cas.visible = n > 0; if (n) this.cas.instanceMatrix.needsUpdate = true;
+    let tr = false;
+    for (let i = 0; i < 12; i++) if (this.trLife[i] > 0) { tr = true; this.trLife[i] -= dt; if (this.trLife[i] <= 0) this.trPos.fill(0, i * 6, i * 6 + 6); }
+    if (tr || this._trOn) this.tracers.geometry.attributes.position.needsUpdate = true;
+    this._trOn = tr;
+    this.tracers.visible = tr || this._trOn;
   }
 }
 

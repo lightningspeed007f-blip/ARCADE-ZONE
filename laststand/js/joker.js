@@ -77,6 +77,20 @@ export function buildArena(W_) {
 }
 
 // ---------- a little grid path-finder for the arena (1 m cells) ----------
+// a light source for lights.js's LightPool that is driven like a THREE.PointLight (position, colour, intensity)
+class PoolLight {
+  constructor(game, hex, dist) {
+    this.x = 0; this.y = -999; this.z = 0; this.dist = dist; this.intensity = 0;
+    this.color = new THREE.Color(hex);
+    this.fx = true;                                            // an effect light: not a lamp that makes the player visible to humans (game.js)
+    this.major = true; this.dynamic = true;                   // wins a slot when it is near, and follows its x/y/z every frame
+    const me = this;
+    this.position = { set(x, y, z) { me.x = x; me.y = y; me.z = z; } };
+    game.W.lights.push(this);
+  }
+  get on() { return this.intensity > 0.01; }
+}
+
 class ArenaNav {
   constructor(P) {
     const [x0, z0] = W(SQ.x0, SQ.z0), [x1, z1] = W(SQ.x1, SQ.z1);
@@ -164,11 +178,11 @@ export class Joker {
     this.state = 'OFF'; this.stateT = 0; this.dead = false;
     this.hp = JOKER.hp; this.maxHp = JOKER.hp;
     this.arena = false;
-    // his own light (made with the town so adding it never recompiles the scene's shaders)
-    this.light = new THREE.PointLight(0xb070ff, 0, 11, 1.5);
-    game.scene.add(this.light);
-    this.crateLight = new THREE.PointLight(0x60ff50, 0, 9, 1.6);
-    game.scene.add(this.crateLight);
+    // his own light and the crate's. They used to be two extra real point lights, which every lit surface in the whole
+    // game paid for (in its shader) even while he was nowhere near. Now they are sources in the town's light pool
+    // (lights.js): the pool's few real lights go to the nearest sources, so these take one only while they are on.
+    this.light = new PoolLight(game, 0xb070ff, 11);
+    this.crateLight = new PoolLight(game, 0x60ff50, 9);
   }
 
   // ---------- loading ----------
