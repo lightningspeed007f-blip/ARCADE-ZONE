@@ -21,6 +21,13 @@ const _q = new THREE.Quaternion(), _t = new THREE.Quaternion(), _e = new THREE.E
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _r = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
 const D = (x, y = 0, z = 0) => _q.setFromEuler(_e.set(x, y, z, 'XYZ'));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const _sph = new THREE.Sphere();
+// is a creature standing at e.pos inside what the camera sees (a roomy sphere round its body; the frustum is last frame's)
+function seen(fr, e, pad = 1.2) {
+  if (!fr) return true;
+  _sph.center.set(e.pos.x, e.pos.y + 0.9 * e.scale, e.pos.z); _sph.radius = 1.3 * e.scale + pad;
+  return fr.intersectsSphere(_sph);
+}
 
 // the four zombies, and how tall each one stands (the height of its head bone, metres)
 export const ZOMBIE_SKINS = ['prisoner', 'girlscout', 'zombiegirl', 'parasite'];
@@ -243,6 +250,16 @@ export class Creatures {
     return a;
   }
 
+  // Pose a zombie's bones. A body nobody can see only needs its bones now and then (the game still uses them for hit
+  // spheres), so it is advanced every third frame with the time it has saved up. True when the bones moved.
+  _anim(I, dt) {
+    if (I.vis) { I.mixer.update(dt + (I.acc || 0)); I.acc = 0; return true; }
+    I.acc = (I.acc || 0) + dt;
+    if ((I.tick = (I.tick || 0) + 1) % 3) return false;
+    I.mixer.update(I.acc); I.acc = 0;
+    return true;
+  }
+
   // ---------- every frame: share the bodies out to the nearest creatures and pose them ----------
   draw(list, cam, dt) {
     const cx = cam.position.x, cz = cam.position.z;
@@ -262,7 +279,9 @@ export class Creatures {
           I.owner = e; e._inst = I; I.root.visible = true; I.cur = null; I.mixer.stopAllAction();
           I.deadPose = false; I.follow = 0;
         }
-        if (T.K.zombie) this._zombie(e, e._inst, T, dt); else this._hound(e, e._inst, dt);
+        const I = e._inst;
+        I.vis = seen(this.g.viewFrustum, e); I.root.visible = I.vis;     // behind you or round a corner: not drawn
+        if (T.K.zombie) this._zombie(e, I, T, dt); else this._hound(e, I, dt);
       }
       if (F) for (const im of F.all) { im.visible = im.count > 0; if (im.count) im.instanceMatrix.needsUpdate = true; }
     }
@@ -308,9 +327,10 @@ export class Creatures {
         if (a) a.time = Math.min(e.deathT, a.getClip().duration - 0.01);
         if (a && T.K.deathHold != null) { a.time = T.K.deathHold; a.paused = true; }   // lies still where it dropped
       }
-      I.mixer.update(dt);
+      const moved = this._anim(I, dt);
       I.root.position.y = e.pos.y - Math.max(0, e.deathT - 30) * 0.06;
-      this._hits(e, I); return;
+      if (moved) this._hits(e, I);
+      return;
     }
     const sp = e.moveSpeed || 0;
     const attacking = e.state === 'ATTACK' || (e.state === 'HUNT' && e.huntAtk);
@@ -332,9 +352,10 @@ export class Creatures {
       I.follow -= dt; I.cur.paused = false; I.cur.timeScale = 1.4;
     } else if (e.state === 'BANG') this._play(I, 'attack', 0.2, 1.25);
     else { const [clip, ts] = this._gait(e, T, sp); this._play(I, clip, 0.3, ts, false, !I.cur); }
-    I.mixer.update(dt);
+    const moved = this._anim(I, dt);
     // a crawler lunging at you: the clip, faster
     if (attacking && e.crawler) this._play(I, 'crawlRun', 0.2, 1.6);
+    if (!moved) return;           // the bones were not re-posed this frame: nothing may be added on top of the old pose
     if (feeding) this._feedPose(e, I, dt);
     // flinch: thrown back a little by the hit
     if (e.flinch > 0.05) this._add(I, 'Spine', D(-e.flinch * 0.45));
@@ -370,7 +391,8 @@ export class Creatures {
     _p.set(e.pos.x, e.pos.y - (e.dead ? Math.max(0, e.deathT - 30) * 0.06 : 0), e.pos.z);
     _r.setFromAxisAngle(_up, e.yaw); _s.setScalar(e.scale);
     _m.compose(_p, _r, _s);
-    for (const im of fr.ims) if (im.count < im.instanceMatrix.count) im.setMatrixAt(im.count++, _m);
+    // (the hit spheres below are still kept for it; it just isn't sent to the GPU when it is behind you or lost in the fog)
+    if (e._cd < 175 && seen(this.g.viewFrustum, e, 0.6)) for (const im of fr.ims) if (im.count < im.instanceMatrix.count) im.setMatrixAt(im.count++, _m);
     e._far = true;
     // hit spheres from the same frame
     const hs = e.hs; hs.length = 0;

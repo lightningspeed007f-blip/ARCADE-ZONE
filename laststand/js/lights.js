@@ -43,13 +43,13 @@ export class LightPool {
         const s = chosen.shift();
         l.userData.src = s || null;
         l.userData.fade = 0;
-        if (s) { l.position.set(s.x, s.y, s.z); l.color.setHex(s.color); l.distance = s.dist; }
+        if (s) { l.position.set(s.x, s.y, s.z); typeof s.color === 'number' ? l.color.setHex(s.color) : l.color.copy(s.color); l.distance = s.dist; }
       }
     }
     for (const l of this.pool) {
       const s = l.userData.src;
       if (!s) { l.intensity = Math.max(0, l.intensity - dt * 20); continue; }
-      if (s.dynamic) l.position.set(s.x, s.y, s.z);
+      if (s.dynamic) { l.position.set(s.x, s.y, s.z); if (typeof s.color !== 'number') l.color.copy(s.color); }
       l.userData.fade = Math.min(1, (l.userData.fade || 0) + dt * 3);
       let k = 1;
       if (s.flicker) {

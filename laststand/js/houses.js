@@ -26,6 +26,7 @@ import { HOUSE_DATA } from './housedata.js';
 import { Frame, door } from './interiors.js';
 import { loadGLB, lambertize } from './models.js';
 import { SCENIC } from './scenery.js';
+import { simplified } from './lod.js';
 
 // the town's random houses (a special one has its own lot)
 export const HOUSE_KINDS = Object.keys(HOUSE_DATA).filter((k) => !HOUSE_DATA[k].special);
@@ -37,6 +38,8 @@ const SHELL_COL = [0.3, 0.29, 0.31];
 const WEIGHT = { american: 1, apocalypse: 1.2, abandoned: 0.9, wooden: 0.7, farm: 1.1, japan: 1, old: 1.3, test: 1.3, horror: 0.6 };
 // and at most this many of each in town (about 70 in all: every one is walk-in, and they cost more to draw than a box)
 const CAP = { american: 7, apocalypse: 9, abandoned: 8, wooden: 5, farm: 8, japan: 9, old: 10, test: 10, horror: 2 };
+// beyond these distances a house is drawn from a lighter copy of the model (lod.js): the walk-in models run to 60-100k triangles
+const HOUSE_LOD = [{ d: 52, ratio: 0.4 }, { d: 105, ratio: 0.15 }];
 const VIEW = 175;            // camera far plane is 170 m
 const SCENIC_VIEW = 140;     // the look-only houses: past this they are lost in the haze anyway, so they aren't drawn
 
@@ -126,6 +129,7 @@ export class ModelHouses {
       h.m = new THREE.Matrix4().compose(_p.set(h.x, 0, h.z), _q.setFromAxisAngle(_up, h.yaw), _s.setScalar(h.k || 1));   // k: a shop scaled to its lot
     }
     this.parts = {};           // kind -> [InstancedMesh]
+    this.lods = {};            // kind -> [[lighter InstancedMesh per HOUSE_LOD tier] per part]
   }
 
   // Load every kind that is in town; resolves when all have arrived or failed.
@@ -146,7 +150,7 @@ export class ModelHouses {
     // and one whose parts take their colour from the vertices needs that switched on
     if (S && (S.tint || S.vcol)) { const done = new Set(); root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (!done.has(m)) { done.add(m); if (S.tint) m.color.multiplyScalar(S.tint); if (S.vcol) m.vertexColors = true; } }); }
     root.updateMatrixWorld(true);
-    const n = this.byKind[kind].length, out = [];
+    const n = this.byKind[kind].length, out = [], lo = [];
     root.traverse((o) => {
       if (!o.isMesh) return;
       // the files are quantised (int16 positions scaled by the node): go to floats before baking the node in
@@ -165,8 +169,17 @@ export class ModelHouses {
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       this.scene.add(im);
       out.push(im);
+      lo.push(HOUSE_LOD.map((t) => {
+        const g = simplified(geo, t.ratio);
+        if (!g) return null;
+        const m = new THREE.InstancedMesh(g, o.material, n);
+        m.frustumCulled = false; m.count = 0; m.visible = false;
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.scene.add(m);
+        return m;
+      }));
     });
-    this.parts[kind] = out;
+    this.parts[kind] = out; this.lods[kind] = lo;
   }
 
   // a model that failed to download: draw its colliders as plain plaster blocks, so the walls are not invisible
@@ -189,27 +202,40 @@ export class ModelHouses {
     const im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xb8ae9c }), this.byKind[kind].length);
     im.frustumCulled = false; im.count = 0;
     this.scene.add(im);
-    this.parts[kind] = [im];
+    this.parts[kind] = [im]; this.lods[kind] = [[]];
   }
 
-  // Every frame: only the houses in view and within sight go to the GPU.
+  // Every frame: only the houses in view and within sight go to the GPU, the far ones as a lighter model.
   update(camera) {
     _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     _fr.setFromProjectionMatrix(_pm);
     const cp = camera.getWorldPosition(_p);
     for (const kind in this.parts) {
-      const parts = this.parts[kind];
+      const parts = this.parts[kind], lods = this.lods[kind];
       const far = SCENIC[kind] ? SCENIC_VIEW : VIEW;
-      let n = 0;
       for (const h of this.byKind[kind]) {
-        const dx = h.cx - cp.x, dz = h.cz - cp.z;
-        if (dx * dx + dz * dz > (far + h.rad) * (far + h.rad)) continue;
+        const dx = h.cx - cp.x, dz = h.cz - cp.z, d2 = dx * dx + dz * dz;
+        if (d2 > (far + h.rad) * (far + h.rad)) continue;
         _sph.center.set(h.cx, h.top / 2, h.cz); _sph.radius = h.rad + h.top / 2;
         if (!_fr.intersectsSphere(_sph)) continue;
-        for (const im of parts) im.setMatrixAt(n, h.m);
-        n++;
+        const dn = Math.max(0, Math.sqrt(d2) - h.rad);
+        const lv = dn < HOUSE_LOD[0].d ? 0 : dn < HOUSE_LOD[1].d ? 1 : 2;
+        for (let p = 0; p < parts.length; p++) {
+          // a part with no lighter copy stays at full detail
+          let m = parts[p], l = lv;
+          while (l > 0 && !lods[p][l - 1]) l--;
+          if (l > 0) m = lods[p][l - 1];
+          m.setMatrixAt(m._n || 0, h.m); m._n = (m._n || 0) + 1;
+        }
       }
-      for (const im of parts) { im.count = n; im.instanceMatrix.needsUpdate = true; }
+      for (let p = 0; p < parts.length; p++) {
+        for (const m of [parts[p], ...lods[p]]) {
+          if (!m) continue;
+          const k = m._n || 0; m._n = 0;
+          m.count = k; m.visible = k > 0;
+          if (k) { m.instanceMatrix.clearUpdateRanges(); m.instanceMatrix.addUpdateRange(0, k * 16); m.instanceMatrix.needsUpdate = true; }
+        }
+      }
     }
   }
 }

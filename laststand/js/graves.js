@@ -14,6 +14,7 @@
 // drawn there, and a failed download just leaves the spot empty.
 import * as THREE from 'three';
 import { loadGLB, lambertize } from './models.js';
+import { lodMesh } from './lod.js';
 
 // the straight row: forty stones from x0 to x1, all facing the same way (toward the station)
 const STONE_ROW = { x0: -170, x1: -110, z: -188, n: 40 };
@@ -22,10 +23,10 @@ const MAW_GRAVES = [[60, -190, 0.3], [66, -191.5, -0.2], [72, -189, 0.1], [78, -
 // model scale is metres per model unit (each file is a different size); yaw turns it around the up axis
 const STONE_SCALE = { bonaventure: 0.82, koszeg: 0.086 };
 const WRECKS = [
-  { file: 'eclipso_car', s: 0.86, x: -106, z: 124, yaw: Math.PI / 2 },           // long axis along the lane
-  { file: 'l200_pickup', s: 0.6, x: -22, z: -68, yaw: 0 },                       // long axis along z
-  { file: 'aircraft_wreck', s: 0.5, x: -62, z: 184, yaw: 0.2 },                 // down in the fields, nose to the south
-  { file: 'destroyed_building', s: 14, x: 34, z: 20, yaw: -0.15 },              // the bombed house by the bazaar
+  { file: 'eclipso_car', s: 0.86, x: -106, z: 124, yaw: Math.PI / 2, lod: { far: 160, tiers: [{ d: 40, ratio: 0.3 }, { d: 90, ratio: 0.1 }] } },           // long axis along the lane
+  { file: 'l200_pickup', s: 0.6, x: -22, z: -68, yaw: 0, lod: { far: 160, tiers: [{ d: 40, ratio: 0.3 }, { d: 90, ratio: 0.1 }] } },                       // long axis along z
+  { file: 'aircraft_wreck', s: 0.5, x: -62, z: 184, yaw: 0.2, lod: { far: 170, tiers: [{ d: 45, ratio: 0.3 }, { d: 100, ratio: 0.1 }] } },                 // down in the fields, nose to the south
+  { file: 'destroyed_building', s: 14, x: 34, z: 20, yaw: -0.15, lod: { far: 175, tiers: [{ d: 50, ratio: 0.3 }, { d: 100, ratio: 0.1 }] } },              // the bombed house by the bazaar
 ];
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1);
@@ -69,29 +70,30 @@ export class Graves {
       prepared('tombstone_bonaventure', STONE_SCALE.bonaventure, 0.08).catch((e) => (console.warn('no headstone', e), null)),
       prepared('tombstone_koszeg', STONE_SCALE.koszeg, 0.08).catch((e) => (console.warn('no stone', e), null)),
     ]);
-    if (bon) this.row(bon);
-    if (kos) this.mutant(kos);
+    if (bon) this.row(bon, { far: 140, tiers: [{ d: 30, ratio: 0.4 }, { d: 70, ratio: 0.12 }] });
+    // the scan is ~345k triangles a stone: a fraction of that is plenty for something knee-high
+    if (kos) this.mutant(kos, { far: 150, base: { ratio: 0.12 }, tiers: [{ d: 22, ratio: 0.04 }, { d: 55, ratio: 0.012 }] });
     for (const w of WRECKS) {
       prepared(w.file, w.s, 0.06).then((m) => this.wreck(m, w)).catch((e) => console.warn('could not load', w.file, e));
     }
   }
 
   // forty identical stones in one straight line, one InstancedMesh per part of the model
-  row(model) {
+  row(model, lod) {
     const g = this.g, n = STONE_ROW.n;
     const at = [];
     for (let i = 0; i < n; i++) at.push({ x: STONE_ROW.x0 + (STONE_ROW.x1 - STONE_ROW.x0) * i / (n - 1), z: STONE_ROW.z, yaw: 0 });
-    this.instances(model, at);
+    this.instances(model, at, lod);
     this.colliders(model, at);
   }
 
-  mutant(model) {
+  mutant(model, lod) {
     const at = MAW_GRAVES.map(([x, z, yaw]) => ({ x, z, yaw }));
-    this.instances(model, at);
+    this.instances(model, at, lod);
     this.colliders(model, at);
   }
 
-  instances(model, at) {
+  instances(model, at, lod) {
     for (const { geo, mat } of model.parts) {
       const im = new THREE.InstancedMesh(geo, mat, at.length);
       at.forEach((o, i) => {
@@ -101,6 +103,7 @@ export class Graves {
       im.instanceMatrix.needsUpdate = true;
       im.computeBoundingSphere();
       this.g.scene.add(im);
+      if (lod) this.g.lod.add(im, lod);
     }
   }
 
@@ -114,10 +117,14 @@ export class Graves {
   wreck(model, w) {
     const g = this.g;
     const grp = new THREE.Group();
-    for (const { geo, mat } of model.parts) grp.add(new THREE.Mesh(geo, mat));
+    for (const { geo, mat } of model.parts) {
+      const m = new THREE.Mesh(geo, mat);
+      grp.add(m);
+      if (w.lod) { lodMesh(m, w.lod); g.lodMeshes.push(m); }
+    }
     grp.position.set(w.x, 0, w.z);
     grp.rotation.y = w.yaw;
-    g.scene.add(grp);
+    g.scene.add(grp); grp.updateMatrixWorld(true);
     const { x, y, z } = model.size;
     g.physics.add(w.x, y / 2, w.z, x / 2, y / 2, z / 2, w.yaw, null);
   }

@@ -16,7 +16,32 @@ import { ASSET_ROOT } from './assets.js';
 
 const FILES = { joker: 'models/joker.glb', cat: 'models/catnap.glb', street: 'models/street.glb' };
 
+// Biggest side, in pixels, a model texture may keep (0 = as shipped). Set once by Game.init for weaker phones: a 1024 px
+// texture costs 5.6 MB of GPU memory with its mip chain, 512 px costs a quarter of that, and on a 1280 px wide screen
+// the difference is barely visible. Shrunk once, before the first upload.
+export const texCap = { max: 0 };
+export function shrink(t, cap) {
+  const max = cap || texCap.max, im = t && t.image;
+  if (!max || !im || t.userData.shrunk) return t;
+  t.userData.shrunk = true;
+  const w = im.width, h = im.height;
+  if (!w || Math.max(w, h) <= max) return t;
+  const k = max / Math.max(w, h), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  if (im.close) im.close();
+  t.image = c; t.needsUpdate = true;
+  return t;
+}
+
+// every texture of a freshly loaded model (the loaders that keep the file's own materials never reach lambert())
+function shrinkAll(root) {
+  if (!texCap.max) return;
+  root.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) { shrink(m.map); shrink(m.emissiveMap); shrink(m.normalMap); } });
+}
+
 function lambert(m, keepNormal, glow) {
+  shrink(m.map); shrink(m.emissiveMap); if (keepNormal) shrink(m.normalMap);
   const L = new THREE.MeshLambertMaterial({
     map: m.map || null, color: m.color ? m.color.clone() : new THREE.Color(1, 1, 1),
     emissive: m.emissive ? m.emissive.clone() : new THREE.Color(0, 0, 0), emissiveMap: m.emissiveMap || null,
@@ -163,7 +188,7 @@ export function restAll(rig) { for (const [b, r] of rig.rest) b.quaternion.copy(
 const loader = { l: null };
 export function loadGLB(path, onProgress) {
   if (!loader.l) { loader.l = new GLTFLoader(); loader.l.setMeshoptDecoder(MeshoptDecoder); }
-  return new Promise((res, rej) => loader.l.load(ASSET_ROOT + path, res, (e) => onProgress && e.total && onProgress(e.loaded / e.total), rej));
+  return new Promise((res, rej) => loader.l.load(ASSET_ROOT + path, (gltf) => { shrinkAll(gltf.scene); res(gltf); }, (e) => onProgress && e.total && onProgress(e.loaded / e.total), rej));
 }
 export function lambertize(root, keepNormal = false, glow = 0) { swapMaterials(root, keepNormal, glow); return root; }
 
